@@ -1,0 +1,7 @@
+- Mevcut kod yapısını bozma.
+- Gereksiz yeni dosya oluşturma.
+- Önce mevcut componentleri yeniden kullan.
+- Her büyük değişiklikten önce planını yaz.
+- Ben onay vermeden kodu değiştirme.
+- Türkçe karakterleri bozma.
+- Kod okunabilir ve modüler olsun.

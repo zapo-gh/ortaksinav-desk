@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kelebek Sınav Sistemi — Lisans Üretici</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f0f4f8;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      min-height: 100vh;
+      padding: 40px 16px;
+    }
+    .card {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.10);
+      padding: 40px 36px;
+      width: 100%;
+      max-width: 560px;
+    }
+    h1 { font-size: 1.5rem; color: #1565c0; margin-bottom: 4px; }
+    .subtitle { font-size: 0.9rem; color: #666; margin-bottom: 32px; }
+    label { display: block; font-size: 0.85rem; font-weight: 600; color: #333; margin-bottom: 6px; margin-top: 20px; }
+    input, select {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1.5px solid #d1d5db;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    input:focus, select:focus { border-color: #1976d2; }
+    .hint { font-size: 0.78rem; color: #888; margin-top: 4px; }
+    .machine-row { display: flex; gap: 8px; align-items: flex-end; }
+    .machine-row input { flex: 1; }
+    .machine-badge {
+      padding: 10px 14px;
+      background: #e8f5e9;
+      border: 1.5px solid #a5d6a7;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      color: #1b5e20;
+      white-space: nowrap;
+      font-weight: 600;
+      cursor: default;
+    }
+    .machine-badge.universal {
+      background: #fff3e0;
+      border-color: #ffcc80;
+      color: #e65100;
+    }
+    .secret-row { position: relative; }
+    .secret-row input { padding-right: 90px; }
+    .toggle-btn {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: #666;
+      font-size: 0.8rem;
+      padding: 4px 8px;
+    }
+    .generate-btn {
+      margin-top: 28px;
+      width: 100%;
+      padding: 12px;
+      background: #1976d2;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .generate-btn:hover { background: #1565c0; }
+    .result-box {
+      margin-top: 24px;
+      background: #f0f7ff;
+      border: 1.5px solid #90caf9;
+      border-radius: 10px;
+      padding: 20px;
+      display: none;
+    }
+    .result-box.visible { display: block; }
+    .result-label { font-size: 0.8rem; color: #1565c0; font-weight: 600; margin-bottom: 8px; }
+    .key-display {
+      font-family: 'Courier New', monospace;
+      font-size: 1.1rem;
+      letter-spacing: 0.08em;
+      color: #0d47a1;
+      background: white;
+      border: 1px solid #90caf9;
+      border-radius: 6px;
+      padding: 12px 14px;
+      word-break: break-all;
+      user-select: all;
+    }
+    .copy-btn {
+      margin-top: 10px;
+      padding: 7px 18px;
+      background: #e3f2fd;
+      color: #1565c0;
+      border: 1px solid #90caf9;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+    .copy-btn:hover { background: #bbdefb; }
+    .meta-info { margin-top: 12px; font-size: 0.82rem; color: #555; line-height: 1.6; }
+    .warning {
+      background: #fff8e1;
+      border: 1.5px solid #ffd54f;
+      border-radius: 8px;
+      padding: 12px 14px;
+      font-size: 0.83rem;
+      color: #6d4c00;
+      margin-top: 24px;
+      line-height: 1.5;
+    }
+    .info-box {
+      background: #e8f5e9;
+      border: 1.5px solid #a5d6a7;
+      border-radius: 8px;
+      padding: 12px 14px;
+      font-size: 0.83rem;
+      color: #1b5e20;
+      margin-top: 16px;
+      line-height: 1.5;
+    }
+    .divider { border: none; border-top: 1px solid #e5e7eb; margin: 28px 0; }
+    .verify-section h2 { font-size: 1rem; color: #333; margin-bottom: 4px; }
+    .verify-section .sub { font-size: 0.82rem; color: #888; margin-bottom: 12px; }
+    .verify-result {
+      margin-top: 12px;
+      padding: 12px 14px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      display: none;
+    }
+    .verify-result.visible { display: block; }
+    .verify-result.ok { background: #e8f5e9; border: 1px solid #a5d6a7; color: #1b5e20; }
+    .verify-result.err { background: #ffebee; border: 1px solid #ef9a9a; color: #b71c1c; }
+  </style>
+</head>
+<body>
+<div class="card">
+  <h1>🔑 Lisans Anahtarı Üretici</h1>
+  <p class="subtitle">Kelebek Sınav Sistemi — Yalnızca geliştirici kullanımı</p>
+
+  <label>Gizli Anahtar (SECRET)</label>
+  <div class="secret-row">
+    <input type="password" id="secret" value="KelBK-2024-xLic-9fTq-mNpR" />
+    <button class="toggle-btn" onclick="toggleSecret()" type="button">Göster</button>
+  </div>
+  <p class="hint">⚠️ Bu değer uygulamanın içindeki SECRET ile aynı olmalıdır. Değiştirirseniz her iki tarafı da güncelleyin.</p>
+
+  <label>Okul / Kurum Kodu <span style="font-weight:400;color:#888">(opsiyonel, max 30 karakter)</span></label>
+  <input type="text" id="schoolNote" maxlength="30" placeholder="Örn: Akhisar Farabi — Şube: A" />
+
+  <label>Son Kullanma Tarihi</label>
+  <input type="date" id="expiryDate" />
+
+  <label>
+    Makine ID
+    <span style="font-weight:400;color:#888">(opsiyonel — boş bırakılırsa evrensel lisans)</span>
+  </label>
+  <div class="machine-row">
+    <input
+      type="text"
+      id="machineId"
+      placeholder="Uygulamanın Ayarlar sekmesinden kopyalayın"
+      style="font-family:monospace; font-size:0.88rem;"
+      oninput="updateMachineBadge()"
+    />
+    <div class="machine-badge universal" id="machineBadge">🌐 Evrensel</div>
+  </div>
+  <p class="hint">
+    Müşteri uygulamayı açıp lisans aktivasyon ekranındaki <strong>Makine ID</strong> değerini size gönderir.
+    Bu ID'yi buraya yapıştırarak o cihaza özel lisans üretin.
+  </p>
+
+  <div class="info-box" id="machineInfo" style="display:none">
+    ✅ <strong>Cihaza özel lisans:</strong> Bu anahtar yalnızca belirtilen makinede çalışacaktır.
+  </div>
+
+  <button class="generate-btn" onclick="generate()">Lisans Anahtarı Üret</button>
+
+  <div class="result-box" id="resultBox">
+    <div class="result-label">📋 LİSANS ANAHTARI</div>
+    <div class="key-display" id="keyDisplay"></div>
+    <button class="copy-btn" onclick="copyKey()">Kopyala</button>
+    <div class="meta-info" id="metaInfo"></div>
+  </div>
+
+  <div class="warning">
+    <strong>⚠️ Güvenlik Uyarısı:</strong> Bu dosyayı ve gizli anahtarı (SECRET) yetkisiz kişilerle paylaşmayın.
+    Herkes bu araçla kendi anahtarını üretebilir. Kaynak kodunuzu herkese açık (public) repo'ya yüklemeyin.
+  </div>
+
+  <hr class="divider" />
+
+  <div class="verify-section">
+    <h2>🔍 Anahtar Doğrulama</h2>
+    <p class="sub">Mevcut bir anahtarın geçerliliğini kontrol edin.</p>
+    <input type="text" id="verifyInput" placeholder="XXXX-XXXX-XXXX-XXXX-..." oninput="this.value=this.value.replace(/[^A-Za-z0-9\-]/g,'')" />
+    <button class="generate-btn" style="margin-top:10px;background:#388e3c" onclick="verify()">Doğrula</button>
+    <div class="verify-result" id="verifyResult"></div>
+  </div>
+</div>
+
+<script>
+  // ─── Crypto Yardımcıları ────────────────────────────────────────────────────
+
+  function parseLocalDate(expiryStr) {
+    const [y, mo, d] = expiryStr.split('-').map(Number);
+    return new Date(y, mo - 1, d);
+  }
+
+  function daysLeftFrom(expiryStr) {
+    const expiry = parseLocalDate(expiryStr);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    expiry.setHours(0, 0, 0, 0);
+    return Math.floor((expiry - today) / 86400000);
+  }
+
+  async function hmacSign(data, secret) {
+    const enc = new TextEncoder();
+    const key = await crypto.subtle.importKey(
+      'raw', enc.encode(secret),
+      { name: 'HMAC', hash: 'SHA-256' },
+      false, ['sign']
+    );
+    const sig = await crypto.subtle.sign('HMAC', key, enc.encode(data));
+    return Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2,'0')).join('');
+  }
+
+  function strToHex(str) {
+    return Array.from(new TextEncoder().encode(str))
+      .map(b => b.toString(16).padStart(2,'0')).join('');
+  }
+
+  function hexToStr(hex) {
+    const bytes = new Uint8Array(hex.length / 2);
+    for (let i = 0; i < hex.length / 2; i++) {
+      bytes[i] = parseInt(hex.substr(i * 2, 2), 16);
+    }
+    return new TextDecoder().decode(bytes);
+  }
+
+  // ─── Makine ID Badge ────────────────────────────────────────────────────────
+
+  function updateMachineBadge() {
+    const mid = document.getElementById('machineId').value.trim();
+    const badge = document.getElementById('machineBadge');
+    const info  = document.getElementById('machineInfo');
+    if (mid) {
+      badge.textContent = '🔒 Cihaza Özel';
+      badge.className = 'machine-badge';
+      info.style.display = 'block';
+    } else {
+      badge.textContent = '🌐 Evrensel';
+      badge.className = 'machine-badge universal';
+      info.style.display = 'none';
+    }
+  }
+
+  // ─── Üretim ────────────────────────────────────────────────────────────────
+
+  async function generate() {
+    const secret     = document.getElementById('secret').value.trim();
+    const schoolNote = document.getElementById('schoolNote').value.trim();
+    const expiryDate = document.getElementById('expiryDate').value;
+    const machineId  = document.getElementById('machineId').value.trim().toUpperCase();
+
+    if (!secret)     { alert('Gizli anahtarı girin.'); return; }
+    if (!expiryDate) { alert('Son kullanma tarihi seçin.'); return; }
+    if (new Date(expiryDate) < new Date()) {
+      if (!confirm('Seçilen tarih geçmişte. Devam etmek istiyor musunuz?')) return;
+    }
+
+    // Kompakt tarih: "2027-07-12" → "20270712"
+    const dateCompact = expiryDate.replace(/-/g, '');
+    const payload = {
+      e: dateCompact,
+      ...(schoolNote ? { n: schoolNote } : {}),
+      ...(machineId  ? { m: machineId  } : {}),
+    };
+    const json = JSON.stringify(payload);
+    const payloadHex = strToHex(json).toUpperCase();
+    const sig = (await hmacSign(payloadHex, secret)).slice(0, 16).toUpperCase();
+    const raw = payloadHex + sig;
+    const key = raw.match(/.{1,4}/g).join('-');
+
+    document.getElementById('keyDisplay').textContent = key;
+
+    const exp = parseLocalDate(expiryDate);
+    const days = daysLeftFrom(expiryDate);
+    document.getElementById('metaInfo').innerHTML =
+      `<b>Son kullanma:</b> ${exp.toLocaleDateString('tr-TR')}<br>` +
+      `<b>Kalan gün:</b> ${days} gün<br>` +
+      (schoolNote ? `<b>Okul notu:</b> ${schoolNote}<br>` : '') +
+      (machineId  ? `<b>Makine ID:</b> <code style="font-size:0.78rem">${machineId}</code>` : '<b>Tür:</b> Evrensel (tüm cihazlarda geçerli)');
+
+    document.getElementById('resultBox').classList.add('visible');
+  }
+
+  async function verify() {
+    const secret = document.getElementById('secret').value.trim();
+    const raw    = document.getElementById('verifyInput').value.replace(/[-\s]/g,'').toUpperCase();
+    const el     = document.getElementById('verifyResult');
+    el.className = 'verify-result visible';
+
+    if (!secret || !raw) { el.className += ' err'; el.textContent = 'Gizli anahtar ve doğrulanacak anahtarı girin.'; return; }
+    if (raw.length < 20) { el.className += ' err'; el.textContent = 'Anahtar çok kısa.'; return; }
+
+    const sig     = raw.slice(-16).toLowerCase();
+    const payload = raw.slice(0, -16);
+    const expSig  = (await hmacSign(payload, secret)).slice(0, 16);
+
+    if (sig !== expSig) {
+      el.className += ' err';
+      el.textContent = '❌ İmza geçersiz. Anahtar hatalı veya gizli anahtar uyuşmuyor.';
+      return;
+    }
+
+    try {
+      const data = JSON.parse(hexToStr(payload));
+      if (!data.e || data.e.length !== 8) throw new Error('Bad date');
+      const expStr = `${data.e.slice(0,4)}-${data.e.slice(4,6)}-${data.e.slice(6,8)}`;
+      const exp  = parseLocalDate(expStr);
+      const days = daysLeftFrom(expStr);
+      const expired = days < 0;
+      el.className += expired ? ' err' : ' ok';
+      el.innerHTML = (expired ? '⚠️ Süresi <b>dolmuş</b>' : '✅ Geçerli') +
+        ` — Son kullanma: <b>${exp.toLocaleDateString('tr-TR')}</b>` +
+        (expired ? '' : ` (${days} gün kaldı)`) +
+        (data.n ? `<br>Okul notu: <b>${data.n}</b>` : '') +
+        (data.m ? `<br>🔒 Makine ID: <code style="font-size:0.78rem">${data.m}</code>` : '<br>🌐 Evrensel lisans');
+    } catch {
+      el.className += ' err';
+      el.textContent = '❌ Payload çözülemedi.';
+    }
+  }
+
+  function copyKey() {
+    const key = document.getElementById('keyDisplay').textContent;
+    navigator.clipboard.writeText(key).then(() => alert('Kopyalandı!')).catch(() => {
+      prompt('Kopyalamak için Ctrl+C:', key);
+    });
+  }
+
+  function toggleSecret() {
+    const input = document.getElementById('secret');
+    input.type = input.type === 'password' ? 'text' : 'password';
+  }
+
+  // Varsayılan tarih: 1 yıl sonra
+  const d = new Date(); d.setFullYear(d.getFullYear() + 1);
+  document.getElementById('expiryDate').value = d.toISOString().slice(0, 10);
+</script>
+</body>
+</html>
