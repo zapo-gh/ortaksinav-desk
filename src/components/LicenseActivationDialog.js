@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions,
   DialogContentText, TextField, Button, Alert, Box,
@@ -70,7 +70,7 @@ const LicenseActivationDialog = ({ onActivated, expiredInfo = null, onClose }) =
       PaperProps={{ sx: { borderRadius: 3 } }}
     >
       {/* Başlık */}
-      <DialogTitle sx={{ pb: 0, pt: 3, textAlign: 'center' }}>
+      <DialogTitle sx={{ pb: 0, pt: 3, px: 3, textAlign: 'center' }}>
         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1.5 }}>
           <Box
             sx={{

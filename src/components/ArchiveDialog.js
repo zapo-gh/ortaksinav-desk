@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import {
     Dialog,
     DialogTitle,
@@ -57,7 +57,7 @@ const ArchiveDialog = ({ open, onClose, onConfirm, planName, defaultYear, defaul
     return (
         <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
             <DialogTitle>
-                <DialogHeader icon={<ArchiveIcon color="secondary" />} title="Planı Arşivle" />
+                <DialogHeader icon={<ArchiveIcon />} title="Planı Arşivle" variant="neutral" />
             </DialogTitle>
             <DialogContent sx={{ mt: 2 }}>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>

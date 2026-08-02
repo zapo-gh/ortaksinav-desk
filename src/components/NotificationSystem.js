@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+﻿import React, { createContext, useContext, useState, useCallback } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -17,8 +17,9 @@ import {
   Warning as WarningIcon,
   Info as InfoIcon
 } from '@mui/icons-material';
-import { toast } from 'sonner';
+import { toast, Toaster as SonnerToaster } from 'sonner';
 import DialogHeader from './common/DialogHeader';
+import { useThemeMode } from '../context/ThemeContext';
 
 // Notification Context
 const NotificationContext = createContext();
@@ -126,7 +127,7 @@ export const NotificationProvider = ({ children }) => {
           PaperProps={{ sx: { borderRadius: 3 } }}
         >
           <DialogTitle>
-            <DialogHeader icon={<WarningIcon color="warning" />} title={confirmDialog.title} />
+            <DialogHeader icon={<WarningIcon />} title={confirmDialog.title} variant="warning" />
           </DialogTitle>
           <DialogContent>
             <Typography variant="body1">{confirmDialog.message}</Typography>
@@ -181,7 +182,7 @@ const PromptDialog = ({ open, title, message, placeholder, defaultValue, onConfi
       PaperProps={{ sx: { borderRadius: 3 } }}
     >
       <DialogTitle>
-        <DialogHeader icon={<InfoIcon color="info" />} title={title} />
+        <DialogHeader icon={<InfoIcon />} title={title} variant="info" />
       </DialogTitle>
       <DialogContent>
         <Typography sx={{ mb: 2 }}>{message}</Typography>
@@ -218,6 +219,26 @@ export const useNotifications = () => {
     throw new Error('useNotifications must be used within a NotificationProvider');
   }
   return context;
+};
+
+// Custom Toaster that respects ThemeContext
+export const AppToaster = () => {
+  const { mode } = useThemeMode();
+  return (
+    <SonnerToaster 
+      position="top-right" 
+      richColors 
+      closeButton 
+      theme={mode}
+      toastOptions={{
+        style: {
+          backdropFilter: 'blur(12px)',
+          background: mode === 'light' ? 'rgba(255,255,255,0.85)' : 'rgba(15,23,42,0.85)',
+          border: `1px solid ${mode === 'light' ? 'rgba(226,232,240,0.8)' : 'rgba(51,65,85,0.8)'}`,
+        }
+      }}
+    />
+  );
 };
 
 export default NotificationProvider;

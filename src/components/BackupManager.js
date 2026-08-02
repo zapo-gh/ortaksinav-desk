@@ -1,4 +1,4 @@
-/**
+﻿/**
  * ============================================================================
  * BACKUP YÖNETİMİ BİLEŞENİ
  * ============================================================================
@@ -247,7 +247,7 @@ const BackupManager = ({ onPlansUpdated }) => {
       {/* Geri Yükleme Onay Dialog'u */}
       <Dialog open={restoreDialogOpen} onClose={() => setRestoreDialogOpen(false)} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
         <DialogTitle>
-          <DialogHeader icon={<RestoreIcon color="primary" />} title="Backup Geri Yükle" />
+          <DialogHeader icon={<RestoreIcon />} title="Backup Geri Yükle" variant="warning" />
         </DialogTitle>
         <DialogContent>
           {selectedBackup && (

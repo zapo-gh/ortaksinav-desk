@@ -1,6 +1,7 @@
-import React, { useState, memo } from 'react';
+import React, { useState, memo, useRef, useEffect, useCallback } from 'react';
 import deepEqual from '../utils/deepEqual';
 import PageHeader from './common/PageHeader';
+import DialogHeader from './common/DialogHeader';
 import {
   Card,
   CardContent,
@@ -40,21 +41,35 @@ import { useNotifications } from './NotificationSystem';
 import { useExamSelector } from '../context/ExamContext';
 import logger from '../utils/logger';
 // Basit, sürükle-bıraksız salon kartı bileşeni
-const SalonItem = ({ form, index, onFormChange, onFormDelete, onFormCopy, yerlesimPlaniVarMi, topluSilmeModu, seciliSalonlar, onSalonSecimi }) => {
+const SalonItem = ({ form, index, onFormChange, onFormDelete, onFormCopy, yerlesimPlaniVarMi, topluSilmeModu, seciliSalonlar, onSalonSecimi, shouldFocus, onFocusDone }) => {
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    if (shouldFocus && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+      inputRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      if (onFocusDone) {
+        onFocusDone();
+      }
+    }
+  }, [shouldFocus, onFocusDone]);
+
   return (
     <Paper
       elevation={2}
       sx={{
-        p: 3,
-        mb: 3,
+        py: 1,
+        px: 2,
+        mb: 1.5,
         maxWidth: '100%',
         transition: 'all 0.2s ease'
       }}
     >
-      <Grid container spacing={2} alignItems="center">
+      <Grid container spacing={1.5} alignItems="center" sx={{ flexWrap: { xs: 'wrap', xl: 'nowrap' } }}>
         {/* Toplu Silme Checkbox */}
         {topluSilmeModu && (
-          <Grid item xs={1}>
+          <Grid item xs="auto">
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Checkbox
                 checked={seciliSalonlar.includes(form.id)}
@@ -67,7 +82,7 @@ const SalonItem = ({ form, index, onFormChange, onFormDelete, onFormCopy, yerles
         )}
 
         {/* Drag Handle - artık sadece görsel ikon */}
-        <Grid item xs={1}>
+        <Grid item xs="auto">
           <Box
             sx={{
               display: 'flex',
@@ -81,23 +96,24 @@ const SalonItem = ({ form, index, onFormChange, onFormDelete, onFormCopy, yerles
         </Grid>
 
         {/* Salon Adı */}
-        <Grid item xs={12} sm={3} md={2}>
+        <Grid item xs={12} sm={3} md="auto">
           <TextField
-            label="Salon Adı"
+            inputRef={inputRef}
+            label="Salon Adı *"
             value={form.salonAdi}
             onChange={(e) => onFormChange(form.id, 'salonAdi', e.target.value)}
             required
             variant="outlined"
             placeholder="Örn: 9/A"
             size="small"
-            sx={{ width: '120px' }}
+            sx={{ width: { xs: '100%', md: '110px' } }}
             disabled={yerlesimPlaniVarMi && yerlesimPlaniVarMi()}
           />
         </Grid>
 
         {/* Sıra Tipi */}
-        <Grid item xs={12} sm={6} md={3}>
-          <FormControl fullWidth size="small">
+        <Grid item xs={12} sm={6} md="auto">
+          <FormControl size="small" sx={{ width: { xs: '100%', md: '130px' } }}>
             <InputLabel>Sıra Tipi</InputLabel>
             <Select
               value={form.siraTipi}
@@ -112,7 +128,7 @@ const SalonItem = ({ form, index, onFormChange, onFormDelete, onFormCopy, yerles
         </Grid>
 
         {/* Aktif Durumu */}
-        <Grid item xs={12} sm={6} md={2}>
+        <Grid item xs={12} sm={6} md="auto">
           <FormControlLabel
             control={
               <Switch
@@ -122,13 +138,13 @@ const SalonItem = ({ form, index, onFormChange, onFormDelete, onFormCopy, yerles
               />
             }
             label="Aktif"
+            sx={{ m: 0 }}
           />
         </Grid>
 
         {/* Grup Sayısı */}
-        <Grid item xs={6} sm={4} md={2}>
+        <Grid item xs={6} sm={4} md="auto">
           <TextField
-            fullWidth
             label="Grup Sayısı"
             type="number"
             value={form.grupSayisi}
@@ -137,15 +153,15 @@ const SalonItem = ({ form, index, onFormChange, onFormDelete, onFormCopy, yerles
             variant="outlined"
             inputProps={{ min: 1, max: 10 }}
             size="small"
+            sx={{ width: { xs: '100%', md: '80px' } }}
             disabled={yerlesimPlaniVarMi && yerlesimPlaniVarMi()}
           />
         </Grid>
 
         {/* Grup Detayları */}
         {form.gruplar?.map((grup) => (
-          <Grid key={grup.id} item xs={2} sm={1.5} md={1}>
+          <Grid key={grup.id} item xs={2} sm={1.5} md="auto">
             <TextField
-              fullWidth
               label={`G${grup.id}`}
               type="number"
               value={grup.siraSayisi}
@@ -153,28 +169,30 @@ const SalonItem = ({ form, index, onFormChange, onFormDelete, onFormCopy, yerles
               variant="outlined"
               inputProps={{ min: 1, max: 50 }}
               size="small"
+              sx={{ width: { xs: '100%', md: '60px' } }}
               disabled={yerlesimPlaniVarMi && yerlesimPlaniVarMi()}
             />
           </Grid>
         ))}
 
         {/* Kapasite */}
-        <Grid item xs={6} sm={3} md={2}>
+        <Grid item xs={6} sm={3} md="auto">
           <Box
             sx={{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              height: '40px',
+              height: '38px',
               border: 1,
               borderColor: 'divider',
               borderRadius: 1,
               bgcolor: 'grey.50',
-              px: '2px'
+              px: 1.5,
+              minWidth: '60px'
             }}
           >
-            <ChairIcon variant="outlined" sx={{ mr: 1, color: 'text.secondary' }} />
-            <Typography variant="body2" color="text.secondary">
+            <ChairIcon variant="outlined" sx={{ mr: 0.5, color: 'text.secondary', fontSize: 20 }} />
+            <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
               {form.gruplar?.reduce((toplam, grup) => {
                 return toplam + (grup.siraSayisi * (form.siraTipi === 'tekli' ? 1 : 2));
               }, 0) || 0}
@@ -183,7 +201,7 @@ const SalonItem = ({ form, index, onFormChange, onFormDelete, onFormCopy, yerles
         </Grid>
 
         {/* Kopyala ve Sil Butonları */}
-        <Grid item xs={12} sm={6} md={2}>
+        <Grid item xs={12} sm={6} md="auto">
           <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1 }}>
             <IconButton
               color="primary"
@@ -241,6 +259,12 @@ const SalonFormu = memo(({ salonlar = [], onSalonlarDegistir, yerlestirmeSonucu 
   const [topluSilmeModu, setTopluSilmeModu] = useState(false);
   const [seciliSalonlar, setSeciliSalonlar] = useState([]);
   const [topluSilmeDialogAcik, setTopluSilmeDialogAcik] = useState(false);
+
+  // Yeni eklenen/kopyalanan salona odaklama state'i
+  const [focusSalonId, setFocusSalonId] = useState(null);
+  const handleFocusDone = useCallback(() => {
+    setFocusSalonId(null);
+  }, []);
 
   // Yerleştirme planı kontrolü
   const yerlesimPlaniVarMi = () => {
@@ -353,6 +377,7 @@ const SalonFormu = memo(({ salonlar = [], onSalonlarDegistir, yerlestirmeSonucu 
       aktif: true
     };
     setAktifSalonFormlari(prev => [...prev, yeniForm]);
+    setFocusSalonId(yeniForm.id);
     // Global state'e de ekle (boş adla geçici olarak eklenir, kullanıcı düzenler)
     try {
       const kapasite = yeniForm.gruplar.reduce((t, g) => t + (g.siraSayisi * (yeniForm.siraTipi === 'tekli' ? 1 : 2)), 0);
@@ -431,6 +456,7 @@ const SalonFormu = memo(({ salonlar = [], onSalonlarDegistir, yerlestirmeSonucu 
     };
 
     setAktifSalonFormlari(prev => [...prev, kopyaForm]);
+    setFocusSalonId(kopyaForm.id);
     // Global state'e de ekle (hemen persist)
     try {
       const kapasite = kopyaForm.gruplar.reduce((t, g) => t + (g.siraSayisi * (kopyaForm.siraTipi === 'tekli' ? 1 : 2)), 0);
@@ -466,6 +492,7 @@ const SalonFormu = memo(({ salonlar = [], onSalonlarDegistir, yerlestirmeSonucu 
           onSalonlarDegistir(guncelSalonlar);
         }
       }
+      showSuccess(`✅ "${silinecekSalonAdi}" başarıyla silindi!`);
     }
 
     // Dialog'u kapat
@@ -796,7 +823,7 @@ const SalonFormu = memo(({ salonlar = [], onSalonlarDegistir, yerlestirmeSonucu 
   // readOnly görünümü: hook'lar tanımlandıktan sonra koşullu render
   if (readOnly) {
     return (
-      <Box sx={{ maxWidth: 1200, mx: 'auto', mt: 3, mb: 4 }}>
+      <Box sx={{ width: '100%', mt: 0, mb: 4 }}>
       <PageHeader
         icon={<MeetingRoomIcon sx={{ color: '#4F46E5', fontSize: 24 }} />}
         title="Sınav Salonları Yönetimi"
@@ -840,7 +867,7 @@ const SalonFormu = memo(({ salonlar = [], onSalonlarDegistir, yerlestirmeSonucu 
   }
 
   return (
-    <Box sx={{ maxWidth: 1200, mx: 'auto', mt: 3, mb: 4 }}>
+    <Box sx={{ width: '100%', mt: 0, mb: 4 }}>
       <PageHeader
         icon={<MeetingRoomIcon sx={{ color: '#4F46E5', fontSize: 24 }} />}
         title="Sınav Salonları Yönetimi"
@@ -941,6 +968,8 @@ const SalonFormu = memo(({ salonlar = [], onSalonlarDegistir, yerlestirmeSonucu 
               topluSilmeModu={topluSilmeModu}
               seciliSalonlar={seciliSalonlar}
               onSalonSecimi={handleSalonSecimi}
+              shouldFocus={form.id === focusSalonId}
+              onFocusDone={handleFocusDone}
             />
           ))}
 
@@ -961,9 +990,8 @@ const SalonFormu = memo(({ salonlar = [], onSalonlarDegistir, yerlestirmeSonucu 
           }
         }}
       >
-        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <DeleteIcon color="error" fontSize="small" />
-          Salon Silme Onayı
+        <DialogTitle>
+          <DialogHeader icon={<DeleteIcon />} title="Salon Silme Onayı" variant="danger" />
         </DialogTitle>
         <DialogContent>
           <Typography variant="body1" sx={{ mb: 2 }}>
@@ -1021,9 +1049,8 @@ const SalonFormu = memo(({ salonlar = [], onSalonlarDegistir, yerlestirmeSonucu 
           }
         }}
       >
-        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <DeleteIcon color="error" fontSize="small" />
-          Toplu Salon Silme
+        <DialogTitle>
+          <DialogHeader icon={<DeleteIcon />} title="Toplu Salon Silme" variant="danger" />
         </DialogTitle>
         <DialogContent>
           <Typography variant="body1" sx={{ mb: 2 }}>

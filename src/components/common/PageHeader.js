@@ -20,7 +20,7 @@ import { Box, Typography } from '@mui/material';
 const PageHeader = ({ icon, title, titleExtra, subtitle, actions, sx }) => {
   const styledIcon = icon
     ? React.cloneElement(icon, {
-        sx: { ...(icon.props?.sx || {}), fontSize: 24, color: '#64748b' }
+        sx: { ...(icon.props?.sx || {}), fontSize: 24, color: 'white' }
       })
     : null;
 
@@ -30,41 +30,62 @@ const PageHeader = ({ icon, title, titleExtra, subtitle, actions, sx }) => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        gap: 1.5,
+        bgcolor: 'background.paper',
+        borderRadius: '12px',
+        py: 1.5,
+        px: 2.5,
         mb: 3,
-        pb: 2,
-        borderBottom: '1px solid rgba(15, 23, 42, 0.08)',
+        border: '1px solid #e2e8f0',
+        boxShadow: (theme) => theme.palette.mode === 'light' ? '0 2px 4px rgba(0, 0, 0, 0.02)' : 'none',
         flexWrap: 'wrap',
+        gap: 1.5,
         ...sx
       }}
     >
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.25, minWidth: 0 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-          {styledIcon}
-          <Typography
-            variant="h5"
-            component="h1"
-            sx={{
-              fontSize: { xs: '1.15rem', sm: '1.35rem' },
-              color: '#0f172a',
-              fontWeight: 700,
-              letterSpacing: '-0.01em',
-              lineHeight: 1.2
-            }}
-          >
-            {title}
-          </Typography>
-          {titleExtra}
-        </Box>
-        {subtitle && (
-          <Typography variant="caption" sx={{ color: 'text.secondary', mt: 0.25 }}>
-            {subtitle}
-          </Typography>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap', flex: 1 }}>
+        {icon && (
+          <Box sx={{ 
+            bgcolor: '#2563eb',
+            color: 'white',
+            borderRadius: '10px',
+            width: 44,
+            height: 44,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0 4px 10px rgba(37, 99, 235, 0.15)',
+            flexShrink: 0
+          }}>
+            {styledIcon}
+          </Box>
         )}
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.25, flex: 1, minWidth: 200 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
+            <Typography
+              variant="h5"
+              component="h1"
+              sx={{
+                fontSize: { xs: '1.25rem', sm: '1.35rem' },
+                fontWeight: 700, 
+                color: (theme) => theme.palette.mode === 'light' ? '#0f172a' : '#f8fafc', 
+                letterSpacing: '-0.01em', 
+                m: 0
+              }}
+            >
+              {title}
+            </Typography>
+            {titleExtra}
+          </Box>
+          {subtitle && (
+            <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 500 }}>
+              {subtitle}
+            </Typography>
+          )}
+        </Box>
       </Box>
 
       {actions && (
-        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
+        <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', flexWrap: 'wrap' }}>
           {actions}
         </Box>
       )}

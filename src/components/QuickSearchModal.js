@@ -1,4 +1,6 @@
-import React from 'react';
+﻿import React from 'react';
+import SearchIcon from '@mui/icons-material/Search';
+import DialogHeader from './common/DialogHeader';
 import { Dialog, DialogTitle, DialogContent, TextField, List, ListItemButton, ListItemText, Box, Typography, Alert } from '@mui/material';
 import ExamContext from '../context/ExamContext';
 import { getPlacementMap, resolveStudentPlacement } from '../utils/placementHelper';
@@ -73,7 +75,7 @@ const QuickSearchModal = ({ open, onClose }) => {
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
-      <DialogTitle>Öğrenci Ara (Ctrl+K)</DialogTitle>
+      <DialogTitle><DialogHeader icon={<SearchIcon />} title="Öğrenci Ara (Ctrl+K)" variant="info" onClose={onClose} /></DialogTitle>
       <DialogContent>
         {!yerlestirmeSonucu && (
           <Alert severity="info" sx={{ mb: 1 }}>

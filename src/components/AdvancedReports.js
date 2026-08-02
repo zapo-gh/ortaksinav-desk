@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Advanced Reports Component
  * Provides detailed analytics and comprehensive reporting features
  */
@@ -254,7 +254,7 @@ const AdvancedReports = ({
       {/* Filter Dialog */}
       <Dialog open={filterDialogOpen} onClose={() => setFilterDialogOpen(false)} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
         <DialogTitle>
-          <DialogHeader icon={<FilterIcon color="primary" />} title="Rapor Filtreleri" />
+          <DialogHeader icon={<FilterIcon />} title="Rapor Filtreleri" variant="neutral" />
         </DialogTitle>
         <DialogContent>
           <FormControl fullWidth sx={{ mt: 2 }}>

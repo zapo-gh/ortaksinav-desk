@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import {
   Card,
   CardContent,
@@ -229,7 +229,7 @@ const LearningStats = () => {
       {/* Temizleme Dialog'u */}
       <Dialog open={clearDialogOpen} onClose={() => setClearDialogOpen(false)} maxWidth="xs" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
         <DialogTitle>
-          <DialogHeader icon={<ClearIcon color="error" />} title="Öğrenme Verilerini Temizle" />
+          <DialogHeader icon={<ClearIcon />} title="Öğrenme Verilerini Temizle" variant="danger" />
         </DialogTitle>
         <DialogContent>
           <Typography>

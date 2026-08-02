@@ -234,39 +234,37 @@ const AyarlarFormu = memo(({ ayarlar, onAyarlarDegistir, ogrenciler, yerlestirme
     if (!ensureWriteAllowed()) {
       return;
     }
-    // Silme onayı diyaloğu tetikleyin
-    setSilinecekDersId(dersId);
-    setDersSilmeDialogAcik(true);
     // Yerleştirme planı kontrolü
     if (yerlesimPlaniVarMi()) {
       showError('Mevcut bir yerleştirme planı bulunduğu için ders silinemez. Önce mevcut planı temizleyin.');
       return;
     }
-
-    const yeniFormData = {
-      ...formData,
-      dersler: formData.dersler.filter(ders => ders.id !== dersId)
-    };
-
-    applyFormUpdate(yeniFormData);
-    setSeciliSiniflar(prev => {
-      const updated = { ...prev };
-      delete updated[dersId];
-      return updated;
-    });
+    // Sadece onay diyaloğunu aç; silmeyi dersSilOnayla yapar
+    setSilinecekDersId(dersId);
+    setDersSilmeDialogAcik(true);
   };
   const [dersSilmeDialogAcik, setDersSilmeDialogAcik] = useState(false);
   const [silinecekDersId, setSilinecekDersId] = useState(null);
   const dersSilOnayla = () => {
-    if (silinecekDersId != null) {
-      const yeniFormData = {
-        ...formData,
-        dersler: formData.dersler.filter(d => d.id !== silinecekDersId)
-      };
-      applyFormUpdate(yeniFormData);
-    }
+    const targetId = silinecekDersId;
     setDersSilmeDialogAcik(false);
     setSilinecekDersId(null);
+
+    if (targetId != null) {
+      setTimeout(() => {
+        const yeniFormData = {
+          ...formData,
+          dersler: formData.dersler.filter(d => d.id !== targetId)
+        };
+        applyFormUpdate(yeniFormData);
+        setSeciliSiniflar(prev => {
+          const updated = { ...prev };
+          delete updated[targetId];
+          return updated;
+        });
+        showSuccess('Ders başarıyla silindi.');
+      }, 0);
+    }
   };
   const dersSilIptal = () => {
     setDersSilmeDialogAcik(false);
@@ -417,12 +415,22 @@ const AyarlarFormu = memo(({ ayarlar, onAyarlarDegistir, ogrenciler, yerlestirme
   };
 
   return (
-    <Box sx={{ maxWidth: 1200, mx: 'auto', mt: 3, mb: 4 }}>
+    <Box sx={{ width: '100%', mt: 0, mb: 4 }}>
       <PageHeader
         icon={<BookIcon sx={{ color: '#4F46E5', fontSize: 24 }} />}
         title="Ders Yönetimi"
-        subtitle="Sınavı yapılacak dersleri ve bu dersleri alan sınıfları belirleyin"
-        sx={{ mb: 3 }}
+        actions={
+          <Button
+            variant="contained"
+            size="medium"
+            startIcon={<AddIcon />}
+            onClick={handleDersEkle}
+            disabled={readOnly || formData.dersler.length >= 4 || yerlesimPlaniVarMi()}
+            sx={{ fontWeight: 600, borderRadius: '8px', boxShadow: 'none' }}
+          >
+            Ders Ekle {formData.dersler.length >= 4 && '(Maksimum 4 ders)'}
+          </Button>
+        }
       />
       <Card elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: '16px', mb: 4 }}>
         <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
@@ -497,18 +505,18 @@ const AyarlarFormu = memo(({ ayarlar, onAyarlarDegistir, ogrenciler, yerlestirme
           </Alert>
         )}
 
-        <form onSubmit={handleSubmit}>
-          <Grid container spacing={3}>
+        <Box>
 
-            {/* Ders Bilgileri */}
-            <Grid size={12} key="ders-bilgileri-section">
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                <BookIcon sx={{ color: '#64748b', fontSize: 20 }} />
-                <Typography variant="h6" sx={{ color: '#0f172a', fontWeight: 700, fontSize: { xs: '1.05rem', sm: '1.2rem' }, letterSpacing: '-0.01em' }}>
-                  Ders Bilgileri
-                </Typography>
-              </Box>
+            {/* Ders Bilgileri baslik */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+              <BookIcon sx={{ color: '#64748b', fontSize: 20 }} />
+              <Typography variant="h6" sx={{ color: '#0f172a', fontWeight: 700, fontSize: { xs: '1.05rem', sm: '1.2rem' }, letterSpacing: '-0.01em' }}>
+                Ders Bilgileri
+              </Typography>
+            </Box>
 
+            {/* Ders Kartlari - yan yana */}
+            <Box sx={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: 2, alignItems: 'flex-start' }}>
               {formData.dersler.map((ders, index) => {
                 const dersIdForHandlers = ders?.id ?? createGeneratedDersId(ders, index);
                 const dersKey = `${dersIdForHandlers}-${index}`;
@@ -518,39 +526,26 @@ const AyarlarFormu = memo(({ ayarlar, onAyarlarDegistir, ogrenciler, yerlestirme
                     key={dersKey}
                     elevation={0}
                     sx={{
-                      mb: 2,
+                      flex: '1 1 260px',
+                      minWidth: 240,
+                      maxWidth: 380,
                       borderRadius: '14px',
                       border: '1px solid #e2e8f0',
                       bgcolor: '#ffffff',
                       transition: 'all 0.2s',
-                      '&:hover': {
-                        borderColor: '#cbd5e1',
-                        boxShadow: '0 4px 12px rgba(15, 23, 42, 0.04)'
-                      }
+                      '&:hover': { borderColor: '#cbd5e1', boxShadow: '0 4px 12px rgba(15, 23, 42, 0.06)' }
                     }}
                   >
-                    <CardContent sx={{ p: { xs: 1.5, sm: 2 }, '&:last-child': { pb: { xs: 1.5, sm: 2 } } }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
-                        <Avatar
-                          sx={{
-                            width: 24,
-                            height: 24,
-                            mr: 1.25,
-                            bgcolor: 'rgba(37, 99, 235, 0.1)',
-                            color: '#2563eb',
-                            fontWeight: 800,
-                            fontSize: 13,
-                            borderRadius: '6px'
-                          }}
-                        >
+                    <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                        <Avatar sx={{ width: 26, height: 26, mr: 1, bgcolor: 'rgba(37, 99, 235, 0.1)', color: '#2563eb', fontWeight: 800, fontSize: 13, borderRadius: '6px' }}>
                           {index + 1}
                         </Avatar>
                         <Typography variant="subtitle1" sx={{ flexGrow: 1, fontWeight: 800, color: '#1e293b', fontSize: '0.92rem' }}>
                           Ders {index + 1}
                         </Typography>
-                        {/* Ders adı metin olarak - testlerin getByText beklentisi için */}
                         {ders.ad && (
-                          <Typography variant="body2" sx={{ mr: 2, display: { xs: 'none', sm: 'block' } }} color="text.secondary">
+                          <Typography variant="body2" sx={{ mr: 1, color: 'text.secondary', fontSize: '0.8rem' }}>
                             {ders.ad}
                           </Typography>
                         )}
@@ -566,220 +561,73 @@ const AyarlarFormu = memo(({ ayarlar, onAyarlarDegistir, ogrenciler, yerlestirme
                         </IconButton>
                       </Box>
 
-                      <Grid container spacing={1.5} alignItems="center">
-                        <Grid item xs={12} md={6} key={`ders-adi-${dersKey}`}>
-                          <TextField
-                            fullWidth
+                      <TextField
+                        fullWidth
+                        size="small"
+                        label={ders.ad ? 'Ders' : 'Ders Adı'}
+                        value={ders.ad}
+                        onChange={(e) => handleDersAdiDegistir(dersIdForHandlers, e.target.value)}
+                        variant="outlined"
+                        placeholder="Örn: Matematik, Türkçe"
+                        error={Boolean(errors[`ders_${dersIdForHandlers}`])}
+                        helperText={errors[`ders_${dersIdForHandlers}`] || ''}
+                        disabled={readOnly}
+                        InputProps={{ startAdornment: (<InputAdornment position="start"><EditIcon color="action" fontSize="small" /></InputAdornment>) }}
+                        sx={{ mb: 1.5, '& .MuiOutlinedInput-root': { borderRadius: '10px', bgcolor: '#f8fafc', height: '40px', '&:hover': { bgcolor: '#ffffff' }, '&.Mui-focused': { bgcolor: '#ffffff' } } }}
+                      />
+
+                      <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 1.5 }}>
+                        <FormControl fullWidth size="small">
+                          <InputLabel>Sınıf Seç (Çoklu)</InputLabel>
+                          <Select
+                            multiple
                             size="small"
-                            label={ders.ad ? 'Ders' : 'Ders Adı'}
-                            value={ders.ad}
-                            onChange={(e) => handleDersAdiDegistir(dersIdForHandlers, e.target.value)}
-                            variant="outlined"
-                            placeholder="Örn: Matematik, Türkçe, Fizik"
-                            error={Boolean(errors[`ders_${dersIdForHandlers}`])}
-                            helperText={errors[`ders_${dersIdForHandlers}`] || ''}
+                            value={seciliSiniflar[dersIdForHandlers] || []}
+                            onChange={(e) => handleSinifSecimi(dersIdForHandlers, e.target.value)}
+                            label="Sınıf Seç (Çoklu)"
+                            renderValue={(selected) => {
+                              if (selected.length === 0) { return <Typography component="span" sx={{ color: 'text.disabled', fontStyle: 'italic', fontSize: '0.8rem' }}>Sınıf seçin...</Typography>; }
+                              return (<Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, maxHeight: '26px', overflow: 'hidden' }}>{selected.map((value) => (<Chip key={value} label={value} size="small" color="primary" variant="outlined" sx={{ height: '20px', fontSize: '0.7rem', fontWeight: 700, borderRadius: '6px' }} />))}</Box>);
+                            }}
+                            sx={{ height: '40px', borderRadius: '10px', bgcolor: '#f8fafc', '&:hover': { bgcolor: '#ffffff' } }}
                             disabled={readOnly}
-                            InputProps={{
-                              startAdornment: (
-                                <InputAdornment position="start">
-                                  <EditIcon color="action" fontSize="small" />
-                                </InputAdornment>
-                              ),
-                            }}
-                            sx={{
-                              '& .MuiOutlinedInput-root': {
-                                borderRadius: '10px',
-                                bgcolor: '#f8fafc',
-                                height: '40px',
-                                transition: 'all 0.2s',
-                                '&:hover': { bgcolor: '#ffffff' },
-                                '&.Mui-focused': { bgcolor: '#ffffff' }
-                              }
-                            }}
-                          />
-                        </Grid>
+                          >
+                            {mevcutSiniflar.filter(sinif => { if (ders.siniflar.includes(sinif)) return false; const d2 = formData.dersler.filter(d => d !== ders).flatMap(d => d.siniflar); return !d2.includes(sinif); }).map(sinif => (<MenuItem key={sinif} value={sinif} sx={{ fontWeight: (seciliSiniflar[dersIdForHandlers] || []).includes(sinif) ? 700 : 'normal', '&.Mui-selected': { backgroundColor: 'action.selected', fontWeight: 700 } }}>{sinif}</MenuItem>))}
+                          </Select>
+                        </FormControl>
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          onClick={() => handleSinifEkleButon(dersIdForHandlers)}
+                          disabled={readOnly || mevcutSiniflar.filter(sinif => { if (ders.siniflar.includes(sinif)) return false; const d2 = formData.dersler.filter(d => (d.id ?? d.uuid ?? `${d.ad || 'ders'}-${index}`) !== dersIdForHandlers).flatMap(d => d.siniflar); return !d2.includes(sinif); }).length === 0}
+                          sx={{ minWidth: 'auto', px: 2, height: '40px', borderRadius: '10px', fontWeight: 700, textTransform: 'none', flexShrink: 0 }}
+                        >
+                          Ekle
+                        </Button>
+                      </Box>
 
-                        <Grid item xs={12} md={6} key={`sinif-secimi-${dersKey}`}>
-                          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                            <FormControl fullWidth size="small">
-                              <InputLabel>Sınıf Seç (Çoklu)</InputLabel>
-                              <Select
-                                multiple
-                                size="small"
-                                value={seciliSiniflar[dersIdForHandlers] || []}
-                                onChange={(e) => handleSinifSecimi(dersIdForHandlers, e.target.value)}
-                                label="Sınıf Seç (Çoklu)"
-                                renderValue={(selected) => {
-                                  if (selected.length === 0) {
-                                    return <Typography component="span" sx={{ color: 'text.disabled', fontStyle: 'italic', fontSize: '0.8rem' }}>Sınıf seçin...</Typography>;
-                                  }
-                                  return (
-                                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, maxHeight: '26px', overflow: 'hidden' }}>
-                                      {selected.map((value) => (
-                                        <Chip
-                                          key={value}
-                                          label={value}
-                                          size="small"
-                                          color="primary"
-                                          variant="outlined"
-                                          sx={{ height: '20px', fontSize: '0.7rem', fontWeight: 700, borderRadius: '6px' }}
-                                        />
-                                      ))}
-                                    </Box>
-                                  );
-                                }}
-                                sx={{
-                                  minWidth: 200,
-                                  height: '40px',
-                                  borderRadius: '10px',
-                                  bgcolor: '#f8fafc',
-                                  transition: 'all 0.2s',
-                                  '&:hover': { bgcolor: '#ffffff' },
-                                  '&.Mui-focused': { bgcolor: '#ffffff' },
-                                  '& .MuiSelect-select': {
-                                    minWidth: '180px',
-                                    display: 'flex',
-                                    alignItems: 'center'
-                                  }
-                                }}
-                                disabled={readOnly}
-                              >
-                                {mevcutSiniflar
-                                  .filter(sinif => {
-                                    // Bu derse zaten eklenmiş sınıfları filtrele
-                                    if (ders.siniflar.includes(sinif)) return false;
-
-                                    // Diğer derslere eklenmiş sınıfları filtrele
-                                    const digerDerslerdeKullanilanSiniflar = formData.dersler
-                                      .filter(d => d !== ders)
-                                      .flatMap(d => d.siniflar);
-
-                                    return !digerDerslerdeKullanilanSiniflar.includes(sinif);
-                                  })
-                                  .map(sinif => (
-                                    <MenuItem
-                                      key={sinif}
-                                      value={sinif}
-                                      sx={{
-                                        fontWeight: (seciliSiniflar[dersIdForHandlers] || []).includes(sinif) ? 700 : 'normal',
-                                        backgroundColor: (seciliSiniflar[dersIdForHandlers] || []).includes(sinif)
-                                          ? 'action.selected'
-                                          : 'transparent',
-                                        '&.Mui-selected': {
-                                          backgroundColor: 'action.selected',
-                                          fontWeight: 700,
-                                          '&:hover': {
-                                            backgroundColor: 'action.focus',
-                                          }
-                                        },
-                                        '&:hover': {
-                                          backgroundColor: (seciliSiniflar[dersIdForHandlers] || []).includes(sinif)
-                                            ? 'action.focus'
-                                            : 'action.hover',
-                                        }
-                                      }}
-                                    >
-                                      {sinif}
-                                    </MenuItem>
-                                  ))}
-                              </Select>
-                            </FormControl>
-
-                            <Button
-                              variant="outlined"
-                              size="small"
-                              onClick={() => handleSinifEkleButon(dersIdForHandlers)}
-                              disabled={readOnly || mevcutSiniflar.filter(sinif => {
-                                // Bu derse zaten eklenmiş sınıfları filtrele
-                                if (ders.siniflar.includes(sinif)) return false;
-
-                                // Diğer derslere eklenmiş sınıfları filtrele
-                                const digerDerslerdeKullanilanSiniflar = formData.dersler
-                                  .filter(d => (d.id ?? d.uuid ?? `${d.ad || 'ders'}-${index}`) !== dersIdForHandlers)
-                                  .flatMap(d => d.siniflar);
-
-                                return !digerDerslerdeKullanilanSiniflar.includes(sinif);
-                              }).length === 0}
-                              sx={{
-                                minWidth: 'auto',
-                                px: 2.5,
-                                height: '40px', // Select ve TextField ile aynı yükseklik
-                                borderRadius: '10px',
-                                fontWeight: 700,
-                                textTransform: 'none',
-                                flexShrink: 0
-                              }}
-                            >
-                              Ekle
-                            </Button>
+                      {Array.isArray(ders.siniflar) && ders.siniflar.length > 0 && (
+                        <Box>
+                          <Typography variant="body2" color="text.secondary" sx={{ mb: 0.75, display: 'flex', alignItems: 'center', gap: 0.5, fontSize: '0.78rem', fontWeight: 600 }}>
+                            <AddIcon fontSize="small" /> Bu dersi alan sınıflar:
+                          </Typography>
+                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
+                            {ders.siniflar.map(sinif => (<Chip key={`${dersKey}-${sinif}`} label={sinif} onDelete={!readOnly ? () => handleSinifSil(dersIdForHandlers, sinif) : undefined} color="primary" variant="outlined" size="small" sx={{ height: 24, borderRadius: '6px', fontWeight: 700, fontSize: '0.72rem', opacity: readOnly ? 0.7 : 1 }} />))}
                           </Box>
-                        </Grid>
-
-                        {Array.isArray(ders.siniflar) && ders.siniflar.length > 0 ? (
-                          <Grid item xs={12} key={`siniflar-listesi-${dersKey}`}>
-                            <Typography
-                              variant="body2"
-                              color="text.secondary"
-                              sx={{
-                                mb: 0.75,
-                                textAlign: 'left',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 0.75,
-                                fontSize: '0.78rem',
-                                fontWeight: 600
-                              }}
-                            >
-                              <AddIcon fontSize="small" /> Bu dersi alan sınıflar:
-                            </Typography>
-                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
-                              {ders.siniflar.map(sinif => (
-                                <Chip
-                                  key={`${dersKey}-${sinif}`}
-                                  label={sinif}
-                                  onDelete={!readOnly ? () => handleSinifSil(dersIdForHandlers, sinif) : undefined}
-                                  color="primary"
-                                  variant="outlined"
-                                  size="small"
-                                  sx={{
-                                    height: 24,
-                                    borderRadius: '6px',
-                                    fontWeight: 700,
-                                    fontSize: '0.72rem',
-                                    opacity: readOnly ? 0.7 : 1
-                                  }}
-                                />
-                              ))}
-                            </Box>
-                          </Grid>
-                        ) : null}
-                      </Grid>
+                        </Box>
+                      )}
                     </CardContent>
                   </Card>
                 );
               })}
-
-              <Button
-                variant="outlined"
-                startIcon={<AddIcon />}
-                onClick={handleDersEkle}
-                disabled={readOnly || formData.dersler.length >= 4 || yerlesimPlaniVarMi()}
-                sx={{ mt: 1 }}
-              >
-                Ders Ekle {formData.dersler.length >= 4 && '(Maksimum 4 ders)'}
-              </Button>
-            </Grid>
+            </Box>
+          </Box>
 
 
-          </Grid>
-        </form>
-      </CardContent>
-    </Card>
-    
       {/* Ders Silme Onayı Dialogu */}
       <Dialog open={dersSilmeDialogAcik} onClose={dersSilIptal} maxWidth="xs" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
         <DialogTitle>
-          <DialogHeader icon={<DeleteIcon color="error" />} title="Ders Silme Onayı" />
+          <DialogHeader icon={<DeleteIcon />} title="Ders Silme Onayı" variant="danger" onClose={dersSilIptal} />
         </DialogTitle>
         <DialogContent>
           <Typography variant="body2">Seçili dersi silmek istediğinize emin misiniz?</Typography>
@@ -789,6 +637,9 @@ const AyarlarFormu = memo(({ ayarlar, onAyarlarDegistir, ogrenciler, yerlestirme
           <Button onClick={dersSilOnayla} color="error" variant="contained">Sil</Button>
         </DialogActions>
       </Dialog>
+
+      </CardContent>
+    </Card>
     </Box>
   );
 });

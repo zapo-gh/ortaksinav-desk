@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useCallback, useMemo } from 'react';
+﻿import React, { createContext, useContext, useEffect, useCallback, useMemo } from 'react';
 import logger from '../utils/logger';
 import {
   waitForAuth,
@@ -81,7 +81,7 @@ export const ExamProvider = ({ children }) => {
     return role === 'admin';
   }, [role]);
 
-  // Uygulama aÃ§Ä±lÄ±ÅŸÄ±nda SQLite'dan verileri yÃ¼kle (useQuery enabled:false olduÄŸu iÃ§in manuel)
+  // Uygulama açılışında SQLite'dan verileri yükle (useQuery enabled:false olduğu için manuel)
   useEffect(() => {
     let cancelled = false;
     async function loadLocalData() {
@@ -102,9 +102,9 @@ export const ExamProvider = ({ children }) => {
           updateAyarlar(settings);
         }
         setLocalDataLoaded(true);
-        logger.info('âœ… Yerel veriler SQLite\'tan yÃ¼klendi:', { students: students?.length, salons: salons?.length, settings: Object.keys(settings || {}).length });
+        logger.info('âœ… Yerel veriler SQLite\'tan yüklendi:', { students: students?.length, salons: salons?.length, settings: Object.keys(settings || {}).length });
       } catch (error) {
-        logger.error('âŒ Yerel veri yÃ¼kleme hatasÄ±:', error);
+        logger.error('âŒ Yerel veri yükleme hatası:', error);
         setLocalDataLoaded(true);
       }
     }
@@ -114,31 +114,31 @@ export const ExamProvider = ({ children }) => {
 
   // Initial data loading from database - Server First Strategy
 
-  // Ã–ÄŸrenciler: Ä°lk yÃ¼klemede sunucu verisi varsa store'u gÃ¼ncelle (yerel veriyi ez)
+  // Öğrenciler: İlk yüklemede sunucu verisi varsa store'u güncelle (yerel veriyi ez)
   useEffect(() => {
     const shouldSync = !initialSyncRef.current.students && studentsData && studentsData.length > 0 && !studentsLoading;
 
     if (shouldSync) {
-      logger.info('ğŸ“¥ ExamContext: Ä°lk yÃ¼kleme - Sunucudan Ã¶ÄŸrenciler senkronize ediliyor (Server First)...', studentsData.length);
+      logger.info('ğŸ“¥ ExamContext: İlk yükleme - Sunucudan öğrenciler senkronize ediliyor (Server First)...', studentsData.length);
       setOgrenciler(studentsData);
       initialSyncRef.current.students = true;
     }
-    // shouldPopulateEmpty kaldÄ±rÄ±ldÄ± - kullanÄ±cÄ± Ã¶ÄŸrencileri silerse geri yÃ¼klememesin
+    // shouldPopulateEmpty kaldırıldı - kullanıcı öğrencileri silerse geri yüklememesin
   }, [studentsData, studentsLoading, setOgrenciler]);
 
-  // Salonlar: Ä°lk yÃ¼klemede sunucu verisi varsa store'u gÃ¼ncelle
+  // Salonlar: İlk yüklemede sunucu verisi varsa store'u güncelle
   useEffect(() => {
     const shouldSync = !initialSyncRef.current.salons && salonsData && salonsData.length > 0 && !salonsLoading;
 
     if (shouldSync) {
-      logger.info('ğŸ“¥ ExamContext: Ä°lk yÃ¼kleme - Sunucudan salonlar senkronize ediliyor (Server First)...', salonsData.length);
+      logger.info('ğŸ“¥ ExamContext: İlk yükleme - Sunucudan salonlar senkronize ediliyor (Server First)...', salonsData.length);
       setSalonlar(salonsData);
       initialSyncRef.current.salons = true;
     }
-    // shouldPopulateEmpty kaldÄ±rÄ±ldÄ± - tutarlÄ±lÄ±k iÃ§in Ã¶ÄŸrencilerle aynÄ± mantÄ±k
+    // shouldPopulateEmpty kaldırıldı - tutarlılık için öğrencilerle aynı mantık
   }, [salonsData, salonsLoading, setSalonlar]);
 
-  // Salonlar deÄŸiÅŸtiÄŸinde SQLite'a kaydet (debounce ile)
+  // Salonlar değiştiğinde SQLite'a kaydet (debounce ile)
   useEffect(() => {
     if (!localDataLoaded || !isWriteAllowed) return;
 
@@ -156,20 +156,20 @@ export const ExamProvider = ({ children }) => {
     return () => clearTimeout(timeoutId);
   }, [salonlar, localDataLoaded, isWriteAllowed]);
 
-  // Ayarlar: Ä°lk yÃ¼klemede sunucu verisi varsa store'u gÃ¼ncelle
+  // Ayarlar: İlk yüklemede sunucu verisi varsa store'u güncelle
   useEffect(() => {
     const hasData = settingsData && Object.keys(settingsData).length > 0;
     const shouldSync = !initialSyncRef.current.settings && hasData && !settingsLoading;
 
     if (shouldSync) {
-      logger.info('ğŸ“¥ ExamContext: Ä°lk yÃ¼kleme - Sunucudan ayarlar senkronize ediliyor (Server First)...');
+      logger.info('ğŸ“¥ ExamContext: İlk yükleme - Sunucudan ayarlar senkronize ediliyor (Server First)...');
       updateAyarlar(settingsData);
       initialSyncRef.current.settings = true;
     }
-    // shouldPopulateEmpty kaldÄ±rÄ±ldÄ± - tutarlÄ±lÄ±k iÃ§in Ã¶ÄŸrencilerle aynÄ± mantÄ±k
+    // shouldPopulateEmpty kaldırıldı - tutarlılık için öğrencilerle aynı mantık
   }, [settingsData, settingsLoading, updateAyarlar]);
 
-  // YÃ¼kleme durumu - query'ler disabled olduÄŸu iÃ§in direkt durdur
+  // Yükleme durumu - query'ler disabled olduğu için direkt durdur
   useEffect(() => {
     if (yukleme) {
       stopLoading();
@@ -230,17 +230,17 @@ export const ExamProvider = ({ children }) => {
       try {
         const trimmed = (username || '').trim();
         if (!trimmed || !password) {
-          throw new Error('KullanÄ±cÄ± adÄ± ve ÅŸifre zorunludur.');
+          throw new Error('Kullanıcı adı ve şifre zorunludur.');
         }
         const session = await signInWithEmail(trimmed, password, rememberMe);
         clearCachedRole();
         prevAuthUserRef.current = null;
-        initialSyncRef.current = { students: false, salons: false, settings: false }; // Sync ref'ini sÄ±fÄ±rla
+        initialSyncRef.current = { students: false, salons: false, settings: false }; // Sync ref'ini sıfırla
         setRoleAction('admin');
         setAuthUser({ uid: session.id, email: session.username, displayName: session.displayName });
         return { success: true };
       } catch (error) {
-        logger.error('âŒ GiriÅŸ denemesi baÅŸarÄ±sÄ±z:', error);
+        logger.error('âŒ Giriş denemesi başarısız:', error);
         return { success: false, error };
       }
     },
@@ -252,12 +252,12 @@ export const ExamProvider = ({ children }) => {
       await signOutUser();
       clearCachedRole();
       prevAuthUserRef.current = null;
-      initialSyncRef.current = { students: false, salons: false, settings: false }; // Sync ref'ini sÄ±fÄ±rla
+      initialSyncRef.current = { students: false, salons: false, settings: false }; // Sync ref'ini sıfırla
       setAuthUser(null);
       setRoleAction('public');
       return { success: true };
     } catch (error) {
-      logger.error('âŒ Ã‡Ä±kÄ±ÅŸ iÅŸlemi baÅŸarÄ±sÄ±z:', error);
+      logger.error('âŒ Çıkış işlemi başarısız:', error);
       return { success: false, error };
     }
   }, [setAuthUser, setRoleAction]);
@@ -282,7 +282,7 @@ export const ExamProvider = ({ children }) => {
       const currentRole = await getUserRole();
       setRoleAction(currentRole);
 
-      // BaÅŸlangÄ±Ã§ta refreshFromFirestore Ã§aÄŸrma - sadece sonradan auth deÄŸiÅŸirse
+      // Başlangıçta refreshFromFirestore çağrma - sadece sonradan auth değişirse
       if (isInitialized && userId !== prevUserId && prevUserId !== null) {
         await refreshFromFirestore({ showLoading: false });
       }
@@ -300,15 +300,15 @@ export const ExamProvider = ({ children }) => {
     ogrencilerYukle: async (yeniOgrenciler) => {
       try {
         await db.saveStudents(yeniOgrenciler);
-        logger.info('âœ… Ã–ÄŸrenciler SQLite\'a kaydedildi');
-        // Her durumda local state'i gÃ¼ncelle (offline Ã§alÄ±ÅŸma desteÄŸi)
+        logger.info('âœ… Öğrenciler SQLite\'a kaydedildi');
+        // Her durumda local state'i güncelle (offline çalışma desteği)
         setOgrenciler(yeniOgrenciler);
         return { success: true };
       } catch (error) {
-        logger.error('âŒ Ã–ÄŸrenciler kaydedilemedi:', error);
-        // VeritabanÄ± hatasÄ± olsa bile local state'i gÃ¼ncelle (kullanÄ±cÄ± Ã§alÄ±ÅŸmaya devam edebilsin)
+        logger.error('âŒ Öğrenciler kaydedilemedi:', error);
+        // Veritabanı hatası olsa bile local state'i güncelle (kullanıcı çalışmaya devam edebilsin)
         setOgrenciler(yeniOgrenciler);
-        setHata(`Ã–ÄŸrenciler kaydedilirken hata oluÅŸtu: ${error.message}. DeÄŸiÅŸiklikler geÃ§ici olarak kaydedildi.`);
+        setHata(`Öğrenciler kaydedilirken hata oluştu: ${error.message}. Değişiklikler geçici olarak kaydedildi.`);
         throw error;
       }
     },
@@ -319,12 +319,12 @@ export const ExamProvider = ({ children }) => {
     ogrencileriTemizle: async () => {
       try {
         await db.saveStudents([]);
-        logger.info('âœ… TÃ¼m Ã¶ÄŸrenciler veritabanÄ±ndan silindi');
+        logger.info('âœ… Tüm öğrenciler veritabanından silindi');
         clearOgrenciler();
         await queryClient.invalidateQueries(['students']);
         return { success: true };
       } catch (error) {
-        logger.error('âŒ Ã–ÄŸrenciler silinemedi:', error);
+        logger.error('âŒ Öğrenciler silinemedi:', error);
         throw error;
       }
     },

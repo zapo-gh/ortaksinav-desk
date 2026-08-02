@@ -1,6 +1,6 @@
-/**
+﻿/**
  * Mojibake normalization for common UTF-8 Türkçe patterns
- * Example: "KayÄ±tlÄ±" -> "Kayıtlı" (Ã/Ä/Å + â€“/â€¢ etc.)
+ * Example: "Kayıtlı" -> "Kayıtlı" (Ã/Ä/Å + â€“/â€¢ etc.)
  *
  * Notes:
  * - This is a best-effort normalization (heuristic). It should be applied only to
@@ -9,25 +9,25 @@
 
 const REPLACEMENTS = [
   // Düzeltmeler (en sık)
-  ['Ãœ', 'Ü'],
-  ['Ã¶', 'ö'],
-  ['Ã–', 'Ö'],
+  ['Ü', 'Ü'],
+  ['ö', 'ö'],
+  ['Ö', 'Ö'],
   ['Ã¤', 'ä'], // fallback (rare)
   ['Ã¤', 'ä'],
   ['Ã±', 'ñ'],
 
-  ['Ã‡', 'Ç'],
-  ['Åž', 'Ş'],
-  ['Åž', 'Ş'],
-  ['ÅŸ', 'ş'],
+  ['Ç', 'Ç'],
+  ['Ş', 'Ş'],
+  ['Ş', 'Ş'],
+  ['ş', 'ş'],
 
-  ['Ä°', 'İ'],
-  ['Ä±', 'ı'],
-  ['Ä°', 'İ'],
-  ['ÅŸ', 'ş'],
+  ['İ', 'İ'],
+  ['ı', 'ı'],
+  ['İ', 'İ'],
+  ['ş', 'ş'],
 
   ['ÃŸ', 'ß'],
-  ['ÄŸ', 'ğ'],
+  ['ğ', 'ğ'],
   ['ÃŸ', 'ß'],
 
   ['â€“', '–'],
@@ -37,9 +37,9 @@ const REPLACEMENTS = [
   ['â€¦', '…'],
   ['â€¢', '•'],
 
-  ['ÅŸ', 'ş'],
-  ['Åž', 'Ş'],
-  ['Ä°', 'İ'],
+  ['ş', 'ş'],
+  ['Ş', 'Ş'],
+  ['İ', 'İ'],
 
   // Sık görülen UI Türkçe örnekleri (tam dönüşüm hedef)
   ['Kayıtlı', 'Kayıtlı'], // no-op, keep for clarity
@@ -47,28 +47,28 @@ const REPLACEMENTS = [
 
 // More accurate explicit sequence fixes (high precision)
 const SEQUENCE_REPLACEMENTS = [
-  ['KayÄ±tlÄ±', 'Kayıtlı'],
-  ['HenÃ¼z', 'Henüz'],
-  ['AKTÄ°F', 'AKTİF'],
-  ['ARÅÄ°V', 'ARŞİF'],
-  ['PlanÄ±', 'Planı'],
-  ['Plan AdÄ±', 'Plan Adı'],
-  ['Yeni Plan AdÄ±', 'Yeni Plan Adı'],
-  ['DB YedeÄŸi', 'DB Yedeği'],
-  ['DB yedeÄŸi', 'DB yedeği'],
-  ['DB yedeÄŸi', 'DB yedeği'],
-  ['ArÅŸivden Ã‡Ä±kar', 'Arşivden Çıkar'],
-  ['ArÅŸivlenmiÅŸ', 'Arşivlenmiş'],
-  ['Plan yÃ¼klendi', 'Plan yüklendi'],
-  ['PlanÄ± ArÅŸivle', 'Planı Arşivle'],
-  ['Plan AdÄ±nÄ± DeÄŸiÅŸtir', 'Plan Adını Değiştir'],
-  ['Plan adÄ± gÃ¼ncelleniyor', 'Plan adı güncelleniyor'],
-  ['iÅŸlem', 'işlem'],
-  ['Bu planÄ± silmek', 'Bu planı silmek'],
-  ['Ä°ptal', 'İptal'],
-  ['Ä°simsiz', 'İsimsiz'],
-  ['GeÃ§ici Plan', 'Geçici Plan'],
-  ['TÃ¼m planlar', 'Tüm planlar'],
+  ['Kayıtlı', 'Kayıtlı'],
+  ['Henüz', 'Henüz'],
+  ['AKTİF', 'AKTİF'],
+  ['ARÅİV', 'ARŞİF'],
+  ['Planı', 'Planı'],
+  ['Plan Adı', 'Plan Adı'],
+  ['Yeni Plan Adı', 'Yeni Plan Adı'],
+  ['DB Yedeği', 'DB Yedeği'],
+  ['DB yedeği', 'DB yedeği'],
+  ['DB yedeği', 'DB yedeği'],
+  ['Arşivden Çıkar', 'Arşivden Çıkar'],
+  ['Arşivlenmiş', 'Arşivlenmiş'],
+  ['Plan yüklendi', 'Plan yüklendi'],
+  ['Planı Arşivle', 'Planı Arşivle'],
+  ['Plan Adını Değiştir', 'Plan Adını Değiştir'],
+  ['Plan adı güncelleniyor', 'Plan adı güncelleniyor'],
+  ['işlem', 'işlem'],
+  ['Bu planı silmek', 'Bu planı silmek'],
+  ['İptal', 'İptal'],
+  ['İsimsiz', 'İsimsiz'],
+  ['Geçici Plan', 'Geçici Plan'],
+  ['Tüm planlar', 'Tüm planlar'],
 ];
 
 // General heuristic: apply sequence replacements then simple char replacements.
@@ -89,19 +89,19 @@ function fixText(input) {
   // Generic replacements
   // Use direct mapping for common UTF-8 Türkçe mojibake fragments.
   out = out
-    .replace(/KayÄ±tlÄ±/g, 'Kayıtlı')
-    .replace(/HenÃ¼z/g, 'Henüz')
-    .replace(/AKTÄ°F/g, 'AKTİF')
-    .replace(/ARÅÄ°V/g, 'ARŞİF')
-    .replace(/Ä°/g, 'İ')
-    .replace(/Ä±/g, 'ı')
-    .replace(/ÅŸ/g, 'ş')
-    .replace(/Åž/g, 'Ş')
-    .replace(/Ãœ/g, 'Ü')
-    .replace(/Ã¼/g, 'ü')
-    .replace(/Ã–/g, 'Ö')
-    .replace(/Ã¶/g, 'ö')
-    .replace(/Ã‡/g, 'Ç')
+    .replace(/Kayıtlı/g, 'Kayıtlı')
+    .replace(/Henüz/g, 'Henüz')
+    .replace(/AKTİF/g, 'AKTİF')
+    .replace(/ARÅİV/g, 'ARŞİF')
+    .replace(/İ/g, 'İ')
+    .replace(/ı/g, 'ı')
+    .replace(/ş/g, 'ş')
+    .replace(/Ş/g, 'Ş')
+    .replace(/Ü/g, 'Ü')
+    .replace(/ü/g, 'ü')
+    .replace(/Ö/g, 'Ö')
+    .replace(/ö/g, 'ö')
+    .replace(/Ç/g, 'Ç')
     .replace(/â€“/g, '–')
     .replace(/â€™/g, '’')
     .replace(/â€œ/g, '“')
@@ -109,7 +109,7 @@ function fixText(input) {
     .replace(/â€¦/g, '…')
     .replace(/â€¢/g, '•')
     .replace(/â€¢/g, '•')
-    .replace(/GeÃ§ici/g, 'Geçici');
+    .replace(/Geçici/g, 'Geçici');
 
   return out;
 }

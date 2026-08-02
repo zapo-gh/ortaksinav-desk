@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Mobile Optimizer Component
  * Provides mobile-specific optimizations and responsive features
  */
@@ -214,7 +214,7 @@ const MobileOptimizer = ({
         PaperProps={{ sx: { borderRadius: 3 } }}
       >
         <DialogTitle>
-          <DialogHeader icon={<PhoneIphoneIcon color="primary" />} title="Mobil Cihaz Tespit Edildi" />
+          <DialogHeader icon={<PhoneIphoneIcon />} title="Mobil Cihaz Tespit Edildi" variant="warning" />
         </DialogTitle>
         <DialogContent>
           <Typography gutterBottom>

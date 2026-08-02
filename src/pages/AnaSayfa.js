@@ -48,6 +48,7 @@ import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { motion, AnimatePresence } from 'framer-motion';
 
+import Sidebar from '../components/common/Sidebar';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import ErrorBoundary from '../components/ErrorBoundary';
@@ -87,6 +88,10 @@ const AnaSayfaContent = React.memo(() => {
   const [seciliSalonId, setSeciliSalonId] = useState(null);
   const { showSuccess, showError, showInfo } = useNotifications();
   const [dndJustEnded, setDndJustEnded] = useState(false);
+
+  // Sidebar States
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
 
   // 1. State Selectors
   const ogrenciler = useExamStore(s => s.ogrenciler);
@@ -681,137 +686,25 @@ const AnaSayfaContent = React.memo(() => {
     <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
       <Box sx={{
         display: 'flex',
-        flexDirection: 'column',
         minHeight: '100vh',
-        bgcolor: 'grey.100'
+        bgcolor: 'transparent'
       }}>
-          <Header
-            baslik="Ortak Sınav Yerleşim Sistemi"
-            onHomeClick={() => tabDegistir('genel-ayarlar')}
-            onTestDashboardClick={() => tabDegistir('test-dashboard')}
-            showNav={false}
-          />
-
-        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-          <Container maxWidth="xl" sx={{ py: { xs: 1, sm: 2 }, flex: 1 }}>
+        <Sidebar 
+          isMobile={isMobile} 
+          mobileOpen={mobileOpen} 
+          setMobileOpen={setMobileOpen} 
+          collapsed={collapsed} 
+          setCollapsed={setCollapsed} 
+        />
+        
+        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+          <Container maxWidth={false} sx={{ py: { xs: 1.5, sm: 2 }, px: { xs: 2, sm: 4, md: 5 }, flex: 1, display: 'flex', flexDirection: 'column' }}>
             {/* Hata Gösterme */}
             {hata && (
-              <Alert
-                severity="error"
-                onClose={hataTemizle}
-                sx={{ mb: 2 }}
-              >
+              <Alert severity="error" onClose={hataTemizle} sx={{ mb: 3 }}>
                 {hata}
               </Alert>
             )}
-
-            {/* Sekme Navigasyonu */}
-            <Paper
-              elevation={1}
-              sx={{
-                mb: { xs: 2, sm: 3 },
-                position: { xs: 'sticky', sm: 'relative' },
-                top: { xs: 0, sm: 0 },
-                zIndex: { xs: 1000, sm: 1 },
-                backgroundColor: 'background.paper',
-                width: '100%'
-              }}
-            >
-              <Tabs
-                value={aktifTab}
-                onChange={(e, newValue) => tabDegistir(newValue)}
-                variant={isMobile ? "scrollable" : "standard"}
-                scrollButtons={isMobile ? "auto" : false}
-                centered={!isMobile}
-                allowScrollButtonsMobile
-                sx={{
-                  borderBottom: 1,
-                  borderColor: 'divider',
-                  '& .MuiTabs-scrollButtons': {
-                    '&.Mui-disabled': {
-                      opacity: 0.3
-                    }
-                  },
-                  '& .MuiTab-root': {
-                    minWidth: { xs: 'auto', sm: 'auto' },
-                    minHeight: { xs: 46, sm: 48 },
-                    px: { xs: 1.25, sm: 2 },
-                    fontSize: { xs: '0.84rem', sm: '0.89rem' },
-                    whiteSpace: 'nowrap'
-                  }
-                }}
-              >
-                <Tab
-                  icon={<SettingsIcon />}
-                  label={"Ayarlar"}
-                  value="genel-ayarlar"
-                  sx={{ textTransform: 'none' }}
-                />
-                <Tab
-                  icon={<PeopleIcon />}
-                  label={"Öğrenciler"}
-                  value="ogrenciler"
-                  sx={{ textTransform: 'none' }}
-                />
-                <Tab
-                  icon={<BookIcon />}
-                  label={"Dersler"}
-                  value="ayarlar"
-                  sx={{ textTransform: 'none' }}
-                />
-                <Tab
-                  icon={<MeetingRoomIcon />}
-                  label={"Sınav Salonları"}
-                  value="salonlar"
-                  sx={{ textTransform: 'none' }}
-                />
-                <Tab
-                  icon={<AssignmentIcon />}
-                  label={"Sabit Atamalar"}
-                  value="sabit-atamalar"
-                  sx={{ textTransform: 'none' }}
-                />
-                <Tab
-                  icon={<AssessmentIcon />}
-                  label={"Planlama Yap"}
-                  value="planlama"
-                  sx={{ textTransform: 'none' }}
-                />
-                <Tab
-                  icon={<ChairIcon />}
-                  label={"Salon Planı"}
-                  value="salon-plani"
-                  sx={{ textTransform: 'none' }}
-                />
-                <Tab
-                  icon={<SaveIcon />}
-                  label={"Kayıtlı Planlar"}
-                  value="kayitli-planlar"
-                  sx={{ textTransform: 'none' }}
-                />
-                {(() => {
-                  try {
-                    const urlParams = new URLSearchParams(window.location.search);
-                    const enabledByQuery = urlParams.get('dbtest') === '1';
-                    const enabledByStorage = localStorage.getItem('enable_db_test') === '1';
-                    if (enabledByQuery || enabledByStorage) {
-                      if (enabledByQuery) localStorage.setItem('enable_db_test', '1');
-                      return (
-                        <Tab
-                          icon={<BugReportIcon />}
-                          label={("Veritabanı Test").toLocaleUpperCase('tr-TR')}
-                          value="database-test"
-                          sx={{ textTransform: 'none' }}
-                        />
-                      );
-                    }
-                  } catch (e) {
-                    logger.debug('Database test tab görünürlük kontrolünde hata:', e);
-                  }
-                  return null;
-                })()}
-              </Tabs>
-            </Paper>
 
             {/* Planda yerleşmeyen öğrenciler için drop zone */}
             {yerlestirmeSonucu && yerlestirmeSonucu.yerlesilemeyenOgrenciler && yerlestirmeSonucu.yerlesilemeyenOgrenciler.length > 0 && (
@@ -829,8 +722,6 @@ const AnaSayfaContent = React.memo(() => {
             {renderTabIcerik()}
           </Container>
         </Box>
-
-        <Footer />
 
         {/* Hızlı İşlem Butonları */}
         <Fab

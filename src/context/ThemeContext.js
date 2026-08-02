@@ -28,9 +28,15 @@ export const CustomThemeProvider = ({ children }) => {
     setMode((prevMode) => {
       const newMode = prevMode === 'light' ? 'dark' : 'light';
       localStorage.setItem('app_theme_mode', newMode);
+      document.documentElement.setAttribute('data-theme', newMode);
       return newMode;
     });
   };
+
+  // Ensure data-theme is set on mount
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', mode);
+  }, [mode]);
 
   const theme = useMemo(
     () =>
@@ -42,9 +48,11 @@ export const CustomThemeProvider = ({ children }) => {
                 // Light mode palette (SaaS Corporate)
                 primary: { main: '#4F46E5', light: '#818CF8', dark: '#3730A3', contrastText: '#ffffff' },
                 secondary: { main: '#0EA5E9', light: '#38BDF8', dark: '#0284C7', contrastText: '#ffffff' },
-                background: { default: '#F8FAFC', paper: '#ffffff' },
+                background: { default: '#F4F7F9', paper: '#ffffff' },
                 text: { primary: '#0F172A', secondary: '#64748B' },
                 divider: 'rgba(226, 232, 240, 1)',
+                female: { main: '#ec4899', light: '#f472b6', dark: '#db2777', 50: '#fdf2f8', 100: '#fce7f3', 200: '#fbcfe8', contrastText: '#ffffff' },
+                male: { main: '#3b82f6', light: '#60a5fa', dark: '#2563eb', 50: '#eff6ff', 100: '#dbeafe', 200: '#bfdbfe', contrastText: '#ffffff' },
               }
             : {
                 // Dark mode palette
@@ -53,6 +61,8 @@ export const CustomThemeProvider = ({ children }) => {
                 background: { default: '#0F172A', paper: '#1E293B' },
                 text: { primary: '#F8FAFC', secondary: '#94A3B8' },
                 divider: 'rgba(51, 65, 85, 1)',
+                female: { main: '#f472b6', light: '#f9a8d4', dark: '#ec4899', 50: '#831843', 100: '#9d174d', 200: '#be185d', contrastText: '#ffffff' },
+                male: { main: '#60a5fa', light: '#93c5fd', dark: '#3b82f6', 50: '#1e3a8a', 100: '#1e40af', 200: '#1d4ed8', contrastText: '#ffffff' },
               }),
         },
         typography: {
@@ -64,16 +74,18 @@ export const CustomThemeProvider = ({ children }) => {
           subtitle2: { fontWeight: 500 },
           button: { textTransform: 'none', fontWeight: 600, letterSpacing: '0.01em' },
         },
-        shape: { borderRadius: 12 },
+        shape: { borderRadius: 8 },
         components: {
           MuiButton: {
             styleOverrides: {
               root: {
-                borderRadius: '10px',
+                borderRadius: '8px',
                 textTransform: 'none',
                 fontWeight: 600,
+                boxShadow: 'none',
                 transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                 '&:hover': {
+                  boxShadow: 'none',
                   transform: 'translateY(-1px)',
                 },
               },
@@ -82,46 +94,78 @@ export const CustomThemeProvider = ({ children }) => {
           MuiCard: {
             styleOverrides: {
               root: {
-                borderRadius: '16px',
-                boxShadow: mode === 'light' 
-                  ? '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)'
-                  : '0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.2)',
+                borderRadius: '12px',
+                boxShadow: 'none',
                 border: '1px solid',
                 borderColor: mode === 'light' ? 'rgba(226, 232, 240, 1)' : 'rgba(51, 65, 85, 1)',
+                backgroundColor: mode === 'light' ? 'rgba(255, 255, 255, 0.7)' : 'rgba(15, 23, 42, 0.7)',
+                backdropFilter: 'blur(16px)',
                 transition: 'all 0.25s ease',
-                '&:hover': {
-                  boxShadow: mode === 'light'
-                    ? '0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.025)'
-                    : '0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.3)',
-                },
-                backgroundColor: mode === 'light' ? '#ffffff' : '#1e293b',
               },
             },
           },
           MuiPaper: {
             styleOverrides: {
               rounded: {
-                borderRadius: '16px',
+                borderRadius: '12px',
               },
+              root: {
+                backgroundColor: mode === 'light' ? 'rgba(255, 255, 255, 0.7)' : 'rgba(15, 23, 42, 0.7)',
+                backdropFilter: 'blur(16px)',
+              }
             },
           },
           MuiDialog: {
+            defaultProps: {
+              TransitionProps: { timeout: 250 },
+            },
             styleOverrides: {
               paper: {
-                borderRadius: '18px',
+                borderRadius: '20px',
                 boxShadow: mode === 'light'
-                  ? '0 25px 50px -12px rgba(15, 23, 42, 0.25)'
-                  : '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
-                backdropFilter: 'blur(8px)',
-                backgroundColor: mode === 'light' ? 'rgba(255, 255, 255, 0.95)' : 'rgba(30, 41, 59, 0.95)',
+                  ? '0 32px 64px -12px rgba(15, 23, 42, 0.28), 0 0 0 1px rgba(226, 232, 240, 0.6)'
+                  : '0 32px 64px -12px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(51, 65, 85, 0.6)',
+                backdropFilter: 'none',
+                backgroundColor: mode === 'light' ? '#ffffff' : '#0f172a',
+                border: `1px solid ${mode === 'light' ? 'rgba(226, 232, 240, 1)' : 'rgba(51, 65, 85, 1)'}`,
+              },
+              paperWidthXs: {
+                maxWidth: '400px',
+              },
+              paperWidthSm: {
+                maxWidth: '520px',
               },
             },
           },
           MuiBackdrop: {
             styleOverrides: {
               root: {
-                backdropFilter: 'blur(4px)',
-                backgroundColor: mode === 'light' ? 'rgba(15, 23, 42, 0.4)' : 'rgba(0, 0, 0, 0.6)',
+                backdropFilter: 'none',
+                backgroundColor: mode === 'light' ? 'rgba(15, 23, 42, 0.45)' : 'rgba(0, 0, 0, 0.65)',
+              },
+            },
+          },
+          MuiDialogTitle: {
+            styleOverrides: {
+              root: {
+                padding: 0,
+                fontSize: '1rem',
+                overflow: 'hidden',
+              },
+            },
+          },
+          MuiDialogContent: {
+            styleOverrides: {
+              root: {
+                padding: '8px 24px 16px 24px',
+              },
+            },
+          },
+          MuiDialogActions: {
+            styleOverrides: {
+              root: {
+                padding: '12px 24px 20px 24px',
+                gap: '8px',
               },
             },
           },
@@ -131,6 +175,7 @@ export const CustomThemeProvider = ({ children }) => {
                 fontWeight: 600,
                 textTransform: 'none',
                 borderRadius: '8px',
+                minHeight: '40px',
                 transition: 'all 0.2s',
               },
             },
@@ -139,22 +184,22 @@ export const CustomThemeProvider = ({ children }) => {
             styleOverrides: {
               root: {
                 fontWeight: 600,
-                borderRadius: '8px',
+                borderRadius: '6px',
               },
             },
           },
           MuiOutlinedInput: {
             styleOverrides: {
               root: {
-                borderRadius: '10px',
-                backgroundColor: mode === 'light' ? '#F8FAFC' : '#0F172A',
+                borderRadius: '8px',
+                backgroundColor: mode === 'light' ? 'rgba(248, 250, 252, 0.5)' : 'rgba(15, 23, 42, 0.5)',
                 transition: 'all 0.2s ease',
                 '&:hover .MuiOutlinedInput-notchedOutline': {
                   borderColor: mode === 'light' ? '#CBD5E1' : '#475569',
                 },
                 '&.Mui-focused': {
                   backgroundColor: mode === 'light' ? '#FFFFFF' : '#1E293B',
-                  boxShadow: mode === 'light' ? '0 0 0 3px rgba(79, 70, 229, 0.15)' : '0 0 0 3px rgba(129, 140, 248, 0.2)',
+                  boxShadow: mode === 'light' ? '0 0 0 2px rgba(79, 70, 229, 0.15)' : '0 0 0 2px rgba(129, 140, 248, 0.2)',
                 },
                 '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
                   borderColor: mode === 'light' ? '#4F46E5' : '#818CF8',
@@ -169,7 +214,7 @@ export const CustomThemeProvider = ({ children }) => {
           MuiTableCell: {
             styleOverrides: {
               root: {
-                borderBottom: `1px solid ${mode === 'light' ? '#F1F5F9' : '#334155'}`,
+                borderBottom: `1px solid ${mode === 'light' ? '#F1F5F9' : '#1E293B'}`,
                 padding: '16px',
               },
               head: {
@@ -179,7 +224,8 @@ export const CustomThemeProvider = ({ children }) => {
                 textTransform: 'uppercase',
                 fontSize: '0.75rem',
                 letterSpacing: '0.05em',
-                borderBottom: `1px solid ${mode === 'light' ? '#E2E8F0' : '#1E293B'}`,
+                borderBottom: `1px solid ${mode === 'light' ? '#E2E8F0' : '#334155'}`,
+                zIndex: 3,
               },
             },
           },

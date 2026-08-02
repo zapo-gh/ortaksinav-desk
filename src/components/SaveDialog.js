@@ -1,4 +1,6 @@
-import React, { useState, useCallback, memo } from 'react';
+﻿
+import SaveIcon from '@mui/icons-material/Save';
+import DialogHeader from './common/DialogHeader';
 import {
   Dialog,
   DialogTitle,
@@ -94,7 +96,7 @@ const SaveDialog = memo(({
       transitionDuration={0}
       PaperProps={{ sx: { borderRadius: 3 } }}
     >
-      <DialogTitle>Planı Kaydet</DialogTitle>
+      <DialogTitle><DialogHeader icon={<SaveIcon />} title="Planı Kaydet" variant="success" /></DialogTitle>
       <DialogContent sx={{ py: 2 }}>
         <TextField
           autoFocus

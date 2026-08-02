@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import PageHeader from './common/PageHeader';
+import DialogHeader from './common/DialogHeader';
 import {
   Box,
   Card,
@@ -36,6 +37,7 @@ import {
   ViewModule as ViewModuleIcon,
   ViewList as ViewListIcon,
   DeleteSweep as DeleteSweepIcon,
+  Delete as DeleteIcon,
   School as SchoolIcon,
   EventSeat as EventSeatIcon
 } from '@mui/icons-material';
@@ -480,12 +482,10 @@ const SabitAtamalar = () => {
   const salonDolulukOrani = salonKapasite > 0 ? Math.round((pinnedStudentsInSalon.length / salonKapasite) * 100) : 0;
 
   return (
-    <Box sx={{ maxWidth: 1200, mx: 'auto', mt: 3, mb: 4, px: { xs: 1, sm: 2 } }}>
+    <Box sx={{ width: '100%', mt: 0, mb: 4 }}>
       <PageHeader
         icon={<PushPinIcon sx={{ color: '#4F46E5', fontSize: 24 }} />}
         title="Sabit Atamalar & Görsel Oturma Şeması"
-        subtitle="Özel durumlu veya ön sırada oturması gereken öğrencileri istediğiniz koltuğa kolayca sabitleyin"
-        sx={{ mb: 3 }}
         actions={
           <Chip
             icon={<SchoolIcon fontSize="small" />}
@@ -503,12 +503,9 @@ const SabitAtamalar = () => {
           <Box
             sx={{
               display: 'flex',
+              flexWrap: 'wrap',
               gap: 1,
-              overflowX: 'auto',
-              pb: 1,
-              mb: 2,
-              '&::-webkit-scrollbar': { height: 6 },
-              '&::-webkit-scrollbar-thumb': { bgcolor: '#cbd5e1', borderRadius: 3 }
+              mb: 3
             }}
           >
             {normalizedSalons.map((s) => {
@@ -518,47 +515,44 @@ const SabitAtamalar = () => {
               const isFull = capacity > 0 && pinnedCount >= capacity;
 
               return (
-                <Paper
+                <Box
                   key={`salon-tab-${s.canonicalId}`}
                   onClick={() => setSelectedSalonId(s.canonicalId)}
-                  elevation={isSelected ? 3 : 0}
                   sx={{
-                    px: 1.75,
-                    py: 1,
-                    minWidth: 130,
-                    borderRadius: '12px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1,
+                    px: 1.5,
+                    py: 0.5,
+                    borderRadius: '8px',
                     cursor: 'pointer',
-                    border: '1.5px solid',
+                    border: '1px solid',
                     borderColor: isSelected ? 'primary.main' : '#e2e8f0',
                     bgcolor: isSelected ? '#eff6ff' : '#ffffff',
                     transition: 'all 0.15s ease',
-                    flexShrink: 0,
                     '&:hover': {
                       borderColor: 'primary.main',
                       bgcolor: isSelected ? '#eff6ff' : '#f8fafc'
                     }
                   }}
                 >
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.25 }}>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 800, fontSize: '0.82rem', color: isSelected ? 'primary.main' : 'text.primary' }}>
-                      {s.label}
-                    </Typography>
-                    <Chip
-                      size="small"
-                      label={`${pinnedCount}/${capacity || '?'}`}
-                      sx={{
-                        height: 18,
-                        fontSize: '0.65rem',
-                        fontWeight: 700,
-                        bgcolor: isFull ? '#fee2e2' : (pinnedCount > 0 ? '#dbeafe' : '#f1f5f9'),
-                        color: isFull ? '#b91c1c' : (pinnedCount > 0 ? '#1e40af' : '#64748b')
-                      }}
-                    />
-                  </Box>
-                  <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', fontSize: '0.68rem', fontWeight: 500 }}>
-                    {pinnedCount === 0 ? 'Boş salon' : `${pinnedCount} sabit öğrenci`}
+                  <Typography sx={{ fontWeight: 700, fontSize: '0.85rem', color: isSelected ? 'primary.main' : 'text.primary' }}>
+                    {s.label}
                   </Typography>
-                </Paper>
+                  <Box
+                    sx={{
+                      px: 0.75,
+                      py: 0.25,
+                      borderRadius: '4px',
+                      bgcolor: isFull ? '#fee2e2' : (pinnedCount > 0 ? '#dbeafe' : '#f1f5f9'),
+                      color: isFull ? '#b91c1c' : (pinnedCount > 0 ? '#1e40af' : '#64748b'),
+                      fontSize: '0.7rem',
+                      fontWeight: 700
+                    }}
+                  >
+                    {pinnedCount}/{capacity || '?'}
+                  </Box>
+                </Box>
               );
             })}
           </Box>
@@ -1122,8 +1116,8 @@ const SabitAtamalar = () => {
 
       {/* Salonu Temizle Onay Dialogu */}
       <Dialog open={confirmClearSalon} onClose={() => setConfirmClearSalon(false)}>
-        <DialogTitle sx={{ fontWeight: 800 }}>
-          Salondaki Sabit Atamaları Temizle
+        <DialogTitle>
+          <DialogHeader icon={<DeleteIcon />} title="Salondaki Sabit Atamaları Temizle" variant="danger" />
         </DialogTitle>
         <DialogContent>
           <DialogContentText>

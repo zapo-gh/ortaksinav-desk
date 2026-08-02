@@ -1,80 +1,80 @@
-import db from '../database';
+﻿import db from '../database';
 import logger from './logger';
 import { getUserRole } from '../auth/authState';
 
 /**
- * GeÃ§ici drag & drop kayÄ±tlarÄ±nÄ± temizle
- * AkÄ±llÄ± limit sistemi ile maksimum 5 geÃ§ici plan tutar
+ * Geçici drag & drop kayıtlarını temizle
+ * Akıllı limit sistemi ile maksimum 5 geçici plan tutar
  */
 export const cleanupTempPlans = async () => {
   try {
     const role = await getUserRole();
     if (role !== 'admin') {
-      logger.info('â„¹ï¸ GeÃ§ici plan temizliÄŸi yalnÄ±zca yÃ¶netici oturumlarÄ±nda Ã§alÄ±ÅŸÄ±r. Public oturum, iÅŸlem atlandÄ±.');
+      logger.info('â„¹ï¸ Geçici plan temizliği yalnızca yönetici oturumlarında çalışır. Public oturum, işlem atlandı.');
       return {
         success: true,
         deletedCount: 0,
         keptCount: 0,
-        message: 'Public oturumda geÃ§ici plan temizliÄŸi yapÄ±lmadÄ±'
+        message: 'Public oturumda geçici plan temizliği yapılmadı'
       };
     }
 
-    logger.info('ğŸ§¹ GeÃ§ici planlar temizleniyor...');
+    logger.info('ğŸ§¹ Geçici planlar temizleniyor...');
 
-    // TÃ¼m planlarÄ± al
+    // Tüm planları al
     const allPlans = await db.getAllPlans();
-    logger.info('ğŸ“‹ TÃ¼m planlar alÄ±ndÄ±:', allPlans.length);
+    logger.info('ğŸ“‹ Tüm planlar alındı:', allPlans.length);
 
-    // GeÃ§ici planlarÄ± filtrele
+    // Geçici planları filtrele
     const tempPlans = allPlans.filter(plan => {
-      // plan.id'yi string'e Ã§evir
+      // plan.id'yi string'e çevir
       const planId = String(plan.id || '');
       const planName = String(plan.name || '');
 
-      const isTemp = planName.includes('GeÃ§ici Plan') || planId.startsWith('temp_');
-      logger.info(`ğŸ” Plan kontrolÃ¼: ${planId} - ${planName} - GeÃ§ici: ${isTemp}`);
+      const isTemp = planName.includes('Geçici Plan') || planId.startsWith('temp_');
+      logger.info(`ğŸ” Plan kontrolü: ${planId} - ${planName} - Geçici: ${isTemp}`);
       return isTemp;
     });
 
-    logger.info(`ğŸ“Š ${tempPlans.length} geÃ§ici plan bulundu`);
+    logger.info(`ğŸ“Š ${tempPlans.length} geçici plan bulundu`);
 
-    // AkÄ±llÄ± limit sistemi: Maksimum 5 geÃ§ici plan tut
+    // Akıllı limit sistemi: Maksimum 5 geçici plan tut
     const MAX_TEMP_PLANS = 5;
 
     if (tempPlans.length > MAX_TEMP_PLANS) {
-      // Tarihe gÃ¶re sÄ±rala (en yeni en son)
+      // Tarihe göre sırala (en yeni en son)
       const sortedTempPlans = tempPlans.sort((a, b) => {
         const dateA = new Date(a.date || a.createdAt || 0);
         const dateB = new Date(b.date || b.createdAt || 0);
         return dateB - dateA;
       });
 
-      // En yeni 5 planÄ± koru, diÄŸerlerini sil
+      // En yeni 5 planı koru, diğerlerini sil
       const plansToKeep = sortedTempPlans.slice(0, MAX_TEMP_PLANS);
       const plansToDelete = sortedTempPlans.slice(MAX_TEMP_PLANS);
 
-      logger.info(`ğŸ—‘ï¸ ${plansToDelete.length} eski geÃ§ici plan silinecek (${plansToKeep.length} plan korunacak)`);
+      logger.info(`ğŸ—‘ï¸ ${plansToDelete.length} eski geçici plan silinecek (${plansToKeep.length} plan korunacak)`);
 
       for (const plan of plansToDelete) {
         try {
           await db.deletePlan(plan.id);
-          logger.info(`âœ… Eski geÃ§ici plan silindi: ${plan.id}`);
+          logger.info(`âœ… Eski geçici plan silindi: ${plan.id}`);
         } catch (deleteError) {
-          logger.error(`âŒ Plan silme hatasÄ± (${plan.id}):`, deleteError);
-          // Tek plan silme hatasÄ± tÃ¼m iÅŸlemi durdurmasÄ±n
+          logger.error(`âŒ Plan silme hatası (${plan.id}):`, deleteError);
+          // Tek plan silme hatası tüm işlemi durdurmasın
         }
       }
 
-      logger.info(`âœ… ${plansToDelete.length} eski geÃ§ici plan temizlendi, ${plansToKeep.length} plan korundu`);
+      logger.info(`âœ… ${plansToDelete.length} eski geçici plan temizlendi, ${plansToKeep.length} plan korundu`);
 
       return {
         success: true,
         deletedCount: plansToDelete.length,
         keptCount: plansToKeep.length,
-        message: `${plansToDelete.length} eski geÃ§ici plan silindi, ${plansToKeep.length} plan korundu`
+        message: `${plansToDelete.length} eski geçici plan silindi, ${plansToKeep.length} plan korundu`
       };
     } else if (tempPlans.length > 1) {
-      // Eski sistem: Sadece 1 plan tut (geriye dÃ¶nÃ¼k uyumluluk)
+      // Eski sistem: Sadece 1 plan tut (geriye dönük uyumluluk)
       const sortedTempPlans = tempPlans.sort((a, b) => {
         const dateA = new Date(a.date || a.createdAt || 0);
         const dateB = new Date(b.date || b.createdAt || 0);
@@ -88,40 +88,40 @@ export const cleanupTempPlans = async () => {
       for (const plan of plansToDelete) {
         try {
           await db.deletePlan(plan.id);
-          logger.info(`âœ… GeÃ§ici plan silindi: ${plan.id}`);
+          logger.info(`âœ… Geçici plan silindi: ${plan.id}`);
         } catch (deleteError) {
-          logger.error(`âŒ Plan silme hatasÄ± (${plan.id}):`, deleteError);
+          logger.error(`âŒ Plan silme hatası (${plan.id}):`, deleteError);
         }
       }
 
-      logger.info(`âœ… ${plansToDelete.length} geÃ§ici plan temizlendi`);
+      logger.info(`âœ… ${plansToDelete.length} geçici plan temizlendi`);
 
       return {
         success: true,
         deletedCount: plansToDelete.length,
         keptCount: 1,
-        message: `${plansToDelete.length} geÃ§ici plan silindi, 1 plan korundu`
+        message: `${plansToDelete.length} geçici plan silindi, 1 plan korundu`
       };
     } else if (tempPlans.length === 1) {
-      logger.info('â„¹ï¸ Sadece 1 geÃ§ici plan var, temizleme gerekmiyor');
+      logger.info('â„¹ï¸ Sadece 1 geçici plan var, temizleme gerekmiyor');
       return {
         success: true,
         deletedCount: 0,
         keptCount: 1,
-        message: 'Sadece 1 geÃ§ici plan var, temizleme gerekmiyor'
+        message: 'Sadece 1 geçici plan var, temizleme gerekmiyor'
       };
     } else {
-      logger.info('â„¹ï¸ Temizlenecek geÃ§ici plan bulunamadÄ±');
+      logger.info('â„¹ï¸ Temizlenecek geçici plan bulunamadı');
       return {
         success: true,
         deletedCount: 0,
         keptCount: 0,
-        message: 'Temizlenecek geÃ§ici plan bulunamadÄ±'
+        message: 'Temizlenecek geçici plan bulunamadı'
       };
     }
 
   } catch (error) {
-    logger.error('âŒ GeÃ§ici planlar temizlenirken hata:', error);
+    logger.error('âŒ Geçici planlar temizlenirken hata:', error);
     return {
       success: false,
       error: error.message
@@ -130,22 +130,22 @@ export const cleanupTempPlans = async () => {
 };
 
 /**
- * GeÃ§ici plan oluÅŸturma stratejisini deÄŸiÅŸtir
- * Mevcut geÃ§ici planÄ± gÃ¼ncelle, yeni kayÄ±t oluÅŸturma
- * Otomatik temizlik ile birlikte Ã§alÄ±ÅŸÄ±r
+ * Geçici plan oluşturma stratejisini değiştir
+ * Mevcut geçici planı güncelle, yeni kayıt oluşturma
+ * Otomatik temizlik ile birlikte çalışır
  */
 export const updateTempPlan = async (planData) => {
   try {
-    // Mevcut geÃ§ici planÄ± bul
+    // Mevcut geçici planı bul
     const allPlans = await db.getAllPlans();
     const existingTempPlan = allPlans.find(plan => {
       const planId = String(plan.id || '');
       const planName = String(plan.name || '');
-      return planName.includes('GeÃ§ici Plan') || planId.startsWith('temp_');
+      return planName.includes('Geçici Plan') || planId.startsWith('temp_');
     });
 
     if (existingTempPlan) {
-      // Mevcut geÃ§ici planÄ± gÃ¼ncelle
+      // Mevcut geçici planı güncelle
       const updatedPlan = {
         ...existingTempPlan,
         data: planData,
@@ -155,17 +155,17 @@ export const updateTempPlan = async (planData) => {
       };
 
       await db.savePlan(updatedPlan);
-      logger.info('ğŸ”„ Mevcut geÃ§ici plan gÃ¼ncellendi');
+      logger.info('ğŸ”„ Mevcut geçici plan güncellendi');
 
-      // Otomatik temizlik kontrolÃ¼
+      // Otomatik temizlik kontrolü
       await autoCleanupIfNeeded();
 
       return updatedPlan;
     } else {
-      // Yeni geÃ§ici plan oluÅŸtur
+      // Yeni geçici plan oluştur
       const newTempPlan = {
         id: `temp_${Date.now()}`,
-        name: 'GeÃ§ici Plan (Drag & Drop)',
+        name: 'Geçici Plan (Drag & Drop)',
         data: planData,
         date: new Date().toISOString(),
         totalStudents: planData.salon?.ogrenciler?.length || 0,
@@ -173,35 +173,35 @@ export const updateTempPlan = async (planData) => {
       };
 
       await db.savePlan(newTempPlan);
-      logger.info('âœ¨ Yeni geÃ§ici plan oluÅŸturuldu');
+      logger.info('âœ¨ Yeni geçici plan oluşturuldu');
 
-      // Otomatik temizlik kontrolÃ¼
+      // Otomatik temizlik kontrolü
       await autoCleanupIfNeeded();
 
       return newTempPlan;
     }
   } catch (error) {
-    logger.error('âŒ GeÃ§ici plan gÃ¼ncellenirken hata:', error);
+    logger.error('âŒ Geçici plan güncellenirken hata:', error);
     throw error;
   }
 };
 
 /**
- * Salon duplikasyon temizliÄŸi - Tauri masaÃ¼stÃ¼ sÃ¼rÃ¼mÃ¼nde geÃ§erli deÄŸil
- * (Firestore kaldÄ±rÄ±ldÄ±, SQLite'da duplikasyon sorun oluÅŸturmaz)
+ * Salon duplikasyon temizliği - Tauri masaüstü sürümünde geçerli değil
+ * (Firestore kaldırıldı, SQLite'da duplikasyon sorun oluşturmaz)
  */
 export const cleanupDuplicateSalons = async () => {
   return {
     success: true,
     deletedCount: 0,
     keptCount: 0,
-    message: 'MasaÃ¼stÃ¼ uygulamasÄ±nda salon duplikasyon temizliÄŸi gerekli deÄŸil'
+    message: 'Masaüstü uygulamasında salon duplikasyon temizliği gerekli değil'
   };
 };
 
 /**
- * Otomatik temizlik kontrolÃ¼
- * GeÃ§ici plan sayÄ±sÄ± 5'i geÃ§erse otomatik temizlik yapar
+ * Otomatik temizlik kontrolü
+ * Geçici plan sayısı 5'i geçerse otomatik temizlik yapar
  */
 const autoCleanupIfNeeded = async () => {
   try {
@@ -209,7 +209,7 @@ const autoCleanupIfNeeded = async () => {
     const tempPlans = allPlans.filter(plan => {
       const planId = String(plan.id || '');
       const planName = String(plan.name || '');
-      return planName.includes('GeÃ§ici Plan') || planId.startsWith('temp_');
+      return planName.includes('Geçici Plan') || planId.startsWith('temp_');
     });
 
     const MAX_TEMP_PLANS = 5;
@@ -217,11 +217,11 @@ const autoCleanupIfNeeded = async () => {
     if (tempPlans.length > MAX_TEMP_PLANS) {
       logger.info(`ğŸ¤– Otomatik temizlik tetiklendi: ${tempPlans.length} > ${MAX_TEMP_PLANS}`);
       const result = await cleanupTempPlans();
-      logger.info(`ğŸ¤– Otomatik temizlik tamamlandÄ±: ${result.deletedCount} plan silindi`);
+      logger.info(`ğŸ¤– Otomatik temizlik tamamlandı: ${result.deletedCount} plan silindi`);
     }
   } catch (error) {
-    logger.error('âŒ Otomatik temizlik hatasÄ±:', error);
-    // Otomatik temizlik hatasÄ± ana iÅŸlemi durdurmasÄ±n
+    logger.error('âŒ Otomatik temizlik hatası:', error);
+    // Otomatik temizlik hatası ana işlemi durdurmasın
   }
 };
 

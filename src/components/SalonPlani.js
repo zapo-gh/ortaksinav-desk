@@ -3,6 +3,7 @@ import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { getSinifSeviyesi, getOgrenciDersleri, isGenderValid, isClassLevelValid } from '../algorithms/gelismisYerlestirmeAlgoritmasi';
 import { isBackToBackClassLevelValid } from '../algorithms/validation/constraints';
 import { getNeighbors } from '../algorithms/utils/helpers';
+import DialogHeader from './common/DialogHeader';
 import dragDropLearning from '../utils/dragDropLearning';
 import logger from '../utils/logger';
 import { useNotifications } from './NotificationSystem';
@@ -56,6 +57,16 @@ import {
   calculateGroupBasedDeskNumbers,
 } from './SalonPlani/utils';
 
+const getStudentGenderColor = (ogrenci) => {
+  if (!ogrenci || !ogrenci.cinsiyet) return 'male';
+  const cinsiyet = ogrenci.cinsiyet.toString().toLowerCase().trim();
+  return ['kız', 'kadin', 'k', 'kadın', 'f', 'bayan', 'female'].includes(cinsiyet) ? 'female' : 'male';
+};
+
+const isStudentGirl = (ogrenci) => {
+  return getStudentGenderColor(ogrenci) === 'female';
+};
+
 // Yerleşmeyen Öğrenci Seçici Modal Bileşeni
 const YerlesmeyenOgrenciSeciciDialog = memo(({ open, onClose, unplacedStudents, onSelect, masaNo }) => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -72,10 +83,7 @@ const YerlesmeyenOgrenciSeciciDialog = memo(({ open, onClose, unplacedStudents, 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
       <DialogTitle>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <PersonIcon color="primary" />
-          <Typography variant="h6">Öğrenci Yerleştir (Masa {masaNo})</Typography>
-        </Box>
+        <DialogHeader icon={<PersonIcon />} title={`Öğrenci Yerleştir (Masa ${masaNo})`} variant="info" onClose={onClose} />
       </DialogTitle>
       <DialogContent>
         <Box sx={{ mb: 2, mt: 1 }}>
@@ -90,7 +98,8 @@ const YerlesmeyenOgrenciSeciciDialog = memo(({ open, onClose, unplacedStudents, 
         <Box sx={{ maxHeight: 300, overflow: 'auto' }}>
           {filteredStudents.length > 0 ? (
             filteredStudents.map((ogrenci) => {
-              const genderColor = (ogrenci.cinsiyet === 'Kız' || ogrenci.cinsiyet === 'K' || ogrenci.cinsiyet === 'k' || ogrenci.cinsiyet === 'kadin' || ogrenci.cinsiyet === 'kadın') ? 'secondary' : 'primary';
+              const genderColor = getStudentGenderColor(ogrenci);
+              const isGirl = isStudentGirl(ogrenci);
 
               return (
                 <ListItem
@@ -112,7 +121,7 @@ const YerlesmeyenOgrenciSeciciDialog = memo(({ open, onClose, unplacedStudents, 
                       <Typography variant="body2" color="text.secondary">
                         {ogrenci.sinif} - No: {ogrenci.numara}
                         <Box component="span" sx={{ color: `${genderColor}.main`, fontWeight: 700, ml: 1 }}>
-                          ({ogrenci.cinsiyet === 'K' ? 'Kız' : 'Erkek'})
+                          ({isGirl ? 'Kız' : 'Erkek'})
                         </Box>
                       </Typography>
                     }
@@ -120,8 +129,13 @@ const YerlesmeyenOgrenciSeciciDialog = memo(({ open, onClose, unplacedStudents, 
                   <Button
                     variant="contained"
                     size="small"
-                    color={genderColor}
-                    sx={{ color: 'white' }}
+                    sx={{
+                      bgcolor: `${genderColor}.main`,
+                      color: 'white',
+                      '&:hover': {
+                        bgcolor: `${genderColor}.dark`
+                      }
+                    }}
                   >
                     Seç
                   </Button>
@@ -337,13 +351,13 @@ const SalonStatsChips = React.memo(({ mode, toplam, yerlesen, yerlesmeyen }) => 
 
           // Arkaplan: Kısıt varsa özel renk, yoksa cinsiyet rengi
           bgcolor: masa.ogrenci
-            ? (conflictStyle ? conflictStyle.bgcolor : (getGenderColor(masa.ogrenci) === 'secondary' ? 'secondary.50' : 'primary.50'))
+            ? (conflictStyle ? conflictStyle.bgcolor : `${getGenderColor(masa.ogrenci)}.50`)
             : 'grey.100',
 
           // Border: Kısıt varsa özel renk, yoksa cinsiyet rengi
           border: masa.ogrenci ? (conflictStyle ? '2px solid' : '2px solid') : '1px solid',
           borderColor: masa.ogrenci
-            ? (conflictStyle ? conflictStyle.borderColor : (getGenderColor(masa.ogrenci) === 'secondary' ? 'secondary.main' : 'primary.main'))
+            ? (conflictStyle ? conflictStyle.borderColor : `${getGenderColor(masa.ogrenci)}.main`)
             : 'grey.300',
 
           position: 'relative',
@@ -372,7 +386,7 @@ const SalonStatsChips = React.memo(({ mode, toplam, yerlesen, yerlesmeyen }) => 
             transform: isSecili ? 'scale(1.05)' : 'scale(1.02)',
             boxShadow: isSecili ? 8 : (conflictStyle ? `0 0 12px ${conflictStyle.glowColor}` : 4),
             bgcolor: masa.ogrenci
-              ? (conflictStyle ? conflictStyle.bgcolor : (getGenderColor(masa.ogrenci) === 'secondary' ? 'secondary.100' : 'primary.100'))
+              ? (conflictStyle ? conflictStyle.bgcolor : `${getGenderColor(masa.ogrenci)}.100`)
               : 'grey.200',
             zIndex: 10
           },
@@ -642,10 +656,7 @@ const SalonPlani = memo(({ sinif, ogrenciler, seciliOgrenciId, kalanOgrenciler =
 
   // Cinsiyet bazlı renk fonksiyonu - useCallback ile optimize edildi
   const getGenderColor = useCallback((ogrenci) => {
-    if (!ogrenci || !ogrenci.cinsiyet) return 'primary';
-
-    const cinsiyet = ogrenci.cinsiyet.toString().toLowerCase().trim();
-    return cinsiyet === 'kız' || cinsiyet === 'kadin' || cinsiyet === 'k' ? 'secondary' : 'primary';
+    return getStudentGenderColor(ogrenci);
   }, []);
 
   // Sınıf düzenini oluştur - GRUP BAZLI SALON YAPISINI KULLANAN
@@ -1137,7 +1148,7 @@ const SalonPlani = memo(({ sinif, ogrenciler, seciliOgrenciId, kalanOgrenciler =
   }, [sinifDuzeni]);
   if (!sinifDuzeni) {
     return (
-      <Card sx={{ maxWidth: 1200, mx: 'auto', mt: 3, mb: 4 }}>
+      <Card sx={{ width: '100%', mt: 0, mb: 4 }}>
         <CardContent>
           <Typography variant="h6" color="text.secondary" textAlign="center">
             {sinif ? 'Salon yükleniyor...' : 'Salon bilgisi bulunamadı'}
@@ -1151,15 +1162,10 @@ const SalonPlani = memo(({ sinif, ogrenciler, seciliOgrenciId, kalanOgrenciler =
   // Bu kısım kaldırıldı - ana salon planı render edilecek
 
   return (
-    <Box sx={{ maxWidth: 1200, mx: 'auto', mt: 3, mb: 4 }}>
+    <Box sx={{ width: '100%', mt: 0, mb: 4 }}>
       <PageHeader
         icon={<ChairIcon sx={{ color: '#4F46E5', fontSize: 24 }} />}
         title={(sinif?.ad || sinif?.salonAdi) ? `${sinif.ad || sinif.salonAdi} Salon Planı` : 'Salon Planları'}
-        sx={{
-          mb: { xs: 2, sm: 3 },
-            flexDirection: { xs: 'column', sm: 'row' },
-            gap: { xs: 1, sm: 0 }
-          }}
           titleExtra={
             <SalonStatsChips {...useMemo(() => {
               if (yerlestirmeSonucu && Array.isArray(yerlestirmeSonucu.tumSalonlar)) {
@@ -1337,26 +1343,9 @@ const SalonPlani = memo(({ sinif, ogrenciler, seciliOgrenciId, kalanOgrenciler =
             <Box
               sx={{
                 display: 'flex',
-                gap: { xs: 0.5, sm: 1 },
-                flexWrap: { xs: 'nowrap', sm: 'wrap' },
-                overflowX: { xs: 'auto', sm: 'visible' },
-                overflowY: 'hidden',
-                WebkitOverflowScrolling: 'touch',
-                scrollbarWidth: { xs: 'thin', sm: 'auto' },
-                '&::-webkit-scrollbar': {
-                  height: { xs: 6, sm: 'auto' }
-                },
-                '&::-webkit-scrollbar-track': {
-                  backgroundColor: { xs: 'rgba(0,0,0,0.05)', sm: 'transparent' }
-                },
-                '&::-webkit-scrollbar-thumb': {
-                  backgroundColor: { xs: 'rgba(0,0,0,0.2)', sm: 'transparent' },
-                  borderRadius: { xs: 3, sm: 0 }
-                },
-                justifyContent: { xs: 'flex-start', sm: 'center' },
-                alignItems: 'center',
-                flexDirection: 'row',
-                pb: { xs: 1, sm: 0 }
+                flexWrap: 'wrap',
+                gap: 1,
+                mb: 1
               }}
             >
               {/* Yerleştirme planı varken - tumSalonlar kullan */}
@@ -1364,79 +1353,49 @@ const SalonPlani = memo(({ sinif, ogrenciler, seciliOgrenciId, kalanOgrenciler =
                 .map((salon) => {
                   const isActive = sinif?.salonId === salon.salonId;
                   return (
-                    <Button
+                    <Box
                       key={salon.salonId}
-                      variant={isActive ? 'contained' : 'outlined'}
                       onClick={() => {
                         if (onSalonDegistir) {
                           onSalonDegistir(salon);
                         }
                       }}
                       sx={{
-                        minWidth: { xs: 'auto', sm: 70 },
-                        maxWidth: { xs: '110px', sm: 'none' },
-                        width: { xs: 'auto', sm: 'auto' },
-                        flexShrink: 0,
-                        borderRadius: { xs: 2, sm: 3 },
-                        textTransform: 'none',
-                        fontWeight: isActive ? 'bold' : 'normal',
-                        boxShadow: 'none',
-                        px: { xs: 0.75, sm: 1.25 },
-                        py: { xs: 0.5, sm: 0.5 },
-                        minHeight: { xs: 28, sm: 'auto' },
-                        height: { xs: 28, sm: 'auto' },
                         display: 'flex',
-                        flexDirection: 'row',
                         alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: { xs: 0.5, sm: 0.75 },
-                        '& > *': {
-                          display: 'flex',
-                          alignItems: 'center'
-                        },
+                        gap: 1,
+                        px: 1.5,
+                        py: 0.5,
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        border: '1px solid',
+                        borderColor: isActive ? 'primary.main' : '#e2e8f0',
+                        bgcolor: isActive ? '#eff6ff' : '#ffffff',
+                        transition: 'all 0.15s ease',
                         '&:hover': {
-                          boxShadow: 'none',
-                          transform: 'none' // Global MuiButton hover translateY(-1px) devre dışı - içerik kaymasını önler
-                        },
-                        transition: 'background-color 0.2s ease',
-                        mb: { xs: 0, sm: 0 }
+                          borderColor: 'primary.main',
+                          bgcolor: isActive ? '#eff6ff' : '#f8fafc'
+                        }
                       }}
                     >
-                      <Typography
-                        variant="body2"
-                        component="span"
-                        sx={{
-                          fontSize: { xs: '0.7rem', sm: '0.875rem' },
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                          maxWidth: { xs: '85px', sm: 'none' },
-                          title: salon.salonAdi,
-                          lineHeight: 1.2,
-                          alignSelf: 'center'
-                        }}
-                      >
+                      <Typography sx={{ fontWeight: 700, fontSize: '0.85rem', color: isActive ? 'primary.main' : 'text.primary' }}>
                         {salon.salonAdi}
                       </Typography>
-                      <Chip
-                        label={getSalonYerlesenSayisi(salon)}
-                        size="small"
+                      <Box
                         title="Bu salonda yerleşen öğrenci sayısı"
                         sx={{
-                          ml: 0,
-                          mt: 0,
-                          height: { xs: 18, sm: 24 },
-                          fontSize: { xs: '0.6rem', sm: '0.75rem' },
-                          fontWeight: 700,
-                          backgroundColor: isActive ? 'white' : 'primary.main',
-                          color: isActive ? 'primary.main' : 'white',
-                          alignSelf: 'center',
-                          '& .MuiChip-label': {
-                            px: { xs: 0.5, sm: 0.75 }
-                          }
+                          px: 0.75,
+                          py: 0.25,
+                          borderRadius: '4px',
+                          bgcolor: isActive ? 'primary.main' : '#f1f5f9',
+                          color: isActive ? 'white' : '#64748b',
+                          fontSize: '0.7rem',
+                          fontWeight: 700
                         }}
-                      />
-                    </Button>
+                      >
+                        {getSalonYerlesenSayisi(salon)}
+                      </Box>
+                    </Box>
                   );
                 })}
 
@@ -1445,73 +1404,45 @@ const SalonPlani = memo(({ sinif, ogrenciler, seciliOgrenciId, kalanOgrenciler =
                 .map((salon) => {
                   const isActive = seciliSalonId === salon.id;
                   return (
-                    <Button
+                    <Box
                       key={salon.id}
-                      variant={isActive ? 'contained' : 'outlined'}
                       onClick={() => onSeciliSalonDegistir && onSeciliSalonDegistir(salon.id)}
                       sx={{
-                        minWidth: { xs: 'auto', sm: 70 },
-                        maxWidth: { xs: '110px', sm: 'none' },
-                        width: { xs: 'auto', sm: 'auto' },
-                        flexShrink: 0,
-                        borderRadius: { xs: 2, sm: 3 },
-                        textTransform: 'none',
-                        fontWeight: isActive ? 'bold' : 'normal',
-                        boxShadow: 'none',
-                        px: { xs: 0.75, sm: 1.25 },
-                        py: { xs: 0.5, sm: 0.5 },
-                        minHeight: { xs: 28, sm: 'auto' },
-                        height: { xs: 28, sm: 'auto' },
                         display: 'flex',
-                        flexDirection: 'row',
                         alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: { xs: 0.5, sm: 0.75 },
-                        '& > *': {
-                          display: 'flex',
-                          alignItems: 'center'
-                        },
+                        gap: 1,
+                        px: 1.5,
+                        py: 0.5,
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        border: '1px solid',
+                        borderColor: isActive ? 'primary.main' : '#e2e8f0',
+                        bgcolor: isActive ? '#eff6ff' : '#ffffff',
+                        transition: 'all 0.15s ease',
                         '&:hover': {
-                          boxShadow: 'none',
-                          transform: 'none' // Global MuiButton hover translateY(-1px) devre dışı - içerik kaymasını önler
-                        },
-                        transition: 'background-color 0.2s ease',
-                        mb: { xs: 0, sm: 0 }
+                          borderColor: 'primary.main',
+                          bgcolor: isActive ? '#eff6ff' : '#f8fafc'
+                        }
                       }}
                     >
-                      <Typography
-                        variant="body2"
-                        sx={{
-                          fontSize: { xs: '0.7rem', sm: '0.875rem' },
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                          maxWidth: { xs: '85px', sm: 'none' },
-                          title: salon.ad || salon.salonAdi || `Salon ${salon.id}`,
-                          lineHeight: 1.2
-                        }}
-                      >
+                      <Typography sx={{ fontWeight: 700, fontSize: '0.85rem', color: isActive ? 'primary.main' : 'text.primary' }}>
                         {salon.ad || salon.salonAdi || `Salon ${salon.id}`}
                       </Typography>
-                      <Chip
-                        label={getSalonYerlesenSayisi(salon)}
-                        size="small"
+                      <Box
                         title="Bu salonda yerleşen öğrenci sayısı"
                         sx={{
-                          ml: 0,
-                          mt: 0,
-                          height: { xs: 18, sm: 24 },
-                          fontSize: { xs: '0.6rem', sm: '0.75rem' },
-                          fontWeight: 700,
-                          backgroundColor: isActive ? 'white' : 'primary.main',
-                          color: isActive ? 'primary.main' : 'white',
-                          alignSelf: 'center',
-                          '& .MuiChip-label': {
-                            px: { xs: 0.5, sm: 0.75 }
-                          }
+                          px: 0.75,
+                          py: 0.25,
+                          borderRadius: '4px',
+                          bgcolor: isActive ? 'primary.main' : '#f1f5f9',
+                          color: isActive ? 'white' : '#64748b',
+                          fontSize: '0.7rem',
+                          fontWeight: 700
                         }}
-                      />
-                    </Button>
+                      >
+                        {getSalonYerlesenSayisi(salon)}
+                      </Box>
+                    </Box>
                   );
                 })}
             </Box>
@@ -1847,8 +1778,7 @@ const SalonPlani = memo(({ sinif, ogrenciler, seciliOgrenciId, kalanOgrenciler =
             color: 'white',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'space-between'
-          }}>
+            justifyContent: 'space-between', px: 3, py: 2.5 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <PersonIcon sx={{ color: 'white' }} />
               <Typography variant="h6" sx={{ color: 'white' }}>
@@ -1857,7 +1787,7 @@ const SalonPlani = memo(({ sinif, ogrenciler, seciliOgrenciId, kalanOgrenciler =
             </Box>
             {seciliOgrenci && (
               <Chip
-                label={seciliOgrenci.cinsiyet === 'K' ? 'Kız' : 'Erkek'}
+                label={isStudentGirl(seciliOgrenci) ? 'Kız' : 'Erkek'}
                 size="small"
                 sx={{
                   bgcolor: 'rgba(255, 255, 255, 0.2)',
@@ -2102,9 +2032,8 @@ const SalonPlani = memo(({ sinif, ogrenciler, seciliOgrenciId, kalanOgrenciler =
           maxWidth="xs"
           fullWidth
         >
-          <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'warning.main' }}>
-            <WarningIcon />
-            <Typography variant="h6">Emin misiniz?</Typography>
+          <DialogTitle>
+            <DialogHeader icon={<WarningIcon />} title="Öğrenciyi Çıkar" variant="warning" />
           </DialogTitle>
           <DialogContent>
             <Typography>

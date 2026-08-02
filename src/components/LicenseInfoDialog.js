@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -53,7 +53,7 @@ const LicenseInfoDialog = ({ open, onClose }) => {
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
       <DialogTitle>
-        <DialogHeader icon={<KeyIcon color="secondary" />} title="Lisans Bilgileri" onClose={handleClose} />
+        <DialogHeader icon={<KeyIcon />} title="Lisans Bilgileri" variant="info" onClose={handleClose} />
       </DialogTitle>
 
       <DialogContent sx={{ pt: 2.5 }}>

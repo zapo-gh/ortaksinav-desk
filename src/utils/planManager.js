@@ -1,9 +1,9 @@
-/**
- * Plan YÃ¶netimi - Temiz ve Basit Sistem
- * Kaydetme ve yÃ¼kleme iÅŸlemlerini standardize eder
+﻿/**
+ * Plan Yönetimi - Temiz ve Basit Sistem
+ * Kaydetme ve yükleme işlemlerini standardize eder
  */
 
-// DatabaseAdapter'Ä± import et (Firestore birincil, IndexedDB fallback)
+// DatabaseAdapter'ı import et (Firestore birincil, IndexedDB fallback)
 import db from '../database/index';
 import { waitForAuth, getCurrentUserId } from '../auth/authState';
 import { sanitizeStudentRecord, sanitizeSalonRecord, sanitizeSettingsMap } from '../utils/sanitizer';
@@ -17,7 +17,7 @@ class PlanManager {
   }
 
   /**
-   * Helper: SQLite'den gelen integer (0/1) ve boolean deÄŸerleri normalize eder
+   * Helper: SQLite'den gelen integer (0/1) ve boolean değerleri normalize eder
    */
   _isArchived(plan) {
     if (!plan) return false;
@@ -34,7 +34,7 @@ class PlanManager {
       };
       this.currentPlanOwnerId = ownerId;
       this.currentPlanInvalidated = false;
-      logger.debug('âœ… planManager: Aktif plan gÃ¼ncellendi', {
+      logger.debug('âœ… planManager: Aktif plan güncellendi', {
         ...this.currentPlan,
         ownerId: this.currentPlanOwnerId
       });
@@ -55,7 +55,7 @@ class PlanManager {
   invalidateCurrentPlan(reason = '') {
     if (this.currentPlan) {
       this.currentPlanInvalidated = true;
-      logger.debug('âš ï¸ planManager: Aktif plan geÃ§ersiz kÄ±lÄ±ndÄ±', {
+      logger.debug('âš ï¸ planManager: Aktif plan geçersiz kılındı', {
         currentPlan: this.currentPlan,
         reason
       });
@@ -86,7 +86,7 @@ class PlanManager {
   }
 
   /**
-   * Plan kaydetme - AynÄ± isimde plan varsa gÃ¼ncelleme, yoksa yeni plan oluÅŸturma
+   * Plan kaydetme - Aynı isimde plan varsa güncelleme, yoksa yeni plan oluşturma
    */
   async savePlan(planName, planData) {
     try {
@@ -96,11 +96,11 @@ class PlanManager {
 
       const ownerId = 'local-user';
 
-      // Ã–nce, mevcut plan context'i Ã¼zerinden kontrol et
+      // Önce, mevcut plan context'i üzerinden kontrol et
       if (this.isCurrentPlanActive()) {
         const currentName = this.getCurrentPlanName().toLowerCase();
         if (currentName === lowerPlanName) {
-          logger.debug('ğŸ”„ planManager: Mevcut plan ID Ã¼zerinden gÃ¼ncelleme yapÄ±lÄ±yor:', this.currentPlan.id);
+          logger.debug('ğŸ”„ planManager: Mevcut plan ID üzerinden güncelleme yapılıyor:', this.currentPlan.id);
           const updatedId = await this.updatePlan(this.currentPlan.id, normalizedPlanName, planData, ownerId);
           if (updatedId) {
             this.setCurrentPlan({ id: updatedId, name: normalizedPlanName, ownerId });
@@ -117,7 +117,7 @@ class PlanManager {
         });
 
         if (existingPlan) {
-          logger.debug('ğŸ”„ AynÄ± isimde plan bulundu, gÃ¼ncelleme yapÄ±lÄ±yor:', existingPlan.id);
+          logger.debug('ğŸ”„ Aynı isimde plan bulundu, güncelleme yapılıyor:', existingPlan.id);
           const updatedId = await this.updatePlan(existingPlan.id, normalizedPlanName, planData, ownerId);
           if (updatedId) {
             this.setCurrentPlan({ id: updatedId, name: normalizedPlanName, ownerId });
@@ -125,16 +125,16 @@ class PlanManager {
           return updatedId;
         }
       } catch (error) {
-        logger.warn('âš ï¸ Plan kontrolÃ¼ sÄ±rasÄ±nda hata (yeni plan oluÅŸturulacak):', error.message);
+        logger.warn('âš ï¸ Plan kontrolü sırasında hata (yeni plan oluşturulacak):', error.message);
       }
 
-      // TÃœM TEST PLANLARINI ENGelle (Firestore kota sorununu Ã¶nlemek iÃ§in)
-      // Test dosyalarÄ±ndan gelen tÃ¼m plan isimlerini engelle
-      // Test ortamÄ±nda bu korumayÄ± devre dÄ±ÅŸÄ± bÄ±rak
+      // TÜM TEST PLANLARINI ENGelle (Firestore kota sorununu önlemek için)
+      // Test dosyalarından gelen tüm plan isimlerini engelle
+      // Test ortamında bu korumayı devre dışı bırak
 
-      // Test ortamÄ±nda kota korumalarÄ±nÄ± tamamen devre dÄ±ÅŸÄ± bÄ±rak
+      // Test ortamında kota korumalarını tamamen devre dışı bırak
       if (process.env.NODE_ENV !== 'test') {
-        // Test plan isimleri listesi (geniÅŸletilmiÅŸ)
+        // Test plan isimleri listesi (genişletilmiş)
         const testPlanNames = [
           'test plan',
           'valid plan',
@@ -145,13 +145,13 @@ class PlanManager {
           'plan 4',
           'plan 5',
           'test',
-          'geÃ§ici plan',
+          'geçici plan',
           'temp plan',
           'sample plan',
           'demo plan'
         ];
 
-        // Tam eÅŸleÅŸme veya iÃ§erme kontrolÃ¼
+        // Tam eşleşme veya içerme kontrolü
         const isTestPlan = testPlanNames.some(testName =>
           normalizedPlanName === testName ||
           normalizedPlanName.toLowerCase() === testName ||
@@ -161,7 +161,7 @@ class PlanManager {
         );
 
         if (isTestPlan) {
-          logger.warn('âš ï¸ Test Plan kaydetme engellendi (Firestore kota korumasÄ±):', normalizedPlanName);
+          logger.warn('âš ï¸ Test Plan kaydetme engellendi (Firestore kota koruması):', normalizedPlanName);
           return null; // Kaydetme
         }
       }
@@ -169,30 +169,30 @@ class PlanManager {
       // Plan verisini temizle ve standardize et
       const cleanPlanData = this.cleanPlanData(planData);
 
-      // EK KORUMA: Ã‡ok az Ã¶ÄŸrenci/salon iÃ§eren planlarÄ± engelle (test planlarÄ± genellikle 1-5 Ã¶ÄŸrenci/salon iÃ§erir)
+      // EK KORUMA: Çok az öğrenci/salon içeren planları engelle (test planları genellikle 1-5 öğrenci/salon içerir)
       const totalStudents = cleanPlanData.totalStudents || 0;
       const salonCount = cleanPlanData.tumSalonlar?.length || 0;
 
-      // BoÅŸ plan kontrolÃ¼
+      // Boş plan kontrolü
       const isEmpty = totalStudents === 0 && salonCount === 0;
       if (isEmpty) {
-        logger.warn('âš ï¸ BoÅŸ plan kaydetme atlandÄ± (0 Ã¶ÄŸrenci, 0 salon).');
+        logger.warn('âš ï¸ Boş plan kaydetme atlandı (0 öğrenci, 0 salon).');
         return null;
       }
 
-      // Test ortamÄ±nda minimal plan kontrollerini devre dÄ±ÅŸÄ± bÄ±rak
+      // Test ortamında minimal plan kontrollerini devre dışı bırak
       if (process.env.NODE_ENV !== 'test') {
-        // Minimal test plan kontrolÃ¼: 5'ten az Ã¶ÄŸrenci VE 2'den az salon = muhtemelen test planÄ±
+        // Minimal test plan kontrolü: 5'ten az öğrenci VE 2'den az salon = muhtemelen test planı
         if (totalStudents <= 5 && salonCount <= 2 && (totalStudents === 1 || salonCount === 1)) {
-          logger.warn(`âš ï¸ Minimal test plan kaydetme engellendi (${totalStudents} Ã¶ÄŸrenci, ${salonCount} salon):`, normalizedPlanName);
+          logger.warn(`âš ï¸ Minimal test plan kaydetme engellendi (${totalStudents} öğrenci, ${salonCount} salon):`, normalizedPlanName);
           return null; // Kaydetme
         }
       }
 
-      // SÄ±nav tarihi-saati bilgilerini metadata'ya ekle (plan listesinde gÃ¶stermek iÃ§in)
+      // Sınav tarihi-saati bilgilerini metadata'ya ekle (plan listesinde göstermek için)
       const ayarlar = cleanPlanData.ayarlar || {};
 
-      // DEBUG: Ayarlar kontrolÃ¼
+      // DEBUG: Ayarlar kontrolü
       logger.debug('ğŸ” planManager.savePlan - Ayarlar:', {
         sinavTarihi: ayarlar.sinavTarihi,
         sinavSaati: ayarlar.sinavSaati,
@@ -201,13 +201,13 @@ class PlanManager {
         ayarlarKeys: Object.keys(ayarlar)
       });
 
-      // VeritabanÄ±na kaydet
+      // Veritabanına kaydet
       const planPayload = {
         name: normalizedPlanName,
         date: new Date().toISOString(),
         totalStudents: cleanPlanData.totalStudents || 0,
         salonCount: cleanPlanData.salonCount || 0,
-        // SÄ±nav bilgilerini metadata'ya ekle (boÅŸ string'leri de kaydet)
+        // Sınav bilgilerini metadata'ya ekle (boş string'leri de kaydet)
         sinavTarihi: ayarlar.sinavTarihi !== undefined && ayarlar.sinavTarihi !== null && ayarlar.sinavTarihi !== '' ? ayarlar.sinavTarihi : null,
         sinavSaati: ayarlar.sinavSaati !== undefined && ayarlar.sinavSaati !== null && ayarlar.sinavSaati !== '' ? ayarlar.sinavSaati : null,
         sinavDonemi: ayarlar.sinavDonemi !== undefined && ayarlar.sinavDonemi !== null && ayarlar.sinavDonemi !== '' ? ayarlar.sinavDonemi : null,
@@ -216,7 +216,7 @@ class PlanManager {
         data: cleanPlanData
       };
 
-      logger.debug('ğŸ’¾ planManager: Plan payload hazÄ±rlandÄ±:', {
+      logger.debug('ğŸ’¾ planManager: Plan payload hazırlandı:', {
         name: planPayload.name,
         totalStudents: planPayload.totalStudents,
         salonCount: planPayload.salonCount,
@@ -224,7 +224,7 @@ class PlanManager {
         dataKeys: planPayload.data ? Object.keys(planPayload.data) : []
       });
 
-      logger.debug('ğŸ’¾ planManager: db.savePlan Ã§aÄŸrÄ±lÄ±yor...', {
+      logger.debug('ğŸ’¾ planManager: db.savePlan çağrılıyor...', {
         dbType: typeof db,
         hasSavePlan: typeof db?.savePlan === 'function',
         dbConstructor: db?.constructor?.name,
@@ -233,19 +233,19 @@ class PlanManager {
         getDatabaseType: db?.getDatabaseType ? db.getDatabaseType() : 'N/A'
       });
 
-      // DEBUG: DatabaseAdapter'Ä±n Ã§aÄŸrÄ±ldÄ±ÄŸÄ±ndan emin olmak iÃ§in
+      // DEBUG: DatabaseAdapter'ın çağrıldığından emin olmak için
       if (db?.useFirestore !== undefined) {
-        logger.debug('âœ… planManager: DatabaseAdapter kullanÄ±lÄ±yor, useFirestore:', db.useFirestore);
+        logger.debug('âœ… planManager: DatabaseAdapter kullanılıyor, useFirestore:', db.useFirestore);
       } else {
-        logger.warn('âš ï¸ planManager: DatabaseAdapter KULLANILMIYOR! DoÄŸrudan IndexedDB kullanÄ±lÄ±yor olabilir!');
+        logger.warn('âš ï¸ planManager: DatabaseAdapter KULLANILMIYOR! Doğrudan IndexedDB kullanılıyor olabilir!');
         logger.warn('âš ï¸ db objesi:', db);
       }
 
       const savedPlan = await db.savePlan(planPayload);
 
-      logger.debug('âœ… planManager: Plan baÅŸarÄ±yla kaydedildi:', savedPlan);
+      logger.debug('âœ… planManager: Plan başarıyla kaydedildi:', savedPlan);
       logger.info('âœ… planManager: Kaydedilen plan ID tipi:', typeof savedPlan);
-      logger.info('âœ… planManager: Kaydedilen plan ID deÄŸeri:', savedPlan);
+      logger.info('âœ… planManager: Kaydedilen plan ID değeri:', savedPlan);
 
       if (savedPlan) {
         this.setCurrentPlan({ id: savedPlan, name: normalizedPlanName, ownerId });
@@ -254,22 +254,22 @@ class PlanManager {
       return savedPlan;
 
     } catch (error) {
-      logger.error('âŒ Plan kaydetme hatasÄ±:', error);
+      logger.error('âŒ Plan kaydetme hatası:', error);
       throw error;
     }
   }
 
   /**
-   * Plan yÃ¼kleme - Basit ve gÃ¼venilir
+   * Plan yükleme - Basit ve güvenilir
    */
   async loadPlan(planId) {
     try {
-      logger.debug('ğŸ“¥ Plan yÃ¼kleniyor:', planId);
+      logger.debug('ğŸ“¥ Plan yükleniyor:', planId);
       let authOwnerId = 'local-user';
 
-      // planId validation - test ortamÄ±nda null ID'lere izin ver
+      // planId validation - test ortamında null ID'lere izin ver
       if (process.env.NODE_ENV !== 'test' && (planId === null || planId === undefined || planId === '')) {
-        throw new Error('Plan ID geÃ§ersiz: null, undefined veya boÅŸ string');
+        throw new Error('Plan ID geçersiz: null, undefined veya boş string');
       }
 
       let normalizedPlanId = planId;
@@ -279,18 +279,18 @@ class PlanManager {
           normalizedPlanId = numId;
         }
       } else if (typeof planId !== 'number') {
-        throw new Error(`Plan ID geÃ§ersiz tip: ${typeof planId} (number veya string olmalÄ±)`);
+        throw new Error(`Plan ID geçersiz tip: ${typeof planId} (number veya string olmalı)`);
       }
 
-      logger.debug('ğŸ“¥ Normalize edilmiÅŸ Plan ID:', normalizedPlanId, '(tip:', typeof normalizedPlanId + ')');
+      logger.debug('ğŸ“¥ Normalize edilmiş Plan ID:', normalizedPlanId, '(tip:', typeof normalizedPlanId + ')');
 
       const plan = await db.getPlan(normalizedPlanId);
 
       if (!plan) {
-        throw new Error(`Plan bulunamadÄ± (ID: ${normalizedPlanId})`);
+        throw new Error(`Plan bulunamadı (ID: ${normalizedPlanId})`);
       }
 
-      logger.debug('âœ… Plan yÃ¼klendi:', plan.name);
+      logger.debug('âœ… Plan yüklendi:', plan.name);
       logger.debug('ğŸ” Plan verisi (raw):', {
         planDataKeys: Object.keys(plan.data),
         salonVar: !!plan.data.salon,
@@ -298,7 +298,7 @@ class PlanManager {
         tumSalonlarLength: plan.data.tumSalonlar?.length || 0
       });
 
-      // Plan verisini doÄŸrula ve dÃ¼zelt
+      // Plan verisini doğrula ve düzelt
       const validatedPlan = this.validateAndFixPlan(plan.data);
 
       logger.debug('ğŸ” Plan verisi (validated):', {
@@ -326,7 +326,7 @@ class PlanManager {
       return result;
 
     } catch (error) {
-      logger.error('âŒ Plan yÃ¼kleme hatasÄ±:', error);
+      logger.error('âŒ Plan yükleme hatası:', error);
       throw error;
     }
   }
@@ -336,45 +336,45 @@ class PlanManager {
    */
   async getAllPlans() {
     try {
-      logger.debug('ğŸ“‹ TÃ¼m planlar yÃ¼kleniyor...');
+      logger.debug('ğŸ“‹ Tüm planlar yükleniyor...');
       const plans = await db.getAllPlans();
 
-      // Ã–NCE: GeÃ§ersiz ID'ye sahip planlarÄ± filtrele
+      // ÖNCE: Geçersiz ID'ye sahip planları filtrele
       const validIdPlans = plans.filter(p => {
         const hasValidId = p.id !== null && p.id !== undefined && p.id !== '';
         if (!hasValidId) {
-          logger.warn('âš ï¸ GeÃ§ersiz Plan ID\'ye sahip plan bulundu ve atlandÄ±:', p);
+          logger.warn('âš ï¸ Geçersiz Plan ID\'ye sahip plan bulundu ve atlandı:', p);
         }
         return hasValidId;
       });
 
-      // Temizlik: tamamen boÅŸ kayÄ±tlarÄ± ayÄ±kla (sadece geÃ§erli ID'li planlar iÃ§in)
-      // Ã–NEMLÄ°: ArÅŸivlenmiÅŸ planlarÄ± asla otomatik silme!
+      // Temizlik: tamamen boş kayıtları ayıkla (sadece geçerli ID'li planlar için)
+      // ÖNEMLİ: Arşivlenmiş planları asla otomatik silme!
       const emptyPlans = validIdPlans.filter(p =>
         (p.totalStudents || 0) === 0 &&
         (p.salonCount || 0) === 0 &&
         !this._isArchived(p)
       );
       if (emptyPlans.length > 0) {
-        logger.warn(`ğŸ§¹ ${emptyPlans.length} boÅŸ plan bulundu, siliniyor...`);
+        logger.warn(`ğŸ§¹ ${emptyPlans.length} boş plan bulundu, siliniyor...`);
         for (const p of emptyPlans) {
           try {
             await db.deletePlan(p.id);
           } catch (e) {
-            logger.warn('Plan silme hatasÄ±:', p.id, e);
+            logger.warn('Plan silme hatası:', p.id, e);
           }
         }
       }
 
-      // GeÃ§erli ID'li ve boÅŸ olmayan planlarÄ± filtrele
-      // ArÅŸivlenmiÅŸ planlarÄ± (metadata kaybÄ± yaÅŸamÄ±ÅŸ olsa bile) koru
+      // Geçerli ID'li ve boş olmayan planları filtrele
+      // Arşivlenmiş planları (metadata kaybı yaşamış olsa bile) koru
       const nonEmptyPlans = validIdPlans.filter(p =>
         (p.totalStudents || 0) > 0 ||
         (p.salonCount || 0) > 0 ||
         p.isArchived === true
       );
 
-      // Test Plan'larÄ± ve Valid Plan'larÄ± filtrele (DatabaseTest.js ve test dosyalarÄ±ndan gelen gereksiz planlar)
+      // Test Plan'ları ve Valid Plan'ları filtrele (DatabaseTest.js ve test dosyalarından gelen gereksiz planlar)
       const withoutTestPlans = nonEmptyPlans.filter(p => {
         const planName = String(p.name || '').trim();
         const lowerName = planName.toLowerCase();
@@ -388,8 +388,8 @@ class PlanManager {
         logger.warn(`âš ï¸ ${nonEmptyPlans.length - withoutTestPlans.length} test plan filtrelendi`);
       }
 
-      logger.debug('âœ… TÃ¼m planlar yÃ¼klendi:', withoutTestPlans.length, 'geÃ§erli plan');
-      logger.debug('ğŸ“‹ Plan detaylarÄ±:', withoutTestPlans.map(p => ({ id: p.id, name: p.name, date: p.date })));
+      logger.debug('âœ… Tüm planlar yüklendi:', withoutTestPlans.length, 'geçerli plan');
+      logger.debug('ğŸ“‹ Plan detayları:', withoutTestPlans.map(p => ({ id: p.id, name: p.name, date: p.date })));
 
       const parseArchiveMetadata = (val) => {
         if (val === null || val === undefined) return null;
@@ -424,7 +424,7 @@ class PlanManager {
 
       logger.debug('âœ… Planlar map edildi:', mappedPlans.length, 'plan');
 
-      // Debug: arÅŸivlenme filtresiyle ilgili uyuÅŸmazlÄ±ÄŸÄ± yakalamak iÃ§in ilk plan Ã¶rneklerini logla
+      // Debug: arşivlenme filtresiyle ilgili uyuşmazlığı yakalamak için ilk plan örneklerini logla
       try {
         const sample = mappedPlans.slice(0, 5).map(p => ({
           id: p.id,
@@ -436,8 +436,8 @@ class PlanManager {
 
       return mappedPlans;
     } catch (error) {
-      logger.error('âŒ HATA - Plan listesi yÃ¼kleme hatasÄ±:', error);
-      logger.error('âŒ Hata detayÄ±:', error.message, error.stack);
+      logger.error('âŒ HATA - Plan listesi yükleme hatası:', error);
+      logger.error('âŒ Hata detayı:', error.message, error.stack);
       throw error;
     }
   }
@@ -450,47 +450,47 @@ class PlanManager {
     try {
       // planId validation
       if (planId === null || planId === undefined || planId === '') {
-        throw new Error('Plan ID geÃ§ersiz: null, undefined veya boÅŸ string');
+        throw new Error('Plan ID geçersiz: null, undefined veya boş string');
       }
 
       // Firestore ID'leri string, IndexedDB ID'leri number olabilir
-      // Her iki formatÄ± da destekle
+      // Her iki formatı da destekle
       let normalizedPlanId = planId;
       if (typeof planId === 'string') {
-        // String ID'yi kontrol et - Firestore ID'si mi (alfanumerik) yoksa sayÄ±sal string mi?
+        // String ID'yi kontrol et - Firestore ID'si mi (alfanumerik) yoksa sayısal string mi?
         const numId = parseInt(planId, 10);
         if (!isNaN(numId) && String(numId) === planId) {
-          // SayÄ±sal string ise (Ã¶rn: "123"), number'a Ã§evir (IndexedDB iÃ§in)
+          // Sayısal string ise (örn: "123"), number'a çevir (IndexedDB için)
           normalizedPlanId = numId;
         } else {
-          // Firestore ID'si (Ã¶rn: "SYAMtaEPx9xyqU8TWWCy") - string olarak bÄ±rak
+          // Firestore ID'si (örn: "SYAMtaEPx9xyqU8TWWCy") - string olarak bırak
           normalizedPlanId = planId;
         }
       } else if (typeof planId !== 'number') {
-        throw new Error(`Plan ID geÃ§ersiz tip: ${typeof planId} (number veya string olmalÄ±)`);
+        throw new Error(`Plan ID geçersiz tip: ${typeof planId} (number veya string olmalı)`);
       }
 
-      // VeritabanÄ±ndan planÄ± sil - hem string hem number ID'leri destekler
+      // Veritabanından planı sil - hem string hem number ID'leri destekler
       await db.deletePlan(normalizedPlanId);
       logger.debug('âœ… Plan silindi:', planId);
     } catch (error) {
-      logger.error('âŒ Plan silme hatasÄ±:', error);
+      logger.error('âŒ Plan silme hatası:', error);
       throw error;
     }
   }
 
   /**
-   * Var olan planÄ± gÃ¼ncelle
+   * Var olan planı güncelle
    */
   async updatePlan(planId, planName, planData, ownerIdParam = null) {
     try {
-      logger.debug('ğŸ”„ planManager: Plan gÃ¼ncelleme baÅŸlÄ±yor:', { planId, planName });
+      logger.debug('ğŸ”„ planManager: Plan güncelleme başlıyor:', { planId, planName });
       const normalizedPlanName = String(planName || '').trim();
       const ownerId = ownerIdParam || 'local-user';
       const cleanPlanData = this.cleanPlanData(planData);
       const ayarlar = cleanPlanData.ayarlar || {};
 
-      // Mevcut planÄ± alarak arÅŸiv durumunu koru
+      // Mevcut planı alarak arşiv durumunu koru
       const existingPlan = await db.getPlan(planId);
 
       const planPayload = {
@@ -504,13 +504,13 @@ class PlanManager {
         donem: ayarlar.donem !== undefined && ayarlar.donem !== null && ayarlar.donem !== '' ? ayarlar.donem : null,
         ownerId,
         data: cleanPlanData,
-        // Normal kaydetme/gÃ¼ncelleme iÅŸlemleri planÄ± "aktif" tutar.
-        // ArÅŸivleme sadece archivePlan() ile yapÄ±lmalÄ±dÄ±r.
+        // Normal kaydetme/güncelleme işlemleri planı "aktif" tutar.
+        // Arşivleme sadece archivePlan() ile yapılmalıdır.
         isArchived: existingPlan ? this._isArchived(existingPlan) : false,
         archiveMetadata: existingPlan?.archiveMetadata ?? null
       };
 
-      logger.debug('ğŸ”„ planManager: db.updatePlan Ã§aÄŸrÄ±lÄ±yor...', {
+      logger.debug('ğŸ”„ planManager: db.updatePlan çağrılıyor...', {
         planId,
         name: planPayload.name,
         totalStudents: planPayload.totalStudents,
@@ -520,44 +520,44 @@ class PlanManager {
       const result = await db.updatePlan(planId, planPayload);
       const updatedPlanId = result || planId;
 
-      logger.debug('âœ… planManager: Plan gÃ¼ncellendi:', updatedPlanId);
+      logger.debug('âœ… planManager: Plan güncellendi:', updatedPlanId);
       this.setCurrentPlan({ id: updatedPlanId, name: normalizedPlanName, ownerId });
 
       return updatedPlanId;
     } catch (error) {
-      logger.error('âŒ Plan gÃ¼ncelleme hatasÄ±:', error);
+      logger.error('âŒ Plan güncelleme hatası:', error);
       throw error;
     }
   }
 
   /**
-   * PlanÄ± arÅŸivle
+   * Planı arşivle
    */
   async archivePlan(planId, archiveMetadata) {
     try {
-      logger.debug('ğŸ“¦ Plan arÅŸivleniyor:', planId, archiveMetadata);
-      // DoÄŸrudan SQL gÃ¼ncellemesi - tÃ¼m plan verisini okuyup yazmaya gerek yok
+      logger.debug('ğŸ“¦ Plan arşivleniyor:', planId, archiveMetadata);
+      // Doğrudan SQL güncellemesi - tüm plan verisini okuyup yazmaya gerek yok
       await db.archivePlan(planId, archiveMetadata);
-      logger.debug('âœ… Plan baÅŸarÄ±yla arÅŸivlendi:', planId);
+      logger.debug('âœ… Plan başarıyla arşivlendi:', planId);
       return true;
     } catch (error) {
-      logger.error('âŒ Plan arÅŸivleme hatasÄ±:', error);
+      logger.error('âŒ Plan arşivleme hatası:', error);
       throw error;
     }
   }
 
   /**
-   * PlanÄ± arÅŸivden Ã§Ä±kar
+   * Planı arşivden çıkar
    */
   async restorePlan(planId) {
     try {
-      logger.debug('ğŸ”“ Plan arÅŸivden Ã§Ä±karÄ±lÄ±yor:', planId);
-      // DoÄŸrudan SQL gÃ¼ncellemesi - tÃ¼m plan verisini okuyup yazmaya gerek yok
+      logger.debug('ğŸ”“ Plan arşivden çıkarılıyor:', planId);
+      // Doğrudan SQL güncellemesi - tüm plan verisini okuyup yazmaya gerek yok
       await db.restorePlan(planId);
-      logger.debug('âœ… Plan baÅŸarÄ±yla restore edildi:', planId);
+      logger.debug('âœ… Plan başarıyla restore edildi:', planId);
       return true;
     } catch (error) {
-      logger.error('âŒ Plan restore hatasÄ±:', error);
+      logger.error('âŒ Plan restore hatası:', error);
       throw error;
     }
   }
@@ -567,7 +567,7 @@ class PlanManager {
    */
   cleanPlanData(planData) {
     if (!planData) {
-      throw new Error('Plan verisi boÅŸ olamaz');
+      throw new Error('Plan verisi boş olamaz');
     }
 
 
@@ -577,23 +577,23 @@ class PlanManager {
       tumSalonlar = planData.tumSalonlar.map(salon => this.cleanSalonData(salon));
     }
 
-    // Temel plan yapÄ±sÄ±nÄ± oluÅŸtur
+    // Temel plan yapısını oluştur
     const cleanData = {
       // Ana salon (ilk salon)
       salon: this.cleanSalonData(planData.salon),
 
-      // TÃ¼m salonlar
+      // Tüm salonlar
       tumSalonlar: tumSalonlar,
 
-      // YerleÅŸemeyen Ã¶ÄŸrenciler
+      // Yerleşemeyen öğrenciler
       yerlesilemeyenOgrenciler: Array.isArray(planData.yerlesilemeyenOgrenciler)
         ? planData.yerlesilemeyenOgrenciler.map(ogr => this.cleanStudentData(ogr))
         : [],
 
-      // Kalan Ã¶ÄŸrenciler
+      // Kalan öğrenciler
       kalanOgrenciler: planData.kalanOgrenciler || [],
 
-      // Ä°statistikler
+      // İstatistikler
       istatistikler: planData.istatistikler || {
         toplamOgrenci: 0,
         yerlesenOgrenci: 0,
@@ -609,7 +609,7 @@ class PlanManager {
         : []
     };
 
-    // Toplam Ã¶ÄŸrenci sayÄ±sÄ±nÄ± hesapla
+    // Toplam öğrenci sayısını hesapla
     cleanData.totalStudents = this.calculateTotalStudents(cleanData);
     cleanData.salonCount = cleanData.tumSalonlar.length;
 
@@ -624,12 +624,12 @@ class PlanManager {
   cleanSalonData(salon) {
     if (!salon) return null;
 
-    // KRÄ°TÄ°K: siraDizilimi bilgisini hesapla veya koru
+    // KRİTİK: siraDizilimi bilgisini hesapla veya koru
     let siraDizilimi = salon.siraDizilimi;
 
-    // EÄŸer siraDizilimi eksik veya geÃ§ersizse, hesapla
+    // Eğer siraDizilimi eksik veya geçersizse, hesapla
     if (!siraDizilimi || !siraDizilimi.satir || !siraDizilimi.sutun || siraDizilimi.satir === 0 || siraDizilimi.sutun === 0) {
-      // Ã–nce masalar'dan hesapla
+      // Önce masalar'dan hesapla
       if (salon.masalar && Array.isArray(salon.masalar) && salon.masalar.length > 0) {
         const maxSatir = Math.max(...salon.masalar.map(m => m.satir || 0)) + 1;
         const maxSutun = Math.max(...salon.masalar.map(m => m.sutun || 0)) + 1;
@@ -638,7 +638,7 @@ class PlanManager {
         }
       }
 
-      // Masalar'dan hesaplanamadÄ±ysa, koltukMatrisi'nden hesapla
+      // Masalar'dan hesaplanamadıysa, koltukMatrisi'nden hesapla
       if ((!siraDizilimi || !siraDizilimi.satir || !siraDizilimi.sutun) && salon.koltukMatrisi) {
         if (salon.koltukMatrisi.satirSayisi && salon.koltukMatrisi.sutunSayisi) {
           siraDizilimi = {
@@ -648,7 +648,7 @@ class PlanManager {
         }
       }
 
-      // Hala hesaplanamadÄ±ysa, kapasite'den varsayÄ±lan deÄŸerler hesapla
+      // Hala hesaplanamadıysa, kapasite'den varsayılan değerler hesapla
       if (!siraDizilimi || !siraDizilimi.satir || !siraDizilimi.sutun) {
         const kapasite = salon.kapasite || salon.masalar?.length || 30;
         const satir = Math.ceil(Math.sqrt(kapasite)) || 6;
@@ -661,13 +661,13 @@ class PlanManager {
       ...salon,
       id: salon.id || salon.salonId,
       salonId: salon.salonId || salon.id,
-      salonAdi: salon.salonAdi || salon.ad || 'Ä°simsiz Salon'
+      salonAdi: salon.salonAdi || salon.ad || 'İsimsiz Salon'
     });
 
     return {
       id: sanitizedSalon.id,
       salonId: sanitizedSalon.salonId,
-      salonAdi: sanitizedSalon.salonAdi || 'Ä°simsiz Salon',
+      salonAdi: sanitizedSalon.salonAdi || 'İsimsiz Salon',
       kapasite: salon.kapasite || 0,
       siraDizilimi: siraDizilimi,
       ogrenciler: (sanitizedSalon.ogrenciler || []).map(ogrenci => this.cleanStudentData(ogrenci)),
@@ -677,7 +677,7 @@ class PlanManager {
   }
 
   /**
-   * Ã–ÄŸrenci verisini temizle
+   * Öğrenci verisini temizle
    */
   cleanStudentData(ogrenci) {
     if (!ogrenci) return null;
@@ -710,28 +710,28 @@ class PlanManager {
   }
 
   /**
-   * Plan verisini doÄŸrula ve dÃ¼zelt
+   * Plan verisini doğrula ve düzelt
    */
   validateAndFixPlan(planData) {
     if (!planData) {
-      throw new Error('Plan verisi bulunamadÄ±');
+      throw new Error('Plan verisi bulunamadı');
     }
 
-    // Temel yapÄ±yÄ± kontrol et
+    // Temel yapıyı kontrol et
     if (!planData.tumSalonlar || !Array.isArray(planData.tumSalonlar)) {
-      logger.warn('âš ï¸ tumSalonlar bulunamadÄ±, boÅŸ array oluÅŸturuluyor');
+      logger.warn('âš ï¸ tumSalonlar bulunamadı, boş array oluşturuluyor');
       planData.tumSalonlar = [];
     }
 
     if (planData.tumSalonlar.length === 0) {
-      logger.warn('âš ï¸ tumSalonlar boÅŸ, ana salon varsa onu kullanÄ±yoruz');
+      logger.warn('âš ï¸ tumSalonlar boş, ana salon varsa onu kullanıyoruz');
 
       // Ana salon varsa, onu tumSalonlar'a ekle
       if (planData.salon) {
         logger.debug('âœ… Ana salon tumSalonlar\'a ekleniyor');
         planData.tumSalonlar = [planData.salon];
       } else {
-        logger.warn('âŒ Ana salon da bulunamadÄ±, varsayÄ±lan salon oluÅŸturuluyor');
+        logger.warn('âŒ Ana salon da bulunamadı, varsayılan salon oluşturuluyor');
         planData.tumSalonlar = [this.createDefaultSalon()];
       }
     }
@@ -741,21 +741,21 @@ class PlanManager {
       planData.salon = planData.tumSalonlar[0];
     }
 
-    // KRITIK: TÃ¼m salonlarÄ±n siraDizilimi'ni kontrol et ve eksikse ekle
-    // SalonPlani bileÅŸeni siraDizilimi.satir ve siraDizilimi.sutun bekliyor
+    // KRITIK: Tüm salonların siraDizilimi'ni kontrol et ve eksikse ekle
+    // SalonPlani bileşeni siraDizilimi.satir ve siraDizilimi.sutun bekliyor
     const fixSalonSiraDizilimi = (salon) => {
       if (!salon) return salon;
 
-      // EÄŸer siraDizilimi zaten geÃ§erliyse, hiÃ§bir ÅŸey yapma
+      // Eğer siraDizilimi zaten geçerliyse, hiçbir şey yapma
       if (salon.siraDizilimi && salon.siraDizilimi.satir && salon.siraDizilimi.sutun &&
         salon.siraDizilimi.satir > 0 && salon.siraDizilimi.sutun > 0) {
         return salon;
       }
 
-      // siraDizilimi eksik veya geÃ§ersizse hesapla
+      // siraDizilimi eksik veya geçersizse hesapla
       let siraDizilimi = salon.siraDizilimi || {};
 
-      // Ã–nce masalar'dan hesapla
+      // Önce masalar'dan hesapla
       if (salon.masalar && Array.isArray(salon.masalar) && salon.masalar.length > 0) {
         const maxSatir = Math.max(...salon.masalar.map(m => (m.satir || 0))) + 1;
         const maxSutun = Math.max(...salon.masalar.map(m => (m.sutun || 0))) + 1;
@@ -764,7 +764,7 @@ class PlanManager {
         }
       }
 
-      // Masalar'dan hesaplanamadÄ±ysa, koltukMatrisi'nden hesapla
+      // Masalar'dan hesaplanamadıysa, koltukMatrisi'nden hesapla
       if ((!siraDizilimi.satir || !siraDizilimi.sutun) && salon.koltukMatrisi) {
         if (salon.koltukMatrisi.satirSayisi && salon.koltukMatrisi.sutunSayisi) {
           siraDizilimi = {
@@ -774,13 +774,13 @@ class PlanManager {
         }
       }
 
-      // Hala hesaplanamadÄ±ysa, kapasite'den varsayÄ±lan deÄŸerler hesapla
+      // Hala hesaplanamadıysa, kapasite'den varsayılan değerler hesapla
       if (!siraDizilimi.satir || !siraDizilimi.sutun) {
         const kapasite = salon.kapasite || salon.masalar?.length || 30;
         const satir = Math.ceil(Math.sqrt(kapasite)) || 6;
         const sutun = Math.ceil(kapasite / satir) || 5;
         siraDizilimi = { satir, sutun };
-        logger.warn('âš ï¸ Salon siraDizilimi eksik, varsayÄ±lan deÄŸerler ekleniyor:', salon.salonAdi || salon.ad);
+        logger.warn('âš ï¸ Salon siraDizilimi eksik, varsayılan değerler ekleniyor:', salon.salonAdi || salon.ad);
       }
 
       return {
@@ -789,23 +789,23 @@ class PlanManager {
       };
     };
 
-    // Ana salonu dÃ¼zelt
+    // Ana salonu düzelt
     if (planData.salon) {
       planData.salon = fixSalonSiraDizilimi(planData.salon);
     }
 
-    // TumSalonlar iÃ§indeki tÃ¼m salonlarÄ±n siraDizilimi'ni kontrol et
+    // TumSalonlar içindeki tüm salonların siraDizilimi'ni kontrol et
     planData.tumSalonlar = planData.tumSalonlar.map(salon => fixSalonSiraDizilimi(salon));
 
-    logger.debug('âœ… Plan verisi doÄŸrulandÄ±:', {
+    logger.debug('âœ… Plan verisi doğrulandı:', {
       salonVar: !!planData.salon,
       tumSalonlarSayisi: planData.tumSalonlar.length,
       totalStudents: planData.totalStudents || 0,
       salonSiraDizilimi: planData.salon?.siraDizilimi
     });
 
-    // Debug: Plan verisinin detaylarÄ±nÄ± kontrol et
-    logger.debug('ğŸ” PlanManager - Plan verisi detaylarÄ±:', {
+    // Debug: Plan verisinin detaylarını kontrol et
+    logger.debug('ğŸ” PlanManager - Plan verisi detayları:', {
       planDataKeys: Object.keys(planData),
       salonKeys: planData.salon ? Object.keys(planData.salon) : 'null',
       salonMasalar: planData.salon?.masalar?.length || 0,
@@ -821,13 +821,13 @@ class PlanManager {
   }
 
   /**
-   * VarsayÄ±lan salon oluÅŸtur
+   * Varsayılan salon oluştur
    */
   createDefaultSalon() {
     return {
       id: 'default',
       salonId: 'default',
-      salonAdi: 'VarsayÄ±lan Salon',
+      salonAdi: 'Varsayılan Salon',
       kapasite: 30,
       siraDizilimi: { satir: 5, sutun: 6 },
       ogrenciler: [],
@@ -837,7 +837,7 @@ class PlanManager {
   }
 
   /**
-   * Toplam Ã¶ÄŸrenci sayÄ±sÄ±nÄ± hesapla
+   * Toplam öğrenci sayısını hesapla
    */
   calculateTotalStudents(planData) {
     let total = 0;

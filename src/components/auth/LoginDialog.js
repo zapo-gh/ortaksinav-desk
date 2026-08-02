@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import {
   Dialog, DialogTitle, DialogContent, DialogActions,
   DialogContentText, TextField, Button, Alert, Box,
@@ -43,7 +43,7 @@ const LoginDialog = ({ open, onClose, onSuccess, forceOpen = false }) => {
     try {
       const trimmed = (loginUsername || '').trim();
       if (!trimmed || !loginPassword) {
-        throw new Error('KullanÄ±cÄ± adÄ± ve ÅŸifre zorunludur.');
+        throw new Error('Kullanıcı adı ve şifre zorunludur.');
       }
 
       // Debug: rememberMe akışını doğrula
@@ -56,7 +56,7 @@ const LoginDialog = ({ open, onClose, onSuccess, forceOpen = false }) => {
       onSuccess?.();
       onClose?.();
     } catch (err) {
-      setError(err?.message || "KullanÄ±cÄ± adÄ± veya ÅŸifre hatalÄ±.");
+      setError(err?.message || "Kullanıcı adı veya şifre hatalı.");
     } finally {
       setLoading(false);
     }
@@ -65,20 +65,20 @@ const LoginDialog = ({ open, onClose, onSuccess, forceOpen = false }) => {
   const handleRegister = async (e) => {
     e.preventDefault();
     if (loading) return;
-    if (regPassword !== regPasswordConfirm) { setError("Åifreler eÅŸleÅŸmiyor."); return; }
+    if (regPassword !== regPasswordConfirm) { setError("Åifreler eşleşmiyor."); return; }
     setLoading(true); setError(null);
     try {
       await localRegister(regUsername, regPassword, regDisplayName);
-      setSuccess("Hesap oluÅŸturuldu! GiriÅŸ yapabilirsiniz.");
+      setSuccess("Hesap oluşturuldu! Giriş yapabilirsiniz.");
       setRegUsername(""); setRegPassword(""); setRegPasswordConfirm(""); setRegDisplayName("");
       setTab(0);
-    } catch (err) { setError(err.message || "Hesap oluÅŸturulamadÄ±."); }
+    } catch (err) { setError(err.message || "Hesap oluşturulamadı."); }
     finally { setLoading(false); }
   };
 
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="xs" fullWidth disableEscapeKeyDown={forceOpen}>
-      <DialogTitle sx={{ pb: 0 }}>Ortak Sınav Yerleşim Programı</DialogTitle>
+      <DialogTitle sx={{ pb: 0, pt: 3, px: 3 }}>Ortak Sınav Yerleşim Programı</DialogTitle>
       <Tabs value={tab} onChange={handleTabChange} sx={{ px: 3 }} variant="fullWidth">
         <Tab label="Giriş Yap" />
         <Tab label="Yeni Hesap Oluştur" />
@@ -88,7 +88,7 @@ const LoginDialog = ({ open, onClose, onSuccess, forceOpen = false }) => {
       {tab === 0 && (
         <form onSubmit={handleLogin}>
           <DialogContent>
-            <DialogContentText sx={{ mb: 1 }}>Devam etmek iÃ§in giriÅŸ yapÄ±n.</DialogContentText>
+            <DialogContentText sx={{ mb: 1 }}>Devam etmek için giriş yapın.</DialogContentText>
             {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
             {success && <Alert severity="success" sx={{ mb: 2 }}>{success}</Alert>}
             <TextField label="E-Posta" value={loginUsername} onChange={e => setLoginUsername(e.target.value)}
@@ -103,14 +103,14 @@ const LoginDialog = ({ open, onClose, onSuccess, forceOpen = false }) => {
                   size="small"
                 />
               }
-              label="Beni hatÄ±rla"
+              label="Beni hatırla"
               sx={{ mt: 0.5 }}
             />
           </DialogContent>
           <DialogActions sx={{ px: 3, pb: 2 }}>
-            {!forceOpen && <Button onClick={handleClose} disabled={loading}>VazgeÃ§</Button>}
+            {!forceOpen && <Button onClick={handleClose} disabled={loading}>Vazgeç</Button>}
             <Button type="submit" variant="contained" disabled={loading} fullWidth={forceOpen}>
-              {loading ? <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}><CircularProgress size={18} thickness={5} />GiriÅŸ yapÄ±lÄ±yor...</Box> : "GiriÅŸ Yap"}
+              {loading ? <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}><CircularProgress size={18} thickness={5} />Giriş yapılıyor...</Box> : "Giriş Yap"}
             </Button>
           </DialogActions>
         </form>
@@ -119,12 +119,12 @@ const LoginDialog = ({ open, onClose, onSuccess, forceOpen = false }) => {
       {tab === 1 && (
         <form onSubmit={handleRegister}>
           <DialogContent>
-            <DialogContentText sx={{ mb: 1 }}>Yeni bir kullanÄ±cÄ± hesabÄ± oluÅŸturun.</DialogContentText>
+            <DialogContentText sx={{ mb: 1 }}>Yeni bir kullanıcı hesabı oluşturun.</DialogContentText>
             {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
             {success && <Alert severity="success" sx={{ mb: 2 }}>{success}</Alert>}
             <TextField label="E-Posta" type="email" value={regUsername} onChange={e => setRegUsername(e.target.value)}
               fullWidth required size="small" margin="dense" autoComplete="email" autoFocus />
-            <TextField label="Ad Soyad (isteÄŸe baÄŸlÄ±)" value={regDisplayName} onChange={e => setRegDisplayName(e.target.value)}
+            <TextField label="Ad Soyad (isteğe bağlı)" value={regDisplayName} onChange={e => setRegDisplayName(e.target.value)}
               fullWidth size="small" margin="dense" />
             <TextField label="Åifre" type="password" value={regPassword} onChange={e => setRegPassword(e.target.value)}
               fullWidth required size="small" margin="dense" autoComplete="new-password" inputProps={{ minLength: 6 }} helperText="En az 6 karakter" />
@@ -132,9 +132,9 @@ const LoginDialog = ({ open, onClose, onSuccess, forceOpen = false }) => {
               fullWidth required size="small" margin="dense" autoComplete="new-password" />
           </DialogContent>
           <DialogActions sx={{ px: 3, pb: 2 }}>
-            {!forceOpen && <Button onClick={handleClose} disabled={loading}>VazgeÃ§</Button>}
+            {!forceOpen && <Button onClick={handleClose} disabled={loading}>Vazgeç</Button>}
             <Button type="submit" variant="contained" color="success" disabled={loading} fullWidth={forceOpen}>
-              {loading ? <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}><CircularProgress size={18} thickness={5} />OluÅŸturuluyor...</Box> : "Hesap OluÅŸtur"}
+              {loading ? <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}><CircularProgress size={18} thickness={5} />Oluşturuluyor...</Box> : "Hesap Oluştur"}
             </Button>
           </DialogActions>
         </form>

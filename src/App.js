@@ -1,7 +1,7 @@
-import React from 'react';
+﻿import React from 'react';
 import { CssBaseline, Box, CircularProgress, Typography } from '@mui/material';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Toaster } from 'sonner';
+import { AppToaster } from './components/NotificationSystem';
 import { ExamProvider } from './context/ExamContext';
 import { CustomThemeProvider } from './context/ThemeContext';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -26,7 +26,7 @@ const queryClient = new QueryClient({
 
 
 
-// Preloader'Ä± kaldÄ±r (React ilk render'da)
+// Preloader'ı kaldır (React ilk render'da)
 function removePreloader() {
   const el = document.getElementById('preloader');
   if (el) {
@@ -37,7 +37,7 @@ function removePreloader() {
 }
 
 function App() {
-  // Ä°lk render'da preloader'Ä± kaldÄ±r
+  // İlk render'da preloader'ı kaldır
   React.useState(() => removePreloader());
 
   const [authReady, setAuthReady] = React.useState(false);
@@ -45,13 +45,13 @@ function App() {
   const [licenseOk, setLicenseOk] = React.useState(null);
   const [licenseExpiredInfo, setLicenseExpiredInfo] = React.useState(null);
 
-  // Auth ve lisans kontrolÃ¼ - login ekranÄ± gÃ¶sterildikten SONRA arka planda Ã§alÄ±ÅŸÄ±r
+  // Auth ve lisans kontrolü - login ekranı gösterildikten SONRA arka planda çalışır
   React.useEffect(() => {
     let cancelled = false;
 
     async function initializeApp() {
       try {
-        // Auth'u baÅŸlat (SQLite session oku)
+        // Auth'u başlat (SQLite session oku)
         const session = await initAuth();
 
         if (cancelled) return;
@@ -65,7 +65,7 @@ function App() {
           }
         }
       } catch (error) {
-        logger.error('Uygulama baÅŸlatma hatasÄ±:', error);
+        logger.error('Uygulama başlatma hatası:', error);
       } finally {
         if (!cancelled) {
           setAuthReady(true);
@@ -78,7 +78,7 @@ function App() {
     return () => { cancelled = true; };
   }, []);
 
-  // Auth deÄŸiÅŸikliklerini dinle
+  // Auth değişikliklerini dinle
   React.useEffect(() => {
     const unsubscribe = subscribeToAuthChanges((session) => {
       setIsLoggedIn(!!session);
@@ -86,7 +86,7 @@ function App() {
     return unsubscribe;
   }, []);
 
-  // Login baÅŸarÄ±lÄ± olunca lisans kontrolÃ¼nÃ¼ tetikle
+  // Login başarılı olunca lisans kontrolünü tetikle
   React.useEffect(() => {
     if (authReady && isLoggedIn && licenseOk === null) {
       const session = getCurrentSession();
@@ -112,7 +112,7 @@ function App() {
   return (
     <ErrorBoundary>
       <CustomThemeProvider>
-        <Toaster position="top-right" richColors closeButton />
+        <AppToaster />
         {/* Giriş yapılmamışsa veya authReady bekleniyor ve oturum yoksa: LoginPage göster */}
         {!isLoggedIn ? (
           <LoginPage onSuccess={() => setIsLoggedIn(true)} />

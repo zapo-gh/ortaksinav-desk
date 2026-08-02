@@ -277,11 +277,10 @@ const PlanlamaYap = memo(({
   const yerlestirmeDisabled = !kontroller?.yerleştirmeYapilabilir && process.env.NODE_ENV !== 'test';
 
   return (
-    <Box sx={{ maxWidth: 1200, mx: 'auto', mt: 3, mb: 4 }}>
+    <Box sx={{ width: '100%', mt: 0, mb: 4 }}>
       <PageHeader
         icon={<AssessmentIcon sx={{ color: '#4F46E5', fontSize: 24 }} />}
         title="Sınav Yerleştirme Planlaması"
-        sx={{ mb: { xs: 2, sm: 3 } }}
           actions={
             <Button
               variant="contained"

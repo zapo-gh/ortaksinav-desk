@@ -1,5 +1,6 @@
-import React, { useState, memo, useRef, useEffect, useCallback } from 'react';
+import React, { useState, memo, useRef, useEffect, useCallback, useMemo } from 'react';
 import PageHeader from './common/PageHeader';
+import DialogHeader from './common/DialogHeader';
 import EmptyState from './common/EmptyState';
 import {
   Card,
@@ -34,7 +35,8 @@ import {
   InputLabel,
   Select,
   TablePagination,
-  MenuItem
+  MenuItem,
+  Stack
 } from '@mui/material';
 import {
   People as PeopleIcon,
@@ -240,6 +242,7 @@ const OgrenciListesi = memo(({ ogrenciler, yerlestirmeSonucu = null, ayarlar = n
       ...(ayarlar || {}),
       dallar: next
     });
+    showSuccess(`✅ "${dal}" dalı başarıyla silindi.`);
   }, [isWriteAllowed, dallarEffective, onAyarlarDegistir, ayarlar, yerlesimPlaniVarMi]);
 
   // ogrencilerYukle fonksiyonu - hem SQLite'a hem global state'e yazar
@@ -326,9 +329,7 @@ const OgrenciListesi = memo(({ ogrenciler, yerlestirmeSonucu = null, ayarlar = n
   const { showSuccess, showError, showWarning } = useNotifications();
   const [yukleme, setYukleme] = useState(false);
   const [aramaTerimi, setAramaTerimi] = useState('');
-  const [aramaAcik, setAramaAcik] = useState(false);
-  const aramaRef = useRef(null);
-  const aramaInputRef = useRef(null);
+  const [seciliSinifFiltre, setSeciliSinifFiltre] = useState('Tümü');
 
   // Pagination state
   const [page, setPage] = useState(0);
@@ -346,37 +347,10 @@ const OgrenciListesi = memo(({ ogrenciler, yerlestirmeSonucu = null, ayarlar = n
   // Normalize cache - component seviyesinde (performans için)
   const normalizeCacheRef = useRef(new Map());
 
+  // Filtre veya arama değiştiğinde 1. sayfaya dön
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (aramaRef.current && !aramaRef.current.contains(event.target)) {
-        if (!aramaTerimi) {
-          setAramaAcik(false);
-        }
-      }
-    };
-
-    if (aramaAcik) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [aramaAcik, aramaTerimi]);
-
-  // Arama açıldığında input'a focus et
-  useEffect(() => {
-    if (aramaAcik && aramaInputRef.current) {
-      // requestAnimationFrame kullanarak DOM güncellemesinden sonra focus et
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          if (aramaInputRef.current && aramaInputRef.current.focus) {
-            aramaInputRef.current.focus();
-          }
-        });
-      });
-    }
-  }, [aramaAcik]);
+    setPage(0);
+  }, [aramaTerimi, seciliSinifFiltre]);
 
   // Türkçe karakterleri normalize eden fonksiyon (performans için memoize)
   const normalizeText = useCallback((text) => {
@@ -417,36 +391,50 @@ const OgrenciListesi = memo(({ ogrenciler, yerlestirmeSonucu = null, ayarlar = n
     cinsiyet: 'E'
   });
 
+  // Sistemde kayıtlı olan sınıfların listesi
+  const mevcutSiniflar = useMemo(() => {
+    const sinifSet = new Set();
+    ogrenciler.forEach(o => {
+      if (o.sinif && typeof o.sinif === 'string' && o.sinif.trim()) {
+        sinifSet.add(o.sinif.trim());
+      }
+    });
+    return Array.from(sinifSet).sort((a, b) => a.localeCompare(b, 'tr', { numeric: true }));
+  }, [ogrenciler]);
+
   // Filtrelenmiş öğrenci listesi - debounced arama terimi ile hesapla (performans optimizasyonu)
   const filtrelenmisOgrenciler = React.useMemo(() => {
-    // Filtreleme mantığı
     let filtered = ogrenciler;
+
+    // 1. Sınıf filtreleme
+    if (seciliSinifFiltre && seciliSinifFiltre !== 'Tümü') {
+      filtered = filtered.filter(ogrenci => (ogrenci.sinif || '').trim() === seciliSinifFiltre);
+    }
+
+    // 2. Arama terimi filtreleme
     if (!manualEklemeAcik && aramaTerimi.trim()) {
-      const isNumber = /^\d+$/.test(aramaTerimi);
-      const isText = !isNumber && aramaTerimi.length >= 3;
+      const qLower = aramaTerimi.toLowerCase().trim();
+      const normalizedTerim = normalizeText(qLower);
+      const cache = normalizeCacheRef.current;
+      const getNormalizedCached = (text) => {
+        if (!cache.has(text)) {
+          cache.set(text, normalizeText(text));
+        }
+        return cache.get(text);
+      };
 
-      if (isNumber || isText) {
-        const normalizedTerim = normalizeText(aramaTerimi);
-        const qLower = aramaTerimi.toLowerCase();
-        const cache = normalizeCacheRef.current;
-        const getNormalizedCached = (text) => {
-          if (!cache.has(text)) {
-            cache.set(text, normalizeText(text));
-          }
-          return cache.get(text);
-        };
+      filtered = filtered.filter(ogrenci => {
+        const ad = ogrenci.ad || '';
+        const soyad = ogrenci.soyad || '';
+        const numara = ogrenci.numara?.toString() || '';
+        const sinif = ogrenci.sinif || '';
 
-        filtered = ogrenciler.filter(ogrenci => {
-          const ad = ogrenci.ad || '';
-          const soyad = ogrenci.soyad || '';
-          const numara = ogrenci.numara?.toString() || '';
-          if (numara.includes(aramaTerimi)) return true;
-          const normalizedAd = getNormalizedCached(ad);
-          const normalizedSoyad = getNormalizedCached(soyad);
-          if (normalizedAd.includes(normalizedTerim) || normalizedSoyad.includes(normalizedTerim)) return true;
-          return ad.toLowerCase().includes(qLower) || soyad.toLowerCase().includes(qLower);
-        });
-      }
+        if (numara.includes(qLower) || sinif.toLowerCase().includes(qLower)) return true;
+        const normalizedAd = getNormalizedCached(ad);
+        const normalizedSoyad = getNormalizedCached(soyad);
+        if (normalizedAd.includes(normalizedTerim) || normalizedSoyad.includes(normalizedTerim)) return true;
+        return ad.toLowerCase().includes(qLower) || soyad.toLowerCase().includes(qLower);
+      });
     }
 
     // Her durumda sınıfa göre sırala (Örn: 9-A, 9-B, 10-A...)
@@ -462,7 +450,7 @@ const OgrenciListesi = memo(({ ogrenciler, yerlestirmeSonucu = null, ayarlar = n
       const numB = parseInt(b.numara, 10) || 0;
       return numA - numB;
     });
-  }, [ogrenciler, aramaTerimi, normalizeText, manualEklemeAcik]);
+  }, [ogrenciler, seciliSinifFiltre, aramaTerimi, normalizeText, manualEklemeAcik]);
   const [manuelOgrenci, setManuelOgrenci] = useState({
     ad: '',
     soyad: '',
@@ -507,6 +495,7 @@ const OgrenciListesi = memo(({ ogrenciler, yerlestirmeSonucu = null, ayarlar = n
       try {
         const updatedList = ogrenciler.filter(o => o.id !== silinecekOgrenciId);
         await ogrencilerYukle(updatedList);
+        showSuccess('✅ Öğrenci başarıyla silindi.');
       } catch (error) {
         showError(`Öğrenci silinirken hata: ${error.message}`);
       }
@@ -1505,7 +1494,7 @@ const OgrenciListesi = memo(({ ogrenciler, yerlestirmeSonucu = null, ayarlar = n
   // Örnek indirme kaldırıldı
 
   return (
-    <Box sx={{ maxWidth: 1200, mx: 'auto', mt: 3, mb: 4 }}>
+    <Box sx={{ width: '100%', mt: 0, mb: 4 }}>
       <PageHeader
         icon={<PeopleIcon sx={{ color: '#4F46E5', fontSize: 24 }} />}
         title="Öğrenci Listesi ve Seçimi"
@@ -1602,132 +1591,118 @@ const OgrenciListesi = memo(({ ogrenciler, yerlestirmeSonucu = null, ayarlar = n
 
 
 
-          {/* İstatistikler ve Arama */}
-          <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap', alignItems: 'center' }}>
-            <Chip
-              icon={<PeopleIcon />}
-              label={`Toplam: ${ogrenciler.length} öğrenci`}
-              color="primary"
-              variant="outlined"
-            />
-            {/* Arama Butonu/Input - Tek Element */}
-            <Box
-              ref={aramaRef}
+          {/* İstatistikler, Sınıf Filtresi ve Arama */}
+          <Box sx={{
+            display: 'flex',
+            gap: 2,
+            mb: 3,
+            flexWrap: 'wrap',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            width: '100%'
+          }}>
+            {/* Sol: Arama inputu (2. görseldeki gibi) */}
+            <TextField
+              size="small"
+              placeholder="Ad, numara, sınıf, TC..."
+              value={aramaTerimi}
+              onChange={(e) => setAramaTerimi(e.target.value)}
+              autoComplete="off"
               sx={{
-                position: 'relative',
-                display: 'flex',
-                alignItems: 'center',
-                height: 40, // Sabit yükseklik
-                overflow: 'hidden'
+                width: { xs: '100%', sm: 360, md: 420 },
+                '& .MuiOutlinedInput-root': {
+                  height: 42,
+                  borderRadius: 2.5,
+                  bgcolor: 'white',
+                  '& fieldset': {
+                    borderColor: 'grey.300',
+                  },
+                  '&:hover fieldset': {
+                    borderColor: 'primary.main',
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: 'primary.main',
+                    borderWidth: 2,
+                  },
+                },
               }}
-            >
-              <TextField
-                inputRef={aramaInputRef}
-                size="small"
-                placeholder={aramaAcik ? "Öğrenci ara (3+ harf veya numara)..." : ""}
-                value={aramaTerimi}
-                onChange={(e) => {
-                  // Throttle ile performans iyileştirmesi
-                  const value = e.target.value;
-                  setAramaTerimi(value);
-                }}
-                onFocus={() => setAramaAcik(true)}
-                autoComplete="off"
-                sx={{
-                  width: aramaAcik ? 280 : 40,
-                  height: 40,
-                  transition: 'all 0.2s ease',
-                  '& .MuiOutlinedInput-root': {
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon sx={{ color: 'text.secondary', fontSize: 20 }} />
+                  </InputAdornment>
+                ),
+                endAdornment: aramaTerimi ? (
+                  <InputAdornment position="end">
+                    <IconButton
+                      size="small"
+                      onClick={() => setAramaTerimi('')}
+                      edge="end"
+                      sx={{
+                        '&:hover': {
+                          bgcolor: 'error.50',
+                          color: 'error.main'
+                        }
+                      }}
+                    >
+                      ✕
+                    </IconButton>
+                  </InputAdornment>
+                ) : null,
+              }}
+            />
+
+            {/* Sağ: Sınıf Filtresi (Tüm Öğrenciler) ve Toplam Öğrenci Chip'i */}
+            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', ml: 'auto', flexWrap: 'wrap' }}>
+              <FormControl size="small" sx={{ minWidth: 180, bgcolor: 'white' }}>
+                <Select
+                  value={seciliSinifFiltre}
+                  onChange={(e) => setSeciliSinifFiltre(e.target.value)}
+                  displayEmpty
+                  sx={{
+                    borderRadius: 2,
                     height: 40,
-                    borderRadius: 99,
-                    bgcolor: 'white',
-                    transition: 'all 0.2s ease',
-                    '& fieldset': {
-                      borderColor: aramaAcik ? 'primary.main' : 'grey.300',
-                      transition: 'all 0.3s ease'
+                    fontWeight: 500,
+                    '& .MuiOutlinedInput-notchedOutline': {
+                      borderColor: 'grey.300',
                     },
-                    '&:hover fieldset': {
-                      borderColor: 'primary.main'
-                    },
-                    '&.Mui-focused fieldset': {
+                    '&:hover .MuiOutlinedInput-notchedOutline': {
                       borderColor: 'primary.main',
-                      boxShadow: 'none'
-                    }
-                  }
-                }}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Box
-                        sx={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          width: 32,
-                          height: 32,
-                          borderRadius: '50%',
-                          bgcolor: aramaAcik ? 'primary.50' : 'transparent',
-                          transition: 'all 0.3s ease',
-                          cursor: 'pointer'
-                        }}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          if (!aramaAcik) {
-                            setAramaAcik(true);
-                            // Focus işlemi useEffect'te yapılıyor (requestAnimationFrame ile)
-                          } else if (aramaInputRef.current) {
-                            // Zaten açıksa direkt focus et
-                            aramaInputRef.current.focus();
-                          }
-                        }}
-                      >
-                        <SearchIcon
-                          color={aramaAcik ? "primary" : "action"}
-                          sx={{
-                            fontSize: 20,
-                            transition: 'all 0.3s ease',
-                            display: 'block',
-                            margin: 'auto',
-                            transform: 'translate(-8px, 0px)' // SearchIcon'u görsel olarak merkeze hizala
-                          }}
-                        />
-                      </Box>
-                    </InputAdornment>
-                  ),
-                  endAdornment: aramaAcik && aramaTerimi && (
-                    <InputAdornment position="end">
-                      <IconButton
-                        size="small"
-                        onClick={() => {
-                          setAramaTerimi('');
-                          setAramaAcik(false);
-                        }}
-                        edge="end"
-                        sx={{
-                          transition: 'all 0.2s ease',
-                          '&:hover': {
-                            bgcolor: 'error.50',
-                            color: 'error.main',
-                            transform: 'scale(1.2) rotate(90deg)'
-                          }
-                        }}
-                      >
-                        ✕
-                      </IconButton>
-                    </InputAdornment>
-                  )
+                    },
+                  }}
+                >
+                  <MenuItem value="Tümü">Tüm Öğrenciler</MenuItem>
+                  {mevcutSiniflar.map((sinif) => (
+                    <MenuItem key={sinif} value={sinif}>
+                      {sinif}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+
+              <Chip
+                icon={<PeopleIcon />}
+                label={`Toplam: ${seciliSinifFiltre !== 'Tümü' || aramaTerimi ? filtrelenmisOgrenciler.length : ogrenciler.length} öğrenci`}
+                color="primary"
+                variant="outlined"
+                sx={{
+                  height: 40,
+                  px: 1.5,
+                  borderRadius: 2,
+                  fontWeight: 600,
+                  bgcolor: 'primary.50',
+                  borderColor: 'primary.200',
+                  fontSize: '0.875rem'
                 }}
               />
             </Box>
-
           </Box>
 
           {/* Öğrenci Tablosu - Dialog açıkken render etme (performans optimizasyonu) */}
           {!manualEklemeAcik && (
             <TableContainer component={Paper} sx={{ maxHeight: 600 }}>
               <Table stickyHeader>
-                <TableHead>
+                <TableHead sx={{ '& th': { bgcolor: '#F8FAFC', zIndex: 3, borderBottom: '2px solid', borderColor: 'grey.200' } }}>
                   <TableRow>
                     <TableCell>Sıra</TableCell>
                     <TableCell>Öğrenci No</TableCell>
@@ -1800,9 +1775,8 @@ const OgrenciListesi = memo(({ ogrenciler, yerlestirmeSonucu = null, ayarlar = n
         fullWidth
         PaperProps={{ sx: { borderRadius: 3 } }}
       >
-        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <EditIcon color="primary" fontSize="small" />
-          Dallar Yönetimi
+        <DialogTitle>
+          <DialogHeader icon={<EditIcon />} title="Dallar Yönetimi" variant="neutral" onClose={closeDallarDialog} />
         </DialogTitle>
 
         <DialogContent>
@@ -1875,7 +1849,7 @@ const OgrenciListesi = memo(({ ogrenciler, yerlestirmeSonucu = null, ayarlar = n
         PaperProps={{ sx: { borderRadius: 3 } }}
       >
         <DialogTitle id="onikinci-sinif-dialog-title">
-          12. Sınıf Öğrencileri Tespit Edildi
+          <DialogHeader icon={<WarningIcon />} title="12. Sınıf Öğrencileri Tespit Edildi" variant="warning" />
         </DialogTitle>
         <DialogContent>
           <DialogContentText id="onikinci-sinif-dialog-description">
@@ -1922,9 +1896,8 @@ const OgrenciListesi = memo(({ ogrenciler, yerlestirmeSonucu = null, ayarlar = n
           }
         }}
       >
-        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <DeleteIcon color="error" fontSize="small" />
-          Öğrenci Silme Onayı
+        <DialogTitle>
+          <DialogHeader icon={<DeleteIcon />} title="Öğrenci Silme Onayı" variant="danger" />
         </DialogTitle>
         <DialogContent>
           <Typography variant="body1" sx={{ mb: 2 }}>
@@ -1984,9 +1957,8 @@ const OgrenciListesi = memo(({ ogrenciler, yerlestirmeSonucu = null, ayarlar = n
           }
         }}
       >
-        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <WarningIcon color="error" fontSize="small" />
-          Tüm Öğrencileri Silme Onayı
+        <DialogTitle>
+          <DialogHeader icon={<WarningIcon />} title="Tüm Öğrencileri Silme Onayı" variant="danger" />
         </DialogTitle>
         <DialogContent>
           <Typography variant="body1" sx={{ mb: 2 }}>
@@ -2049,16 +2021,16 @@ const OgrenciListesi = memo(({ ogrenciler, yerlestirmeSonucu = null, ayarlar = n
           }
         }}
       >
-        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <AddIcon color="primary" fontSize="small" />
-          Manuel Öğrenci Ekleme
+        <DialogTitle>
+          <DialogHeader icon={<AddIcon />} title="Manuel Öğrenci Ekleme" variant="info" onClose={handleManuelEklemeIptal} />
         </DialogTitle>
-        <DialogContent sx={{ overflow: 'visible' }}>
-          <Grid container spacing={3}>
-            <Grid item xs={12} sm={6}>
+        <DialogContent sx={{ overflow: 'visible', pt: 1 }}>
+          <Stack spacing={2.5} sx={{ width: '100%', mt: 0.5 }}>
+            {/* 1. Satır: Ad ve Soyad YAN YANA */}
+            <Box sx={{ display: 'flex', gap: 2, width: '100%' }}>
               <TextField
-                fullWidth
-                label="Ad *"
+                sx={{ flex: 1 }}
+                label="Ad"
                 value={manuelOgrenci.ad}
                 onChange={handleAdChange}
                 required
@@ -2067,18 +2039,10 @@ const OgrenciListesi = memo(({ ogrenciler, yerlestirmeSonucu = null, ayarlar = n
                 error={!!validationErrors?.ad}
                 helperText={validationErrors?.ad}
                 inputProps={{ maxLength: 30 }}
-                InputLabelProps={{
-                  sx: {
-                    backgroundColor: 'white',
-                    px: 0.5
-                  }
-                }}
               />
-            </Grid>
-            <Grid item xs={12} sm={6}>
               <TextField
-                fullWidth
-                label="Soyad *"
+                sx={{ flex: 1 }}
+                label="Soyad"
                 value={manuelOgrenci.soyad}
                 onChange={handleSoyadChange}
                 required
@@ -2087,18 +2051,14 @@ const OgrenciListesi = memo(({ ogrenciler, yerlestirmeSonucu = null, ayarlar = n
                 error={!!validationErrors?.soyad}
                 helperText={validationErrors?.soyad}
                 inputProps={{ maxLength: 30 }}
-                InputLabelProps={{
-                  sx: {
-                    backgroundColor: 'white',
-                    px: 0.5
-                  }
-                }}
               />
-            </Grid>
-            <Grid item xs={12} sm={6}>
+            </Box>
+
+            {/* 2. Satır: Öğrenci No, Sınıf ve Cinsiyet YAN YANA */}
+            <Box sx={{ display: 'flex', gap: 2, width: '100%' }}>
               <TextField
-                fullWidth
-                label="Öğrenci No *"
+                sx={{ flex: 1 }}
+                label="Öğrenci No"
                 value={manuelOgrenci.numara}
                 onChange={handleNumaraChange}
                 required
@@ -2109,11 +2069,9 @@ const OgrenciListesi = memo(({ ogrenciler, yerlestirmeSonucu = null, ayarlar = n
                 helperText={validationErrors?.numara || validationWarnings?.numara}
                 inputProps={{ min: 1, max: 9999999999 }}
               />
-            </Grid>
-            <Grid item xs={12} sm={6}>
               <TextField
-                fullWidth
-                label="Sınıf *"
+                sx={{ flex: 1 }}
+                label="Sınıf"
                 value={manuelOgrenci.sinif}
                 onChange={handleSinifChange}
                 required
@@ -2124,9 +2082,7 @@ const OgrenciListesi = memo(({ ogrenciler, yerlestirmeSonucu = null, ayarlar = n
                 helperText={validationErrors?.sinif || validationWarnings?.sinif}
                 inputProps={{ pattern: '^\\d+-[A-Z]$', maxLength: 5 }}
               />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <FormControl fullWidth size="medium">
+              <FormControl sx={{ flex: 1 }} size="medium">
                 <InputLabel>Cinsiyet</InputLabel>
                 <Select
                   value={manuelOgrenci.cinsiyet}
@@ -2137,8 +2093,8 @@ const OgrenciListesi = memo(({ ogrenciler, yerlestirmeSonucu = null, ayarlar = n
                   <MenuItem value="K">Kız</MenuItem>
                 </Select>
               </FormControl>
-            </Grid>
-          </Grid>
+            </Box>
+          </Stack>
         </DialogContent>
         <DialogActions sx={{
           justifyContent: 'flex-end',
@@ -2193,85 +2149,70 @@ const OgrenciListesi = memo(({ ogrenciler, yerlestirmeSonucu = null, ayarlar = n
           }
         }}
       >
-        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <EditIcon color="primary" fontSize="small" />
-          Öğrenci Bilgilerini Düzenle
+        <DialogTitle>
+          <DialogHeader icon={<EditIcon />} title="Öğrenci Bilgilerini Düzenle" variant="info" onClose={() => setDuzenlemeAcik(false)} />
         </DialogTitle>
-        <DialogContent sx={{ overflow: 'visible' }}>
+        <DialogContent sx={{ overflow: 'visible', pt: 1 }}>
           {duzenlenecekOgrenci && (
-            <Grid container spacing={2}>
-              {/* Row 1: Ad and Soyad */}
-              <Grid item xs={12} sm={6}>
+            <Stack spacing={2.5} sx={{ width: '100%', mt: 0.5 }}>
+              {/* 1. Satır: Ad ve Soyad YAN YANA */}
+              <Box sx={{ display: 'flex', gap: 2, width: '100%' }}>
                 <TextField
-                  fullWidth
-                  label="Ad *"
+                  sx={{ flex: 1 }}
+                  label="Ad"
                   value={duzenlenenOgrenciData.ad}
                   onChange={handleDuzenlemeAdChange}
+                  required
                   variant="outlined"
                   size="medium"
                   error={!!duzenlemeValidationErrors?.ad}
                   helperText={duzenlemeValidationErrors?.ad}
                   inputProps={{ maxLength: 30 }}
-                  InputLabelProps={{
-                    sx: { backgroundColor: 'white', px: 0.5 }
-                  }}
                 />
-              </Grid>
-              <Grid item xs={12} sm={6}>
                 <TextField
-                  fullWidth
-                  label="Soyad *"
+                  sx={{ flex: 1 }}
+                  label="Soyad"
                   value={duzenlenenOgrenciData.soyad}
                   onChange={handleDuzenlemeSoyadChange}
+                  required
                   variant="outlined"
                   size="medium"
                   error={!!duzenlemeValidationErrors?.soyad}
                   helperText={duzenlemeValidationErrors?.soyad}
                   inputProps={{ maxLength: 30 }}
-                  InputLabelProps={{
-                    sx: { backgroundColor: 'white', px: 0.5 }
-                  }}
                 />
-              </Grid>
+              </Box>
 
-              {/* Row 2: No, Sınıf, Cinsiyet */}
-              <Grid item xs={12} sm={4}>
+              {/* 2. Satır: Öğrenci No, Sınıf ve Cinsiyet YAN YANA */}
+              <Box sx={{ display: 'flex', gap: 2, width: '100%' }}>
                 <TextField
-                  fullWidth
-                  label="Öğrenci No *"
+                  sx={{ flex: 1 }}
+                  label="Öğrenci No"
                   value={duzenlenenOgrenciData.numara}
                   onChange={handleDuzenlemeNumaraChange}
+                  required
                   variant="outlined"
                   size="medium"
                   type="number"
                   error={!!duzenlemeValidationErrors?.numara}
                   helperText={duzenlemeValidationErrors?.numara || duzenlemeValidationWarnings?.numara}
                   inputProps={{ min: 1, max: 9999999999 }}
-                  InputLabelProps={{
-                    sx: { backgroundColor: 'white', px: 0.5 }
-                  }}
                 />
-              </Grid>
-              <Grid item xs={12} sm={4}>
                 <TextField
-                  fullWidth
-                  label="Sınıf *"
+                  sx={{ flex: 1 }}
+                  label="Sınıf"
                   value={duzenlenenOgrenciData.sinif}
                   onChange={handleDuzenlemeSinifChange}
+                  required
                   variant="outlined"
                   size="medium"
                   placeholder="Örn: 9-A"
                   error={!!duzenlemeValidationErrors?.sinif}
                   helperText={duzenlemeValidationErrors?.sinif || duzenlemeValidationWarnings?.sinif}
                   inputProps={{ pattern: '^\\d+-[A-Z]$', maxLength: 5 }}
-                  InputLabelProps={{
-                    sx: { backgroundColor: 'white', px: 0.5 }
-                  }}
                 />
-              </Grid>
-              <Grid item xs={12} sm={4}>
-                <FormControl fullWidth size="medium">
-                  <InputLabel sx={{ backgroundColor: 'white', px: 0.5 }}>Cinsiyet</InputLabel>
+                <FormControl sx={{ flex: 1 }} size="medium">
+                  <InputLabel>Cinsiyet</InputLabel>
                   <Select
                     value={duzenlenenOgrenciData.cinsiyet}
                     onChange={handleDuzenlemeCinsiyetChange}
@@ -2281,8 +2222,8 @@ const OgrenciListesi = memo(({ ogrenciler, yerlestirmeSonucu = null, ayarlar = n
                     <MenuItem value="K">Kız</MenuItem>
                   </Select>
                 </FormControl>
-              </Grid>
-            </Grid>
+              </Box>
+            </Stack>
           )}
         </DialogContent>
         <DialogActions sx={{

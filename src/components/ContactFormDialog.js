@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import emailjs from '@emailjs/browser';
 import {
   Dialog,
@@ -128,7 +128,7 @@ const ContactFormDialog = ({ open, onClose }) => {
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
       <DialogTitle>
-        <DialogHeader icon={<EmailIcon color="primary" />} title="İletişim Formu" onClose={handleClose} />
+        <DialogHeader icon={<EmailIcon />} title="İletişim Formu" variant="info" onClose={handleClose} />
       </DialogTitle>
 
       <form onSubmit={handleSubmit}>

@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions,
   TextField, Button, Alert, Box, Typography,
@@ -86,7 +86,7 @@ const LicenseManager = ({ open, onClose }) => {
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
       <DialogTitle>
-        <DialogHeader icon={<KeyIcon color="primary" />} title="Lisans Anahtarı Üretici" onClose={handleClose} />
+        <DialogHeader icon={<KeyIcon />} title="Lisans Anahtarı Üretici" variant="info" onClose={handleClose} />
       </DialogTitle>
 
       <form onSubmit={handleGenerate}>

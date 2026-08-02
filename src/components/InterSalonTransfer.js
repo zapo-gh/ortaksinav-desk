@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+﻿import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -161,7 +161,7 @@ const InterSalonTransfer = ({
       PaperProps={{ sx: { borderRadius: 3 } }}
     >
       <DialogTitle>
-        <DialogHeader icon={<SwapIcon color="primary" />} title="Transfer" />
+        <DialogHeader icon={<SwapIcon />} title="Transfer" variant="info" />
       </DialogTitle>
 
       <DialogContent sx={{ px: 2, pt: 1.5, pb: 1 }}>

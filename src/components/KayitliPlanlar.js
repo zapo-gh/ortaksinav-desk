@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import {
   Container, Typography, Box, Card, CardContent, Button,
   List, ListItem, ListItemText, ListItemSecondaryAction,
@@ -100,7 +100,7 @@ const KayitliPlanlar = ({ onPlanYukle }) => {
         if (plan.id === null || plan.id === undefined || plan.id === '') return false;
         const planId = String(plan.id);
         const planName = String(plan.name || '');
-        return !planName.includes('GeÃ§ici Plan') && !planId.startsWith('temp_');
+        return !planName.includes('Geçici Plan') && !planId.startsWith('temp_');
       });
 
       const sortedPlans = filteredPlans.sort((a, b) => {
@@ -258,7 +258,7 @@ const KayitliPlanlar = ({ onPlanYukle }) => {
         const db = await import('../database/tauriDb');
         await db.default?.closeDbConnection?.();
       } catch (_) {
-        // BaÄŸlantÄ± zaten kapalÄ± olabilir veya henÃ¼z baÅŸlatÄ±lmamÄ±ÅŸ olabilir, sessizce geÃ§
+        // Bağlantı zaten kapalı olabilir veya henüz başlatılmamış olabilir, sessizce geç
       }
       await new Promise(r => setTimeout(r, 500));
       const bytes = selectedDbBytes;
@@ -299,7 +299,7 @@ const KayitliPlanlar = ({ onPlanYukle }) => {
       try {
         const db = await import('../database/tauriDb');
         await db.default.execute("PRAGMA wal_checkpoint(TRUNCATE)");
-      } catch (_) { /* checkpoint hatasÄ± kritik deÄŸil */ }
+      } catch (_) { /* checkpoint hatası kritik değil */ }
       const { invoke } = await import('@tauri-apps/api/core');
       const bytes = await invoke('export_db_backup');
       if (!bytes) throw new Error('export_db_backup boş döndü');
@@ -326,7 +326,7 @@ const KayitliPlanlar = ({ onPlanYukle }) => {
   const handleArchiveConfirm = async (metadata) => {
     if (!planToArchive) return;
     try {
-      logger.debug('ğŸ“¦ handleArchiveConfirm - baÅŸladÄ±', {
+      logger.debug('ğŸ“¦ handleArchiveConfirm - başladı', {
         planId: planToArchive.id,
         planIdType: typeof planToArchive.id,
         metadata,
@@ -340,7 +340,7 @@ const KayitliPlanlar = ({ onPlanYukle }) => {
         planId: planToArchive.id
       });
 
-      showSuccess('Plan baÅŸarÄ±yla arÅŸivlendi.');
+      showSuccess('Plan başarıyla arşivlendi.');
       await loadPlans();
 
       logger.debug('ğŸ“¦ handleArchiveConfirm - loadPlans success', {
@@ -348,7 +348,7 @@ const KayitliPlanlar = ({ onPlanYukle }) => {
       });
     } catch (error) {
       logger.error('âŒ handleArchiveConfirm - archivePlan hata:', error);
-      showError(`Plan arÅŸivlenirken hata oluÅŸtu: ${error?.message || 'unknown'}`);
+      showError(`Plan arşivlenirken hata oluştu: ${error?.message || 'unknown'}`);
     } finally {
       setIsLoading(false);
       setPlanToArchive(null);
@@ -357,16 +357,16 @@ const KayitliPlanlar = ({ onPlanYukle }) => {
 
   const handleRestorePlan = async (planId) => {
     try {
-      logger.debug('ğŸ” ArÅŸivden Ã§Ä±karma tetiklendi. planId:', planId, 'type:', typeof planId);
+      logger.debug('ğŸ” Arşivden çıkarma tetiklendi. planId:', planId, 'type:', typeof planId);
       setIsLoading(true);
       await planManager.restorePlan(planId);
-      logger.debug('âœ… restorePlan tamamlandÄ±. planId:', planId, 'type:', typeof planId);
-      showSuccess('Plan arÅŸivden Ã§Ä±karÄ±ldÄ±.');
+      logger.debug('âœ… restorePlan tamamlandı. planId:', planId, 'type:', typeof planId);
+      showSuccess('Plan arşivden çıkarıldı.');
       await loadPlans();
-      logger.debug('ğŸ“‹ loadPlans tamamlandÄ± sonrasÄ± refresh. planId:', planId);
+      logger.debug('ğŸ“‹ loadPlans tamamlandı sonrası refresh. planId:', planId);
     } catch (error) {
       logger.error('âŒ restorePlan hata:', error);
-      showError(`Plan geri yÃ¼klenirken hata oluÅŸtu: ${error?.message || 'unknown'}`);
+      showError(`Plan geri yüklenirken hata oluştu: ${error?.message || 'unknown'}`);
     } finally {
       setIsLoading(false);
     }
@@ -467,11 +467,10 @@ const KayitliPlanlar = ({ onPlanYukle }) => {
   }, [archivedPlansList, selectedArchiveYear, selectedArchiveTerm, archiveSearchText]);
 
   return (
-    <Container maxWidth="lg" sx={{ py: 3 }}>
+    <Box sx={{ width: '100%', mt: 0, mb: 4 }}>
       <PageHeader
         icon={<HistoryIcon sx={{ color: '#4F46E5', fontSize: 24 }} />}
         title="Kayıtlı Planlar"
-        sx={{ mb: 3, flexDirection: { xs: 'column', sm: 'row' }, alignItems: { xs: 'flex-start', sm: 'center' } }}
             actions={
               <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', justifyContent: { xs: 'flex-end', sm: 'flex-start' } }}>
                 <Button
@@ -1000,7 +999,7 @@ const KayitliPlanlar = ({ onPlanYukle }) => {
         defaultTerm={ayarlar?.donem}
       />
 
-      {/* DB YÃ¼kleme Onay Dialog */}
+      {/* DB Yükleme Onay Dialog */}
       <Dialog
         open={dbImportDialogOpen}
         onClose={() => {
@@ -1014,7 +1013,7 @@ const KayitliPlanlar = ({ onPlanYukle }) => {
         PaperProps={{ sx: { borderRadius: 3 } }}
       >
         <DialogTitle>
-          <DialogHeader icon={<WarningIcon color="warning" />} title="DB Yedeğini Yükle" />
+          <DialogHeader icon={<WarningIcon />} title="DB Yedeğini Yükle" variant="warning" />
         </DialogTitle>
         <DialogContent sx={{ mt: 2 }}>
           <Typography>
@@ -1063,7 +1062,7 @@ const KayitliPlanlar = ({ onPlanYukle }) => {
         PaperProps={{ sx: { borderRadius: 3 } }}
       >
         <DialogTitle>
-          <DialogHeader icon={<WarningIcon color="error" />} title="Planı Sil" />
+          <DialogHeader icon={<WarningIcon />} title="Planı Sil" variant="danger" />
         </DialogTitle>
         <DialogContent sx={{ mt: 2 }}>
           <Typography>
@@ -1097,7 +1096,7 @@ const KayitliPlanlar = ({ onPlanYukle }) => {
         </DialogActions>
       </Dialog>
 
-      {/* Ä°sim DeÄŸiÅŸtirme Dialog */}
+      {/* İsim Değiştirme Dialog */}
       <Dialog
         open={renameDialogOpen}
         onClose={() => {
@@ -1176,7 +1175,7 @@ const KayitliPlanlar = ({ onPlanYukle }) => {
           )}
         </DialogActions>
       </Dialog>
-    </Container>
+    </Box>
   );
 };
 

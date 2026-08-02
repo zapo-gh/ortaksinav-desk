@@ -1,4 +1,4 @@
-/**
+﻿/**
  * AI Model Trainer Component
  * Advanced machine learning integration for placement optimization
  */
@@ -468,7 +468,7 @@ const AIModelTrainer = ({
       {/* Training Configuration Dialog */}
       <Dialog open={settingsDialogOpen} onClose={() => setSettingsDialogOpen(false)} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
         <DialogTitle>
-          <DialogHeader icon={<SettingsIcon color="primary" />} title="AI Eğitim Ayarları" />
+          <DialogHeader icon={<SettingsIcon />} title="AI Eğitim Ayarları" variant="neutral" />
         </DialogTitle>
         <DialogContent>
           <TextField

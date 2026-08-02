@@ -33,7 +33,7 @@ import { useThemeMode } from '../context/ThemeContext';
 import { isSuperAdmin, getCurrentSession } from '../services/localAuth';
 import logger from '../utils/logger';
 
-const Header = ({ baslik, kullanici, onHomeClick, onTestDashboardClick }) => {
+const Header = ({ baslik, kullanici, onHomeClick, onTestDashboardClick, showNav, onMenuClick }) => {
   const [anchorEl, setAnchorEl] = React.useState(null);
   const [showTestDashboard, setShowTestDashboard] = React.useState(false);
   const [openSearch, setOpenSearch] = React.useState(false);
@@ -221,15 +221,25 @@ const Header = ({ baslik, kullanici, onHomeClick, onTestDashboardClick }) => {
         position="sticky"
         elevation={0}
         sx={{
-          background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #1e3a8a 100%)',
-          backdropFilter: 'blur(16px)',
+          background: 'transparent',
+          backdropFilter: 'blur(12px)',
           borderBottom: '1px solid',
-          borderColor: 'rgba(255, 255, 255, 0.15)',
-          boxShadow: '0 8px 32px 0 rgba(15, 23, 42, 0.35)',
+          borderColor: 'divider',
           transition: 'all 0.3s ease',
+          zIndex: 10,
         }}
       >
-        <Toolbar sx={{ minHeight: { xs: 66, md: 72 }, px: { xs: 1.5, sm: 2, md: 3 }, gap: 1 }}>
+        <Toolbar sx={{ minHeight: { xs: 60, md: 64 }, px: { xs: 1.5, sm: 2, md: 3 }, gap: 1 }}>
+          {/* Mobil Menü İkonu */}
+          {onMenuClick && (
+            <IconButton
+              onClick={onMenuClick}
+              edge="start"
+              sx={{ color: 'text.primary', mr: 1, display: { sm: 'none' } }}
+            >
+              <MenuIcon />
+            </IconButton>
+          )}
           {/* Sol taraf - Logo */}
           <Box
             onClick={onHomeClick}
@@ -294,113 +304,70 @@ const Header = ({ baslik, kullanici, onHomeClick, onTestDashboardClick }) => {
               minWidth: 0,
               display: 'flex',
               alignItems: 'center',
-              justifyContent: { xs: 'flex-start', sm: 'center' },
+              justifyContent: 'flex-start',
               gap: 1.5,
-              px: { xs: 0.5, sm: 2 },
+              px: { xs: 0.5, sm: 1 },
             }}
           >
             <Typography
               variant="h6"
-              component="div"
+              noWrap
               sx={{
-                fontWeight: 800,
-                letterSpacing: '0.5px',
-                color: '#ffffff',
-                textShadow: '0 2px 4px rgba(0,0,0,0.3)',
-                fontSize: { xs: '0.9rem', sm: '1.15rem', md: '1.4rem' },
-                textAlign: { xs: 'left', sm: 'center' },
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-                userSelect: 'none'
+                fontWeight: 700,
+                fontSize: { xs: '1rem', sm: '1.1rem', md: '1.25rem' },
+                color: 'text.primary',
+                letterSpacing: '-0.02em',
+                lineHeight: 1.2
               }}
-              title={baslik || 'Ortak Sınav Yerleştirme Sistemi'}
             >
               {baslik || 'Ortak Sınav Yerleştirme Sistemi'}
             </Typography>
-
-            <Chip
-              label="v2.0 • SİSTEM AKTİF"
-              size="small"
-              sx={{
-                display: { xs: 'none', md: 'inline-flex' },
-                bgcolor: 'rgba(34, 197, 94, 0.15)',
-                color: '#4ade80',
-                border: '1px solid rgba(34, 197, 94, 0.4)',
-                fontWeight: 700,
-                fontSize: '0.72rem',
-                height: 24,
-                boxShadow: '0 0 12px rgba(34, 197, 94, 0.25)',
-                '& .MuiChip-label': { px: 1.2 },
-              }}
-            />
           </Box>
 
           {/* Sağ taraf - Tüm Butonlar Birlikte */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, sm: 1, md: 1.5 }, flexShrink: 0 }}>
-            <IconButton
-              color="inherit"
-              size="small"
-              onClick={() => setOpenSearch(true)}
-              aria-label="Öğrenci ara"
-              title="Öğrenci Ara (Ctrl+K)"
-              sx={{
-                bgcolor: 'rgba(255, 255, 255, 0.08)',
-                border: '1px solid rgba(255, 255, 255, 0.15)',
-                borderRadius: '10px',
-                p: 1,
-                transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                '&:hover': {
-                  bgcolor: 'rgba(255, 255, 255, 0.18)',
-                  transform: 'translateY(-2px)',
-                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
-                }
-              }}
-            >
-              <SearchIcon fontSize="small" />
-            </IconButton>
-            <IconButton
-              color="inherit"
-              size="small"
-              onClick={toggleFullscreen}
-              aria-label="Tam ekran"
-              title="Tam Ekran (F11)"
-              sx={{
-                bgcolor: 'rgba(255, 255, 255, 0.08)',
-                border: '1px solid rgba(255, 255, 255, 0.15)',
-                borderRadius: '10px',
-                p: 1,
-                transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                '&:hover': {
-                  bgcolor: 'rgba(255, 255, 255, 0.18)',
-                  transform: 'translateY(-2px)',
-                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
-                }
-              }}
-            >
-              {isFullscreen ? <FullscreenExitIcon fontSize="small" /> : <FullscreenIcon fontSize="small" />}
-            </IconButton>
-            <IconButton
-              color="inherit"
-              size="small"
-              onClick={toggleColorMode}
-              aria-label="Tema değiştir"
-              title={mode === 'dark' ? "Aydınlık Mod" : "Karanlık Mod"}
-              sx={{
-                bgcolor: 'rgba(255, 255, 255, 0.08)',
-                border: '1px solid rgba(255, 255, 255, 0.15)',
-                borderRadius: '10px',
-                p: 1,
-                transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                '&:hover': {
-                  bgcolor: 'rgba(255, 255, 255, 0.18)',
-                  transform: 'translateY(-2px)',
-                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
-                }
-              }}
-            >
-              {mode === 'dark' ? <LightModeIcon fontSize="small" /> : <DarkModeIcon fontSize="small" />}
-            </IconButton>
+              {/* Arama Butonu */}
+              <IconButton
+                onClick={() => setOpenSearch(true)}
+                title="Hızlı Arama (Ctrl+K)"
+                sx={{
+                  color: 'text.secondary',
+                  background: mode === 'light' ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.05)',
+                  '&:hover': { background: mode === 'light' ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.1)' }
+                }}
+              >
+                <SearchIcon fontSize="small" />
+              </IconButton>
+              
+              {/* Tema Butonu */}
+              {!showNav && (
+                <IconButton
+                  onClick={toggleColorMode}
+                  title={mode === 'dark' ? 'Açık Tema' : 'Koyu Tema'}
+                  sx={{
+                    color: 'text.secondary',
+                    background: mode === 'light' ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.05)',
+                    '&:hover': { background: mode === 'light' ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.1)' },
+                    display: { xs: 'none', sm: 'inline-flex' }
+                  }}
+                >
+                  {mode === 'dark' ? <LightModeIcon fontSize="small" /> : <DarkModeIcon fontSize="small" />}
+                </IconButton>
+              )}
+
+              {/* Tam Ekran Butonu */}
+              <IconButton
+                onClick={toggleFullscreen}
+                title={isFullscreen ? 'Tam Ekrandan Çık' : 'Tam Ekran'}
+                sx={{
+                  color: 'text.secondary',
+                  background: mode === 'light' ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.05)',
+                  '&:hover': { background: mode === 'light' ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.1)' }
+                }}
+              >
+                {isFullscreen ? <FullscreenExitIcon fontSize="small" /> : <FullscreenIcon fontSize="small" />}
+              </IconButton>
+            
             {/* Test Dashboard Butonu */}
             {showTestDashboard && (
               <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center' }}>
@@ -412,46 +379,61 @@ const Header = ({ baslik, kullanici, onHomeClick, onTestDashboardClick }) => {
 
             {/* Kullanıcı Bölgesi */}
             {currentUser ? (
-              <>
-                <Chip
-                  label={displayName}
-                  variant="outlined"
+              <Box
+                onClick={handleMenu}
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: { xs: 0.5, sm: 1 },
+                  cursor: 'pointer',
+                  p: 0.5,
+                  pr: { xs: 1, sm: 1.5 },
+                  borderRadius: '12px',
+                  background: mode === 'light' ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.05)',
+                  border: '1px solid',
+                  borderColor: mode === 'light' ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.1)',
+                  transition: 'all 0.2s',
+                  '&:hover': {
+                    background: mode === 'light' ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.1)',
+                  }
+                }}
+              >
+                <Avatar
                   sx={{
-                    display: { xs: 'none', sm: 'flex' },
-                    color: '#ffffff',
-                    bgcolor: 'rgba(255, 255, 255, 0.08)',
-                    borderColor: 'rgba(255, 255, 255, 0.2)',
-                    backdropFilter: 'blur(10px)',
+                    width: { xs: 32, sm: 36 },
+                    height: { xs: 32, sm: 36 },
+                    bgcolor: 'primary.main',
+                    fontSize: { xs: '0.9rem', sm: '1rem' },
                     fontWeight: 600,
-                    borderRadius: '8px',
-                    maxWidth: { sm: 130, md: 'none' },
-                    transition: 'all 0.2s',
-                    '& .MuiChip-label': {
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis'
-                    },
-                    '&:hover': {
-                      bgcolor: 'rgba(255, 255, 255, 0.18)'
-                    }
-                  }}
-                />
-                <IconButton
-                  size="small"
-                  onClick={handleMenu}
-                  color="inherit"
-                  sx={{
-                    bgcolor: 'rgba(255, 255, 255, 0.12)',
-                    border: '1px solid rgba(255, 255, 255, 0.2)',
-                    borderRadius: '10px',
-                    p: 0.5,
-                    transition: 'all 0.2s',
-                    '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.24)', transform: 'translateY(-1px)' }
                   }}
                 >
-                  <Avatar sx={{ width: 32, height: 32, bgcolor: 'white', color: '#1e3a8a', fontWeight: 700 }}>
-                    {avatarLetter}
-                  </Avatar>
-                </IconButton>
+                  {avatarLetter}
+                </Avatar>
+                <Box sx={{ display: { xs: 'none', md: 'block' } }}>
+                  <Typography
+                    variant="subtitle2"
+                    sx={{ 
+                      fontWeight: 600, 
+                      color: 'text.primary',
+                      fontSize: { xs: '0.8rem', sm: '0.875rem' },
+                      letterSpacing: '-0.01em',
+                      lineHeight: 1.2
+                    }}
+                  >
+                    {displayName}
+                  </Typography>
+                  <Typography
+                    variant="caption"
+                    sx={{ 
+                      color: 'text.secondary',
+                      fontSize: '0.7rem',
+                      fontWeight: 500,
+                      display: 'block'
+                    }}
+                  >
+                    {role === 'admin' ? 'Yönetici' : 'Misafir'}
+                  </Typography>
+                </Box>
                 <Menu
                   anchorEl={anchorEl}
                   open={Boolean(anchorEl)}
@@ -476,26 +458,11 @@ const Header = ({ baslik, kullanici, onHomeClick, onTestDashboardClick }) => {
                     Çıkış Yap
                   </MenuItem>
                 </Menu>
-              </>
+              </Box>
             ) : (
               <Button
                 color="inherit"
                 startIcon={<Login />}
-                sx={{
-                  minWidth: { xs: 'auto', sm: 'auto' },
-                  px: { xs: 0.5, sm: 1.5 },
-                  py: { xs: 0.5, sm: 0.75 },
-                  border: '1px solid rgba(255, 255, 255, 0.3)',
-                  '&:hover': {
-                    bgcolor: 'rgba(255, 255, 255, 0.1)'
-                  },
-                  '& .MuiButton-startIcon': {
-                    margin: { xs: 0, sm: '0 8px 0 0' }
-                  },
-                  '& .MuiSvgIcon-root': {
-                    fontSize: { xs: '1.2rem', sm: '1.5rem' }
-                  }
-                }}
                 onClick={canAuth ? () => setLoginDialogOpen(true) : undefined}
                 disabled={!canAuth}
               >
