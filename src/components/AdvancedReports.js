@@ -58,6 +58,7 @@ import {
   Error as ErrorIcon
 } from '@mui/icons-material';
 import { useReactToPrint } from 'react-to-print';
+import DialogHeader from './common/DialogHeader';
 
 const AdvancedReports = ({
   yerlestirmeSonucu,
@@ -251,8 +252,10 @@ const AdvancedReports = ({
       </Card>
 
       {/* Filter Dialog */}
-      <Dialog open={filterDialogOpen} onClose={() => setFilterDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Rapor Filtreleri</DialogTitle>
+      <Dialog open={filterDialogOpen} onClose={() => setFilterDialogOpen(false)} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
+        <DialogTitle>
+          <DialogHeader icon={<FilterIcon color="primary" />} title="Rapor Filtreleri" />
+        </DialogTitle>
         <DialogContent>
           <FormControl fullWidth sx={{ mt: 2 }}>
             <InputLabel>Zaman Aralığı</InputLabel>
@@ -281,8 +284,8 @@ const AdvancedReports = ({
             </Select>
           </FormControl>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setFilterDialogOpen(false)}>İptal</Button>
+        <DialogActions sx={{ px: 3, pb: 2.5 }}>
+          <Button onClick={() => setFilterDialogOpen(false)} variant="outlined">İptal</Button>
           <Button onClick={() => setFilterDialogOpen(false)} variant="contained">
             Uygula
           </Button>
@@ -290,15 +293,17 @@ const AdvancedReports = ({
       </Dialog>
 
       {/* Export Dialog */}
-      <Dialog open={exportDialogOpen} onClose={() => setExportDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Raporu Dışa Aktar</DialogTitle>
+      <Dialog open={exportDialogOpen} onClose={() => setExportDialogOpen(false)} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
+        <DialogTitle>
+          <DialogHeader icon={<DownloadIcon color="primary" />} title="Raporu Dışa Aktar" />
+        </DialogTitle>
         <DialogContent>
           <Typography gutterBottom>
             Raporu aşağıdaki formatlardan birinde dışa aktarabilirsiniz:
           </Typography>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setExportDialogOpen(false)}>İptal</Button>
+        <DialogActions sx={{ px: 3, pb: 2.5 }}>
+          <Button onClick={() => setExportDialogOpen(false)} variant="outlined">İptal</Button>
           <Button onClick={() => handleExport('json')} variant="outlined">
             JSON
           </Button>
@@ -540,7 +545,9 @@ const RecommendationsTab = ({ reportData }) => (
 
 // Helper function to generate report data
 const generateReportData = (yerlestirmeSonucu, ogrenciler, salonlar, ayarlar, performanceData) => {
-  const totalStudents = ogrenciler.length;
+  const totalStudents = Number.isFinite(yerlestirmeSonucu?.istatistikler?.toplamOgrenci)
+    ? yerlestirmeSonucu.istatistikler.toplamOgrenci
+    : ogrenciler.length;
   const countFilled = (s) => {
     if (s && s.gruplar) {
       let c = 0;

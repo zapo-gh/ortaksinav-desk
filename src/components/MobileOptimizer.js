@@ -34,8 +34,10 @@ import {
   Fullscreen as FullscreenIcon,
   FullscreenExit as FullscreenExitIcon,
   Save as SaveIcon,
-  Print as PrintIcon
+  Print as PrintIcon,
+  PhoneIphone as PhoneIphoneIcon
 } from '@mui/icons-material';
+import DialogHeader from './common/DialogHeader';
 
 const MobileOptimizer = ({
   children,
@@ -209,8 +211,11 @@ const MobileOptimizer = ({
         onClose={() => setShowMobileWarning(false)}
         maxWidth="sm"
         fullWidth
+        PaperProps={{ sx: { borderRadius: 3 } }}
       >
-        <DialogTitle>Mobil Cihaz Tespit Edildi</DialogTitle>
+        <DialogTitle>
+          <DialogHeader icon={<PhoneIphoneIcon color="primary" />} title="Mobil Cihaz Tespit Edildi" />
+        </DialogTitle>
         <DialogContent>
           <Typography gutterBottom>
             Mobil cihazda daha iyi deneyim için bazı optimizasyonlar aktif edildi.
@@ -223,8 +228,8 @@ const MobileOptimizer = ({
             </Typography>
           </Alert>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShowMobileWarning(false)}>
+        <DialogActions sx={{ px: 3, pb: 2.5 }}>
+          <Button onClick={() => setShowMobileWarning(false)} variant="contained">
             Anladım
           </Button>
         </DialogActions>

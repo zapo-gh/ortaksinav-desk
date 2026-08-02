@@ -19,6 +19,7 @@ import {
     Archive as ArchiveIcon,
     CalendarToday as CalendarIcon
 } from '@mui/icons-material';
+import DialogHeader from './common/DialogHeader';
 
 const ArchiveDialog = ({ open, onClose, onConfirm, planName, defaultYear, defaultTerm }) => {
     const currentYear = new Date().getFullYear();
@@ -49,17 +50,14 @@ const ArchiveDialog = ({ open, onClose, onConfirm, planName, defaultYear, defaul
     };
 
     const handleConfirm = () => {
-        // Debug: buton gerçekten basılıyor mu?
-        console.log('🗄️ ArchiveDialog handleConfirm - metadata:', metadata, 'metadataType:', typeof metadata);
         onConfirm?.(metadata);
         onClose();
     };
 
     return (
-        <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
-            <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <ArchiveIcon color="secondary" />
-                <Typography variant="h6">Planı Arşivle</Typography>
+        <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
+            <DialogTitle>
+                <DialogHeader icon={<ArchiveIcon color="secondary" />} title="Planı Arşivle" />
             </DialogTitle>
             <DialogContent sx={{ mt: 2 }}>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
@@ -120,8 +118,8 @@ const ArchiveDialog = ({ open, onClose, onConfirm, planName, defaultYear, defaul
                     </Grid>
                 </Grid>
             </DialogContent>
-            <DialogActions sx={{ p: 2 }}>
-                <Button onClick={onClose} color="inherit">İptal</Button>
+            <DialogActions sx={{ px: 3, pb: 2.5 }}>
+                <Button onClick={onClose} variant="outlined">İptal</Button>
                 <Button
                     onClick={handleConfirm}
                     variant="contained"

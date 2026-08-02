@@ -6,6 +6,7 @@ import { getNeighbors } from '../algorithms/utils/helpers';
 import dragDropLearning from '../utils/dragDropLearning';
 import logger from '../utils/logger';
 import { useNotifications } from './NotificationSystem';
+import PageHeader from './common/PageHeader';
 import {
   Card,
   CardContent,
@@ -1136,7 +1137,7 @@ const SalonPlani = memo(({ sinif, ogrenciler, seciliOgrenciId, kalanOgrenciler =
   }, [sinifDuzeni]);
   if (!sinifDuzeni) {
     return (
-      <Card sx={{ maxWidth: 1400, mx: 'auto' }}>
+      <Card sx={{ maxWidth: 1200, mx: 'auto', mt: 3, mb: 4 }}>
         <CardContent>
           <Typography variant="h6" color="text.secondary" textAlign="center">
             {sinif ? 'Salon yükleniyor...' : 'Salon bilgisi bulunamadı'}
@@ -1150,30 +1151,16 @@ const SalonPlani = memo(({ sinif, ogrenciler, seciliOgrenciId, kalanOgrenciler =
   // Bu kısım kaldırıldı - ana salon planı render edilecek
 
   return (
-    <Box sx={{ width: '100%', mb: 2 }}>
-      <Paper elevation={1} sx={{ p: { xs: 1, sm: 2 }, maxWidth: { xs: '100%', sm: 1400 }, mx: 'auto' }}>
-        <Box sx={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          mb: 1,
-          flexDirection: { xs: 'column', sm: 'row' },
-          gap: { xs: 1, sm: 0 }
-        }}>
-          <Box sx={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: { xs: 1, sm: 2 },
-            flexWrap: 'wrap'
-          }}>
-            <Box sx={{ width: 40, height: 40, borderRadius: '12px', bgcolor: 'rgba(37, 99, 235, 0.12)', border: '1px solid rgba(37, 99, 235, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 6px rgba(37, 99, 235, 0.15)' }}>
-              <ChairIcon sx={{ color: '#2563eb', fontSize: 22 }} />
-            </Box>
-            <Typography variant="h6" component="h1" sx={{ fontSize: { xs: '1.15rem', sm: '1.35rem' }, color: '#0f172a', fontWeight: 800, letterSpacing: '-0.02em' }}>
-              {(sinif?.ad || sinif?.salonAdi) ? `${sinif.ad || sinif.salonAdi} Salon Planı` : 'Salon Planları'}
-            </Typography>
-
-            {/* Öğrenci Sayıları */}
+    <Box sx={{ maxWidth: 1200, mx: 'auto', mt: 3, mb: 4 }}>
+      <PageHeader
+        icon={<ChairIcon sx={{ color: '#4F46E5', fontSize: 24 }} />}
+        title={(sinif?.ad || sinif?.salonAdi) ? `${sinif.ad || sinif.salonAdi} Salon Planı` : 'Salon Planları'}
+        sx={{
+          mb: { xs: 2, sm: 3 },
+            flexDirection: { xs: 'column', sm: 'row' },
+            gap: { xs: 1, sm: 0 }
+          }}
+          titleExtra={
             <SalonStatsChips {...useMemo(() => {
               if (yerlestirmeSonucu && Array.isArray(yerlestirmeSonucu.tumSalonlar)) {
                 const countFilled = (salonKaydi) => {
@@ -1271,75 +1258,78 @@ const SalonPlani = memo(({ sinif, ogrenciler, seciliOgrenciId, kalanOgrenciler =
               }
               return { mode: null };
             }, [yerlestirmeSonucu, ogrenciler])} />
-          </Box>
-
-          <Box sx={{
-            display: 'flex',
-            gap: { xs: 0.5, sm: 1 },
-            flexDirection: { xs: 'column', sm: 'row' },
-            alignItems: { xs: 'center', sm: 'flex-start' }
-          }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: { xs: '100%', sm: 'auto' }, maxWidth: '100%' }}>
-              {aktifPlanAdi ? (
-                <Chip
-                  label={`Plan: ${aktifPlanAdi}`}
-                  color="primary"
-                  variant="outlined"
-                  size="small"
-                  sx={{
-                    fontSize: { xs: '0.65rem', sm: '0.75rem' },
-                    fontWeight: 500,
-                    maxWidth: { xs: '200px', sm: 'none' }, minWidth: 0,
-                    textTransform: 'none',
-                    '& .MuiChip-label': {
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                      display: 'block'
-                    }
-                  }}
-                  title={`Plan: ${aktifPlanAdi}`}
-                />
-              ) : null}
-              <Tooltip title="Yerleşimi Temizle">
-                <Button
-                  variant="outlined"
-                  color="error"
-                  startIcon={<DeleteIcon sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }} />}
-                  onClick={async () => {
-                    const confirmed = await showConfirm('Tüm yerleştirme sonuçlarını temizlemek istediğinizden emin misiniz?');
-                    if (confirmed) {
-                      if (typeof onOgrenciSec === 'function') {
-                        onOgrenciSec('clear');
+          }
+          actions={
+            <Box sx={{
+              display: 'flex',
+              gap: { xs: 0.5, sm: 1 },
+              flexDirection: { xs: 'column', sm: 'row' },
+              alignItems: { xs: 'center', sm: 'flex-start' }
+            }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: { xs: '100%', sm: 'auto' }, maxWidth: '100%' }}>
+                {aktifPlanAdi ? (
+                  <Chip
+                    label={`Plan: ${aktifPlanAdi}`}
+                    color="primary"
+                    variant="outlined"
+                    size="small"
+                    sx={{
+                      fontSize: { xs: '0.65rem', sm: '0.75rem' },
+                      fontWeight: 500,
+                      maxWidth: { xs: '200px', sm: 'none' }, minWidth: 0,
+                      textTransform: 'none',
+                      '& .MuiChip-label': {
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        display: 'block'
                       }
-                    }
-                  }}
-                  sx={{
-                    flexShrink: 0,
+                    }}
+                    title={`Plan: ${aktifPlanAdi}`}
+                  />
+                ) : null}
+                <Tooltip title="Yerleşimi Temizle">
+                  <Button
+                    variant="outlined"
+                    color="error"
+                    startIcon={<DeleteIcon sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }} />}
+                    onClick={async () => {
+                      const confirmed = await showConfirm('Tüm yerleştirme sonuçlarını temizlemek istediğinizden emin misiniz?');
+                      if (confirmed) {
+                        if (typeof onOgrenciSec === 'function') {
+                          onOgrenciSec('clear');
+                        }
+                      }
+                    }}
+                    sx={{
+                      flexShrink: 0,
 
-                    bgcolor: 'error.50',
-                    borderColor: 'error.200',
-                    color: 'error.main',
-                    fontSize: { xs: '0.65rem', sm: '0.75rem' },
-                    px: { xs: 1, sm: 1.5 },
-                    py: { xs: 0, sm: 0.75 },
-                    height: { xs: 24, sm: 'auto' },
-                    minWidth: { xs: 'auto', sm: 'auto' },
-                    '& .MuiButton-startIcon': {
-                      mr: { xs: 0.5, sm: 1 }
-                    },
-                    '&:hover': {
-                      bgcolor: 'error.100',
-                      borderColor: 'error.300'
-                    }
-                  }}
-                >
-                  <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>Yerleşimi </Box>Temizle
-                </Button>
-              </Tooltip>
+                      bgcolor: 'error.50',
+                      borderColor: 'error.200',
+                      color: 'error.main',
+                      fontSize: { xs: '0.65rem', sm: '0.75rem' },
+                      px: { xs: 1, sm: 1.5 },
+                      py: { xs: 0, sm: 0.75 },
+                      height: { xs: 24, sm: 'auto' },
+                      minWidth: { xs: 'auto', sm: 'auto' },
+                      '& .MuiButton-startIcon': {
+                        mr: { xs: 0.5, sm: 1 }
+                      },
+                      '&:hover': {
+                        bgcolor: 'error.100',
+                        borderColor: 'error.300'
+                      }
+                    }}
+                  >
+                    <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>Yerleşimi </Box>Temizle
+                  </Button>
+                </Tooltip>
+              </Box>
             </Box>
-          </Box>
-        </Box>
+          }
+        />
+      <Card elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: '16px', mb: 2 }}>
+        <CardContent sx={{ p: { xs: 1.5, sm: 2.5 } }}>
 
         {/* Salon sekmeleri - Hem yerleştirme planı varken hem de yokken göster */}
         {((tumSalonlar && tumSalonlar.length > 1) || (salonlar && salonlar.length > 0)) && (
@@ -1406,7 +1396,7 @@ const SalonPlani = memo(({ sinif, ogrenciler, seciliOgrenciId, kalanOgrenciler =
                         },
                         '&:hover': {
                           boxShadow: 'none',
-                          // Transform yerine sadece box-shadow ile hover efekti
+                          transform: 'none' // Global MuiButton hover translateY(-1px) devre dışı - içerik kaymasını önler
                         },
                         transition: 'background-color 0.2s ease',
                         mb: { xs: 0, sm: 0 }
@@ -1483,7 +1473,7 @@ const SalonPlani = memo(({ sinif, ogrenciler, seciliOgrenciId, kalanOgrenciler =
                         },
                         '&:hover': {
                           boxShadow: 'none',
-                          // Transform yerine sadece box-shadow ile hover efekti
+                          transform: 'none' // Global MuiButton hover translateY(-1px) devre dışı - içerik kaymasını önler
                         },
                         transition: 'background-color 0.2s ease',
                         mb: { xs: 0, sm: 0 }
@@ -1861,7 +1851,7 @@ const SalonPlani = memo(({ sinif, ogrenciler, seciliOgrenciId, kalanOgrenciler =
           }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <PersonIcon sx={{ color: 'white' }} />
-              <Typography variant="h6">
+              <Typography variant="h6" sx={{ color: 'white' }}>
                 {seciliOgrenci ? 'Öğrenci Detayları' : 'Masa Bilgileri'}
               </Typography>
             </Box>
@@ -2151,8 +2141,9 @@ const SalonPlani = memo(({ sinif, ogrenciler, seciliOgrenciId, kalanOgrenciler =
           onSelect={handleUnplacedStudentSelect}
           masaNo={seciliMasa?.masaNumarasi || (seciliMasa && calculateDeskNumberForMasa(seciliMasa))}
         />
-      </Paper>
-    </Box >
+        </CardContent>
+      </Card>
+    </Box>
 
   );
 });

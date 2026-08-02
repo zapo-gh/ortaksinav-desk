@@ -21,6 +21,8 @@ import {
   ExpandLess as ExpandLessIcon, UnfoldMore as UnfoldMoreIcon, UnfoldLess as UnfoldLessIcon
 } from '@mui/icons-material';
 import ArchiveDialog from './ArchiveDialog';
+import PageHeader from './common/PageHeader';
+import DialogHeader from './common/DialogHeader';
 import planManager from '../utils/planManager';
 import { useNotifications } from './NotificationSystem';
 import logger from '../utils/logger';
@@ -466,43 +468,35 @@ const KayitliPlanlar = ({ onPlanYukle }) => {
 
   return (
     <Container maxWidth="lg" sx={{ py: 3 }}>
-      <Card elevation={2}>
-        <CardContent>
-          <Box sx={{
-            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-            mb: { xs: 2, sm: 3 },
-            flexDirection: { xs: 'column', sm: 'row' },
-            gap: { xs: 1, sm: 0 }
-          }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-              <Box sx={{ width: 40, height: 40, borderRadius: '12px', bgcolor: 'rgba(37, 99, 235, 0.12)', border: '1px solid rgba(37, 99, 235, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 6px rgba(37, 99, 235, 0.15)' }}>
-                <HistoryIcon sx={{ color: '#2563eb', fontSize: 22 }} />
+      <PageHeader
+        icon={<HistoryIcon sx={{ color: '#4F46E5', fontSize: 24 }} />}
+        title="Kayıtlı Planlar"
+        sx={{ mb: 3, flexDirection: { xs: 'column', sm: 'row' }, alignItems: { xs: 'flex-start', sm: 'center' } }}
+            actions={
+              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', justifyContent: { xs: 'flex-end', sm: 'flex-start' } }}>
+                <Button
+                  variant="contained" color="primary" size="small"
+                  onClick={handleDbBackup}
+                  startIcon={<BackupIcon />}
+                  sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' }, px: { xs: 1, sm: 2 } }}
+                  disabled={isLoading || dbBackupLoading || dbImportLoading}
+                >
+                  {dbBackupLoading ? 'DB Yedek Alınıyor...' : 'DB Yedeği Al'}
+                </Button>
+                <Button
+                  variant="outlined" color="warning" size="small"
+                  onClick={handleDbImportPick}
+                  startIcon={<UploadIcon />}
+                  sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' }, px: { xs: 1, sm: 2 } }}
+                  disabled={isLoading || dbBackupLoading || dbImportLoading}
+                >
+                  {dbImportLoading ? 'DB Yükleniyor...' : 'DB Yedeğini Yükle'}
+                </Button>
               </Box>
-              <Typography variant="h6" component="h1" sx={{ mb: 0, fontSize: { xs: '1.15rem', sm: '1.35rem' }, color: '#0f172a', fontWeight: 800, letterSpacing: '-0.02em' }}>
-                Kayıtlı Planlar
-              </Typography>
-            </Box>
-            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', justifyContent: { xs: 'flex-end', sm: 'flex-start' } }}>
-              <Button
-                variant="contained" color="primary" size="small"
-                onClick={handleDbBackup}
-                startIcon={<BackupIcon />}
-                sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' }, px: { xs: 1, sm: 2 } }}
-                disabled={isLoading || dbBackupLoading || dbImportLoading}
-              >
-                {dbBackupLoading ? 'DB Yedek Alınıyor...' : 'DB Yedeği Al'}
-              </Button>
-              <Button
-                variant="outlined" color="warning" size="small"
-                onClick={handleDbImportPick}
-                startIcon={<UploadIcon />}
-                sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' }, px: { xs: 1, sm: 2 } }}
-                disabled={isLoading || dbBackupLoading || dbImportLoading}
-              >
-                {dbImportLoading ? 'DB Yükleniyor...' : 'DB Yedeğini Yükle'}
-              </Button>
-            </Box>
-          </Box>
+        }
+      />
+      <Card elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: '16px', mb: 4 }}>
+        <CardContent>
 
           <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
             <Tabs value={activeTab} onChange={(e, v) => setActiveTab(v)} aria-label="plan tabs">
@@ -1017,10 +1011,10 @@ const KayitliPlanlar = ({ onPlanYukle }) => {
         }}
         maxWidth="sm"
         fullWidth
+        PaperProps={{ sx: { borderRadius: 3 } }}
       >
-        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <WarningIcon color="warning" />
-          <Typography variant="h6" component="span">DB Yedeğini Yükle</Typography>
+        <DialogTitle>
+          <DialogHeader icon={<WarningIcon color="warning" />} title="DB Yedeğini Yükle" />
         </DialogTitle>
         <DialogContent sx={{ mt: 2 }}>
           <Typography>
@@ -1035,12 +1029,13 @@ const KayitliPlanlar = ({ onPlanYukle }) => {
             Yükleme sonrası sayfa otomatik yenilenecektir.
           </Alert>
         </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
+        <DialogActions sx={{ px: 3, pb: 2.5 }}>
           <Button
             onClick={() => {
               setDbImportDialogOpen(false);
               setSelectedDbFileName(null);
             }}
+            variant="outlined"
             disabled={dbImportLoading}
           >
             İptal
@@ -1065,18 +1060,18 @@ const KayitliPlanlar = ({ onPlanYukle }) => {
         }}
         maxWidth="xs"
         fullWidth
+        PaperProps={{ sx: { borderRadius: 3 } }}
       >
-        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <WarningIcon color="error" />
-          <Typography variant="h6">Planı Sil</Typography>
+        <DialogTitle>
+          <DialogHeader icon={<WarningIcon color="error" />} title="Planı Sil" />
         </DialogTitle>
         <DialogContent sx={{ mt: 2 }}>
           <Typography>
             Bu planı silmek istediğinize emin misiniz? Bu işlem geri alınamaz.
           </Typography>
         </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
-          <Button onClick={() => {
+        <DialogActions sx={{ px: 3, pb: 2.5 }}>
+          <Button variant="outlined" onClick={() => {
             setDeleteDialogOpen(false);
             setPlanToDelete(null);
           }}>
@@ -1115,12 +1110,13 @@ const KayitliPlanlar = ({ onPlanYukle }) => {
         maxWidth="sm"
         fullWidth
         disableEscapeKeyDown={isRenaming}
+        PaperProps={{ sx: { borderRadius: 3 } }}
       >
-        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <EditIcon color="primary" />
-          <Typography variant="h6">
-            {isRenaming ? 'Plan Adı Güncelleniyor' : 'Plan Adını Değiştir'}
-          </Typography>
+        <DialogTitle>
+          <DialogHeader
+            icon={<EditIcon color="primary" />}
+            title={isRenaming ? 'Plan Adı Güncelleniyor' : 'Plan Adını Değiştir'}
+          />
         </DialogTitle>
         <DialogContent sx={{ mt: 2 }}>
           {isRenaming ? (
@@ -1157,8 +1153,9 @@ const KayitliPlanlar = ({ onPlanYukle }) => {
             </>
           )}
         </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
+        <DialogActions sx={{ px: 3, pb: 2.5 }}>
           <Button
+            variant="outlined"
             onClick={() => {
               setRenameDialogOpen(false);
               setPlanToRename(null);

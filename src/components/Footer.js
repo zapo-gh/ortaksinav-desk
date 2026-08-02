@@ -6,13 +6,11 @@ import {
   Divider,
   IconButton,
   Tooltip,
-  Link,
   Stack,
   Chip
 } from '@mui/material';
 import {
   School as SchoolIcon,
-  Code as CodeIcon,
   Email as EmailIcon,
   Info as InfoIcon
 } from '@mui/icons-material';
@@ -29,8 +27,8 @@ const Footer = () => {
       component="footer"
       className="app-footer"
       sx={{
-        py: 1,
-        px: 2,
+        py: { xs: 1.75, sm: 2.25 },
+        px: { xs: 1.5, sm: 2 },
         backgroundColor: 'grey.50',
         borderTop: '1px solid',
         borderColor: 'grey.200',
@@ -52,7 +50,7 @@ const Footer = () => {
       />
       
       <Container maxWidth="lg">
-        <Stack spacing={3} className="footer-icerik">
+        <Stack spacing={{ xs: 2, sm: 2.5 }} className="footer-icerik">
           {/* Ana içerik */}
           <Box
             sx={{
@@ -86,7 +84,7 @@ const Footer = () => {
                   variant="body2" 
                   sx={{ 
                     color: 'text.secondary',
-                    fontSize: '0.85rem'
+                    fontSize: { xs: '0.82rem', sm: '0.86rem' }
                   }}
                 >
                   Ortak Sınav Yerleştirme Sistemi
@@ -136,7 +134,7 @@ const Footer = () => {
               variant="body2" 
               sx={{ 
                 color: 'text.secondary',
-                fontSize: '0.8rem',
+                fontSize: { xs: '0.82rem', sm: '0.86rem' },
                 display: 'flex',
                 alignItems: 'center',
                 gap: 0.5

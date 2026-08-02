@@ -1,15 +1,17 @@
 import React from 'react';
-import { ThemeProvider, createTheme } from '@mui/material/styles';
 import { CssBaseline, Box, CircularProgress, Typography } from '@mui/material';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Toaster } from 'sonner';
 import { ExamProvider } from './context/ExamContext';
+import { CustomThemeProvider } from './context/ThemeContext';
 import ErrorBoundary from './components/ErrorBoundary';
 import AnaSayfa from './pages/AnaSayfa';
 import LoginPage from './components/auth/LoginPage';
 import LicenseActivationDialog from './components/LicenseActivationDialog';
 import { getCurrentSession, isSuperAdmin, ensureSuperAdmin, initAuth } from "./services/localAuth";
-import { subscribeToAuthChanges } from './auth/authState';
+import { subscribeToAuthChanges, notifyAuthListeners } from './auth/authState';
 import { checkStoredLicense } from './services/licenseService';
+import logger from './utils/logger';
 import './App.css';
 
 const queryClient = new QueryClient({
@@ -22,100 +24,7 @@ const queryClient = new QueryClient({
   },
 });
 
-// Modern Kurumsal Material-UI Teması (Indigo & Slate)
-const theme = createTheme({
-  palette: {
-    primary: {
-      main: '#2563eb',
-      light: '#60a5fa',
-      dark: '#1e3a8a',
-      contrastText: '#ffffff',
-    },
-    secondary: {
-      main: '#10b981',
-      light: '#34d399',
-      dark: '#059669',
-      contrastText: '#ffffff',
-    },
-    background: {
-      default: '#f8fafc',
-      paper: '#ffffff',
-    },
-    text: {
-      primary: '#0f172a',
-      secondary: '#475569',
-    },
-  },
-  typography: {
-    fontFamily: '"Inter", "Outfit", "Segoe UI", system-ui, -apple-system, sans-serif',
-    h4: { fontWeight: 700, letterSpacing: '-0.01em', color: '#0f172a' },
-    h5: { fontWeight: 700, letterSpacing: '-0.01em', color: '#0f172a' },
-    h6: { fontWeight: 700, letterSpacing: '-0.005em', color: '#0f172a' },
-    button: { textTransform: 'none', fontWeight: 600, letterSpacing: '0.01em' },
-  },
-  shape: { borderRadius: 12 },
-  components: {
-    MuiButton: {
-      styleOverrides: {
-        root: {
-          borderRadius: '10px',
-          textTransform: 'none',
-          fontWeight: 600,
-          transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-          '&:hover': {
-            transform: 'translateY(-1px)',
-          },
-        },
-      },
-    },
-    MuiCard: {
-      styleOverrides: {
-        root: {
-          borderRadius: '16px',
-          boxShadow: '0 10px 25px -5px rgba(15, 23, 42, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.04)',
-          border: '1px solid rgba(226, 232, 240, 0.8)',
-          transition: 'all 0.25s ease',
-          '&:hover': {
-            boxShadow: '0 20px 30px -10px rgba(15, 23, 42, 0.12)',
-          },
-        },
-      },
-    },
-    MuiPaper: {
-      styleOverrides: {
-        rounded: {
-          borderRadius: '16px',
-        },
-      },
-    },
-    MuiDialog: {
-      styleOverrides: {
-        paper: {
-          borderRadius: '18px',
-          boxShadow: '0 25px 50px -12px rgba(15, 23, 42, 0.25)',
-        },
-      },
-    },
-    MuiTab: {
-      styleOverrides: {
-        root: {
-          fontWeight: 600,
-          textTransform: 'none',
-          borderRadius: '8px',
-          transition: 'all 0.2s',
-        },
-      },
-    },
-    MuiChip: {
-      styleOverrides: {
-        root: {
-          fontWeight: 600,
-          borderRadius: '8px',
-        },
-      },
-    },
-  },
-});
+
 
 // Preloader'Ä± kaldÄ±r (React ilk render'da)
 function removePreloader() {
@@ -143,9 +52,7 @@ function App() {
     async function initializeApp() {
       try {
         // Auth'u baÅŸlat (SQLite session oku)
-        console.time('â ± initAuth');
         const session = await initAuth();
-        console.timeEnd('â ± initAuth');
 
         if (cancelled) return;
 
@@ -154,13 +61,11 @@ function App() {
           notifyAuthListeners(session);
           setIsLoggedIn(true);
           if (isSuperAdmin(session)) {
-            console.time('â ± ensureSuperAdmin');
             await ensureSuperAdmin();
-            console.timeEnd('â ± ensureSuperAdmin');
           }
         }
       } catch (error) {
-        console.error('Uygulama baÅŸlatma hatasÄ±:', error);
+        logger.error('Uygulama baÅŸlatma hatasÄ±:', error);
       } finally {
         if (!cancelled) {
           setAuthReady(true);
@@ -206,8 +111,8 @@ function App() {
   // Login ekranı hemen göster: authReady beklenmez; ama render ağacı tek kalır (flash önleme)
   return (
     <ErrorBoundary>
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
+      <CustomThemeProvider>
+        <Toaster position="top-right" richColors closeButton />
         {/* Giriş yapılmamışsa veya authReady bekleniyor ve oturum yoksa: LoginPage göster */}
         {!isLoggedIn ? (
           <LoginPage onSuccess={() => setIsLoggedIn(true)} />
@@ -221,7 +126,6 @@ function App() {
           <QueryClientProvider client={queryClient}>
             <ExamProvider>
               <div className="App">
-                <a href="#" style={{ position: 'absolute', left: '-9999px' }}>learn react</a>
                 <AnaSayfa />
               </div>
             </ExamProvider>
@@ -245,7 +149,7 @@ function App() {
             </Typography>
           </Box>
         )}
-      </ThemeProvider>
+      </CustomThemeProvider>
     </ErrorBoundary>
   );
 }

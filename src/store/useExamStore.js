@@ -81,7 +81,7 @@ export const useExamStore = create(
             yukleme: false, // Başlangıçta false - sadece veri yüklerken true olacak
             yuklemeMesaji: null,
             hata: null,
-            role: 'admin',
+            role: 'public',
             authUser: null,
 
             // Actions
@@ -181,23 +181,48 @@ export const useExamStore = create(
 
             pinOgrenci: (ogrenciId, pinnedSalonId, pinnedMasaId) => {
                 const { ogrenciler } = get();
-                const updatedOgrenciler = ogrenciler.map(o => o.id === ogrenciId ? {
-                    ...o,
-                    pinned: true,
-                    pinnedSalonId: pinnedSalonId != null ? String(pinnedSalonId) : null,
-                    pinnedMasaId: pinnedMasaId != null ? String(pinnedMasaId) : null
-                } : o);
+                const normalizedTargetId = ogrenciId != null ? String(ogrenciId) : null;
+                const normalizedSalonId = pinnedSalonId != null ? String(pinnedSalonId) : null;
+                const normalizedMasaId = pinnedMasaId != null ? String(pinnedMasaId) : null;
+                const updatedOgrenciler = ogrenciler.map(o => {
+                    const matchesById = o?.id != null && String(o.id) === normalizedTargetId;
+                    const matchesByNumara = o?.numara != null && String(o.numara) === normalizedTargetId;
+                    const isMatch = normalizedTargetId != null && (matchesById || matchesByNumara);
+                    if (isMatch) {
+                        return {
+                            ...o,
+                            pinned: true,
+                            pinnedSalonId: normalizedSalonId,
+                            pinnedMasaId: normalizedMasaId
+                        };
+                    }
+                    // Koltuk münhasırlığı: aynı salon+masa'da zaten başka bir öğrenci
+                    // oturuyorsa (ör. yarış durumu / çakışan çağrılar), o öğrenciyi otomatik boşalt.
+                    const occupiesSameSeat = normalizedMasaId != null && o?.pinned &&
+                        String(o.pinnedSalonId) === normalizedSalonId &&
+                        String(o.pinnedMasaId) === normalizedMasaId;
+                    if (occupiesSameSeat) {
+                        return { ...o, pinned: false, pinnedSalonId: null, pinnedMasaId: null };
+                    }
+                    return o;
+                });
                 set({ ogrenciler: updatedOgrenciler });
             },
 
             unpinOgrenci: (ogrenciId) => {
                 const { ogrenciler } = get();
-                const updatedOgrenciler = ogrenciler.map(o => o.id === ogrenciId ? {
+                const normalizedTargetId = ogrenciId != null ? String(ogrenciId) : null;
+                const updatedOgrenciler = ogrenciler.map(o => {
+                    const matchesById = o?.id != null && String(o.id) === normalizedTargetId;
+                    const matchesByNumara = o?.numara != null && String(o.numara) === normalizedTargetId;
+                    const isMatch = normalizedTargetId != null && (matchesById || matchesByNumara);
+                    return isMatch ? {
                     ...o,
                     pinned: false,
                     pinnedSalonId: null,
                     pinnedMasaId: null
-                } : o);
+                } : o;
+                });
                 set({ ogrenciler: updatedOgrenciler });
             },
 
@@ -299,18 +324,31 @@ export const useExamStore = create(
                 aktifTab: 'ayarlar',
                 yukleme: false,
                 hata: null,
-                role: 'admin',
+                role: 'public',
                 authUser: null
             })
         }),
         {
             name: 'exam-storage-tauri-v1',
+            version: 2,
+            migrate: (persistedState, version) => {
+                if (!persistedState || typeof persistedState !== 'object') {
+                    return persistedState;
+                }
+
+                if (version < 2) {
+                    const nextState = { ...persistedState };
+                    delete nextState.role;
+                    return nextState;
+                }
+
+                return persistedState;
+            },
             partialize: (state) => ({
                 // Sadece UI state'ini ve ayarları persist et
                 // Büyük verileri (ogrenciler, yerlestirmeSonucu) SQLite yönetiyor
                 aktifTab: state.aktifTab,
-                ayarlar: state.ayarlar,
-                role: state.role
+                ayarlar: state.ayarlar
             })
         }
     )

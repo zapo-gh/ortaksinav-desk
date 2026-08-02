@@ -474,8 +474,9 @@ export const useAnaSayfaState = () => {
 
                     const sonuc = gelismisYerlestirme(seciliSinifOgrencileri, aktifSalonlar, ayarlar);
                     if (sonuc.istatistikler) {
-                        sonuc.istatistikler.toplamOgrenci = ogrenciler.length;
-                        sonuc.istatistikler.yerlesemeyenOgrenci = ogrenciler.length - sonuc.istatistikler.yerlesenOgrenci;
+                        const hedefOgrenciSayisi = seciliSinifOgrencileri.length;
+                        sonuc.istatistikler.toplamOgrenci = hedefOgrenciSayisi;
+                        sonuc.istatistikler.yerlesemeyenOgrenci = hedefOgrenciSayisi - (sonuc.istatistikler.yerlesenOgrenci || 0);
                     }
 
                     const formatlanmisSonuc = {

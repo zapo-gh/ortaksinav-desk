@@ -6,6 +6,7 @@ import {
   useTheme,
   GlobalStyles
 } from '@mui/material';
+import PrintHeader from './common/PrintHeader';
 
 /**
  * Yazdırılabilir Salon Planı Bileşeni
@@ -157,12 +158,32 @@ export const SalonPlaniPrintable = forwardRef(({ yerlestirmeSonucu, ayarlar = {}
     };
   };
 
-  // Tüm salonları al - salon sırasına göre sırala
-  const tumSalonlar = (yerlestirmeSonucu?.tumSalonlar || []).sort((a, b) => {
-    // Salon ID'lerine göre sırala (sayısal olarak)
-    const aId = parseInt(a.id || a.salonId || 0);
-    const bId = parseInt(b.id || b.salonId || 0);
-    return aId - bId;
+  // Salon adını seviye (9, 10, 11, 12) ve şube (A, B, C...) olarak ayrıştırır
+  const parseSalonAdi = (adi) => {
+    if (!adi) return null;
+    const match = adi.toString().trim().match(/^(\d+)[-/]?\s*([A-Za-zÇĞİÖŞÜçğıöşü]+)?$/);
+    if (!match) return null;
+    return {
+      seviye: parseInt(match[1], 10),
+      sube: (match[2] || '').toUpperCase()
+    };
+  };
+
+  // Tüm salonları al - salon adına göre (sınıf sırasına uygun) artan sırala
+  const tumSalonlar = [...(yerlestirmeSonucu?.tumSalonlar || [])].sort((a, b) => {
+    const adiA = (a.salonAdi || a.ad || '').toString().trim();
+    const adiB = (b.salonAdi || b.ad || '').toString().trim();
+    const parsedA = parseSalonAdi(adiA);
+    const parsedB = parseSalonAdi(adiB);
+
+    if (parsedA && parsedB) {
+      if (parsedA.seviye !== parsedB.seviye) return parsedA.seviye - parsedB.seviye;
+      if (parsedA.sube !== parsedB.sube) return parsedA.sube.localeCompare(parsedB.sube, 'tr-TR');
+      return 0;
+    }
+
+    // Sınıf formatında değilse salon adını doğal (numeric-aware) sırala
+    return adiA.localeCompare(adiB, 'tr-TR', { numeric: true, sensitivity: 'base' });
   });
 
   if (!tumSalonlar || tumSalonlar.length === 0) {
@@ -266,24 +287,12 @@ export const SalonPlaniPrintable = forwardRef(({ yerlestirmeSonucu, ayarlar = {}
             }}
           >
             {/* Salon Başlığı */}
-            <Box sx={{ textAlign: 'center', mb: 3 }}>
-              <Typography variant="body1" component="h1" sx={{ fontWeight: 700, mb: 0.2, lineHeight: 1.3, fontSize: '1.1rem' }}>
-                {ayarlar.okulAdi || 'Akhisar Farabi Mesleki ve Teknik Anadolu Lisesi'}
-              </Typography>
-              <Typography variant="body2" sx={{ mb: 0.2, lineHeight: 1.3, fontSize: '1.0rem' }}>
-                {ayarlar.egitimYili || '2025-2026'} Eğitim Öğretim Yılı
-              </Typography>
-              <Typography variant="body2" sx={{ mb: 0.2, lineHeight: 1.3, fontSize: '1.0rem' }}>
-                {ayarlar.donem || '1. Dönem'}. Dönem {ayarlar.sinavDonemi || '1. Ortak Sınavı'}. Ortak Sınavı
-              </Typography>
-              <Typography variant="body2" sx={{ mb: 0.2, lineHeight: 1.3, fontSize: '1.0rem', fontWeight: 700 }}>
-                {salon.salonAdi || salon.ad || `Salon ${salonIndex + 1}`} Salon Yerleşim Planı
-              </Typography>
-              <Typography variant="body2" sx={{ mb: 0.2, lineHeight: 1.3, fontSize: '0.9rem' }}>
-                Sınav Tarihi: {ayarlar.sinavTarihi ? new Date(ayarlar.sinavTarihi).toLocaleDateString('tr-TR') : new Date().toLocaleDateString('tr-TR')}
-                {ayarlar.sinavSaati && ` | Sınav Saati: ${ayarlar.sinavSaati}`}
-              </Typography>
-            </Box>
+            <PrintHeader 
+              schoolName={ayarlar.okulAdi || 'T.C. MİLLİ EĞİTİM BAKANLIĞI'}
+              subTitle={`${ayarlar.egitimYili || '2025-2026'} Eğitim Öğretim Yılı`}
+              documentTitle={`${salon.salonAdi || salon.ad || `Salon ${salonIndex + 1}`} Salon Yerleşim Planı - ${ayarlar.donem || '1. Dönem'}. Dönem ${ayarlar.sinavDonemi || '1. Ortak Sınavı'}. Ortak Sınavı`}
+              date={`${ayarlar.sinavTarihi ? new Date(ayarlar.sinavTarihi).toLocaleDateString('tr-TR') : new Date().toLocaleDateString('tr-TR')} ${ayarlar.sinavSaati ? `- ${ayarlar.sinavSaati}` : ''}`}
+            />
 
 
             {/* Öğretmen Masası ve Ders Tahtası */}

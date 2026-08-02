@@ -12,6 +12,7 @@ import {
   Chip
 } from '@mui/material';
 import { getPlacementMap, resolveStudentPlacement } from '../utils/placementHelper';
+import PrintHeader from './common/PrintHeader';
 
 const SalonOgrenciListesiPrintable = forwardRef(({ ogrenciler, yerlestirmeSonucu, ayarlar = {} }, ref) => {
   // Merkezi yerleşim haritasını oluştur (her render'da çalışır ama hızlıdır, useMemo eklenebilir ama şu an için yeterli)
@@ -314,24 +315,10 @@ const SalonOgrenciListesiPrintable = forwardRef(({ ogrenciler, yerlestirmeSonucu
               }} />
 
               {/* Sınıf Başlığı */}
-              <Box sx={{
-                textAlign: 'center',
-                mb: 1,
-                '@media print': {
-                  mt: 0,
-                  mb: 1,
-                  pt: 0,
-                  pb: 0
-                }
-              }}>
-                <Typography variant="body1" component="h2" sx={{ fontWeight: 700, mb: 0.2, lineHeight: 1.3, fontSize: '1.1rem' }}>
-                  {ayarlar.okulAdi || 'Akhisar Farabi Mesleki ve Teknik Anadolu Lisesi'}
-                </Typography>
-                <Typography variant="body2" sx={{ mb: 0.2, lineHeight: 1.3, fontSize: '1.0rem' }}>
-                  {ayarlar.egitimYili || '2025-2026'} Eğitim Öğretim Yılı
-                </Typography>
-                <Typography variant="body2" sx={{ mb: 0.2, lineHeight: 1.3, fontSize: '1.0rem' }}>
-                  {(() => {
+              <PrintHeader 
+                schoolName={ayarlar.okulAdi || 'T.C. MİLLİ EĞİTİM BAKANLIĞI'}
+                subTitle={`${ayarlar.egitimYili || '2025-2026'} Eğitim Öğretim Yılı`}
+                documentTitle={`${sinif} Sınıfı Listesi - ${(() => {
                     // Bu sınıfın dersini bul
                     if (ayarlar.dersler && ayarlar.dersler.length > 0) {
                       const sinifDersi = ayarlar.dersler.find(ders =>
@@ -346,15 +333,9 @@ const SalonOgrenciListesiPrintable = forwardRef(({ ogrenciler, yerlestirmeSonucu
                       ? ayarlar.dersler[0].ad || 'Ders Adı'
                       : 'Ders Adı';
                     return `${dersAdi} ${ayarlar.donem || '1'}. Dönem ${ayarlar.sinavDonemi || '1'}. Ortak Sınavı`;
-                  })()}
-                </Typography>
-                <Typography variant="body1" component="h3" sx={{ fontWeight: 700, color: 'primary.main', lineHeight: 1.3, fontSize: '1.1rem' }}>
-                  {sinif} Sınıfı Listesi
-                </Typography>
-                <Typography variant="body2" sx={{ mb: 0.2, lineHeight: 1.3, fontSize: '0.9rem', color: 'text.secondary' }}>
-                  Sınav Tarihi: {ayarlar.sinavTarihi ? new Date(ayarlar.sinavTarihi).toLocaleDateString('tr-TR') : new Date().toLocaleDateString('tr-TR')} • Sınav Saati: {ayarlar.sinavSaati || '09:00'}
-                </Typography>
-              </Box>
+                  })()}`}
+                date={`${ayarlar.sinavTarihi ? new Date(ayarlar.sinavTarihi).toLocaleDateString('tr-TR') : new Date().toLocaleDateString('tr-TR')} ${ayarlar.sinavSaati ? `- ${ayarlar.sinavSaati}` : ''}`}
+              />
 
               <TableContainer component={Paper} sx={{
                 mb: 1,

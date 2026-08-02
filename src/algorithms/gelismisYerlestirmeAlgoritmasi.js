@@ -1498,16 +1498,46 @@ export const gelismisYerlestirme = (ogrenciler, salonlar, ayarlar, kisitlar = {
       totalNonPinned += havuz.filter(o => !o.pinned).length;
     });
 
-    // 3) Her salon için ideal hedef (Toplam Öğrenci / Salon Sayısı)
-    // Bu hedef, o salonun alabileceği en fazla öğrenci sayısını belirler
-    const baseTarget = Math.floor((ogrenciler.length) / aktifSalonlar.length);
-    const extra = (ogrenciler.length) % aktifSalonlar.length;
-
-    const finalTargets = aktifSalonlar.map((_, idx) => {
-      return baseTarget + (idx < extra ? 1 : 0);
+    // 3) Her salon için hedef hesapla - GERÇEK KAPASİTEYİ (salon.kapasite) ASLA AŞMAZ.
+    // ÖNEMLİ: Salonların kapasiteleri farklı olabilir (ör. 29, 30). Düz ortalama
+    // (Toplam Öğrenci / Salon Sayısı) kullanmak, küçük kapasiteli bir salona
+    // fiziksel koltuk sayısından FAZLA öğrenci hedeflenmesine ve dolayısıyla
+    // "Yerleşmeyen" öğrenci oluşmasına yol açıyordu. Bunun yerine, kalan öğrencileri
+    // kapasitesi dolmamış salonlara eşit paylarla, kapasite sınırını aşmadan dağıtıyoruz.
+    const salonKapasiteleri = aktifSalonlar.map(salon => {
+      const kapasite = Number(salon.kapasite);
+      return Number.isFinite(kapasite) && kapasite > 0 ? kapasite : Infinity;
     });
 
-    logger.info(`⚖️ KESİN DENGELEME HEDEFLERİ:`, finalTargets);
+    const finalTargets = new Array(aktifSalonlar.length).fill(0);
+    let kalanOgrenciSayisi = ogrenciler.length;
+    let acikSalonIndeksleri = aktifSalonlar.map((_, idx) => idx);
+
+    while (kalanOgrenciSayisi > 0 && acikSalonIndeksleri.length > 0) {
+      const esitPay = Math.max(1, Math.floor(kalanOgrenciSayisi / acikSalonIndeksleri.length));
+      let biriktirilen = 0;
+      const sonrakiAcikIndeksler = [];
+
+      acikSalonIndeksleri.forEach(idx => {
+        const bosluk = salonKapasiteleri[idx] - finalTargets[idx];
+        if (bosluk <= 0) return; // bu salon zaten kapasitesine ulaştı
+        const eklenen = Math.min(esitPay, bosluk, kalanOgrenciSayisi - biriktirilen);
+        if (eklenen > 0) {
+          finalTargets[idx] += eklenen;
+          biriktirilen += eklenen;
+          if (finalTargets[idx] < salonKapasiteleri[idx]) {
+            sonrakiAcikIndeksler.push(idx);
+          }
+        }
+      });
+
+      kalanOgrenciSayisi -= biriktirilen;
+      acikSalonIndeksleri = sonrakiAcikIndeksler;
+
+      if (biriktirilen === 0) break; // ilerleme yoksa (tüm salonlar dolu) sonsuz döngüyü önle
+    }
+
+    logger.info(`⚖️ KESİN DENGELEME HEDEFLERİ (kapasiteye duyarlı):`, finalTargets);
 
     // 4) Fazlalıkları eksiklere taşı (Strict Rebalancing)
     let moved = 0;

@@ -14,9 +14,9 @@ import {
 } from '@mui/material';
 import {
   Email as EmailIcon,
-  Close as CloseIcon,
   Send as SendIcon,
 } from '@mui/icons-material';
+import DialogHeader from './common/DialogHeader';
 
 // EmailJS Configuration
 // Bu değerleri https://www.emailjs.com/ sitesinden alabilirsiniz
@@ -127,14 +127,8 @@ const ContactFormDialog = ({ open, onClose }) => {
 
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
-      <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1, pb: 1 }}>
-        <EmailIcon color="primary" />
-        <Typography variant="h6" fontWeight={700} sx={{ flex: 1 }}>
-          İletişim Formu
-        </Typography>
-        <Button size="small" onClick={handleClose}>
-          <CloseIcon />
-        </Button>
+      <DialogTitle>
+        <DialogHeader icon={<EmailIcon color="primary" />} title="İletişim Formu" onClose={handleClose} />
       </DialogTitle>
 
       <form onSubmit={handleSubmit}>
@@ -213,7 +207,7 @@ const ContactFormDialog = ({ open, onClose }) => {
         </DialogContent>
 
         <DialogActions sx={{ px: 3, pb: 2.5 }}>
-          <Button onClick={handleClose} color="inherit" disabled={sending}>
+          <Button onClick={handleClose} variant="outlined" disabled={sending}>
             İptal
           </Button>
           <Button

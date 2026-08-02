@@ -7,6 +7,8 @@ import {
     DialogContent,
     DialogActions
 } from '@mui/material';
+import { Save as SaveIcon } from '@mui/icons-material';
+import DialogHeader from '../common/DialogHeader';
 
 const PlanKaydetmeDialog = React.memo(({
     open,
@@ -40,8 +42,10 @@ const PlanKaydetmeDialog = React.memo(({
     }, [onSave, onClose, planAdi]);
 
     return (
-        <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
-            <DialogTitle>Planı Kaydet</DialogTitle>
+        <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
+            <DialogTitle>
+                <DialogHeader icon={<SaveIcon color="primary" />} title="Planı Kaydet" />
+            </DialogTitle>
             <DialogContent>
                 <TextField
                     autoFocus
@@ -54,8 +58,8 @@ const PlanKaydetmeDialog = React.memo(({
                     placeholder="Örn: 2025-2026 1. Dönem Sınav Planı"
                 />
             </DialogContent>
-            <DialogActions>
-                <Button onClick={handleClose}>İptal</Button>
+            <DialogActions sx={{ px: 3, pb: 2.5 }}>
+                <Button onClick={handleClose} variant="outlined">İptal</Button>
                 <Button onClick={handleSave} variant="contained" color="primary">
                     Kaydet
                 </Button>

@@ -1,6 +1,6 @@
-- [ ] UI: AyarlarFormu içindeki “Algoritma Kısıtlamaları” bloğunu kaldır
-- [ ] UI: GenelAyarlarFormu içine “Algoritma Kısıtlamaları” bloğunu taşı (aynı toggle davranışı)
-- [ ] Algoritma: GelismisYerlestirmeMotoru içine kullanıcı kisitlar objesini geçir
-- [ ] Algoritma: GelismisYerlestirmeMotoru.checkKisitlar içinde katmanSeviyesi yerine/yanında kisitlar toggle’larını gerçek şekilde uygula
-- [ ] Algoritma: En azından loglardan kisitlar değerlerinin çalıştığını doğrula (toggle aç/kapa ile fark)
-- [ ] Lokal test: npm test veya ilgili testleri/console testleri çalıştır (varsa)
+- [x] UI: AyarlarFormu içindeki “Algoritma Kısıtlamaları” bloğunu kaldır
+- [x] UI: GenelAyarlarFormu içine “Algoritma Kısıtlamaları” bloğunu taşı (aynı toggle davranışı)
+- [x] Algoritma: GelismisYerlestirmeMotoru içine kullanıcı kisitlar objesini geçir
+- [x] Algoritma: GelismisYerlestirmeMotoru.checkKisitlar içinde katmanSeviyesi yerine/yanında kisitlar toggle’larını gerçek şekilde uygula
+- [x] Algoritma: En azından loglardan kisitlar değerlerinin çalıştığını doğrula (toggle aç/kapa ile fark)
+- [x] Lokal test: npm test veya ilgili testleri/console testleri çalıştır (varsa)

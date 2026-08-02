@@ -31,6 +31,7 @@ import {
   Lightbulb as LightbulbIcon
 } from '@mui/icons-material';
 import dragDropLearning from '../utils/dragDropLearning';
+import DialogHeader from './common/DialogHeader';
 
 const LearningStats = () => {
   const [learningStats, setLearningStats] = useState(null);
@@ -226,16 +227,18 @@ const LearningStats = () => {
       </Card>
 
       {/* Temizleme Dialog'u */}
-      <Dialog open={clearDialogOpen} onClose={() => setClearDialogOpen(false)}>
-        <DialogTitle>Öğrenme Verilerini Temizle</DialogTitle>
+      <Dialog open={clearDialogOpen} onClose={() => setClearDialogOpen(false)} maxWidth="xs" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
+        <DialogTitle>
+          <DialogHeader icon={<ClearIcon color="error" />} title="Öğrenme Verilerini Temizle" />
+        </DialogTitle>
         <DialogContent>
           <Typography>
             Tüm öğrenme verilerini silmek istediğinizden emin misiniz? 
             Bu işlem geri alınamaz ve AI sistemi sıfırlanacaktır.
           </Typography>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setClearDialogOpen(false)}>İptal</Button>
+        <DialogActions sx={{ px: 3, pb: 2.5 }}>
+          <Button onClick={() => setClearDialogOpen(false)} variant="outlined">İptal</Button>
           <Button onClick={handleClearLearningData} color="error" variant="contained">
             Temizle
           </Button>

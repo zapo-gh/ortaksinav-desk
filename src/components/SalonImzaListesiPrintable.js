@@ -26,12 +26,32 @@ const SalonImzaListesiPrintable = forwardRef(({ yerlestirmeSonucu, ayarlar = {},
   const getMasaNo = (masa) => calculateDeskNumberForMasa(masa, yerlestirmeSonucu?.tumSalonlar);
 
 
-  // Tüm salonları al - salon sırasına göre sırala
-  const tumSalonlar = (yerlestirmeSonucu?.tumSalonlar || []).sort((a, b) => {
-    // Salon ID'lerine göre sırala (sayısal olarak)
-    const aId = parseInt(a.id || a.salonId || 0);
-    const bId = parseInt(b.id || b.salonId || 0);
-    return aId - bId;
+  // Salon adını seviye (9, 10, 11, 12) ve şube (A, B, C...) olarak ayrıştırır
+  const parseSalonAdi = (adi) => {
+    if (!adi) return null;
+    const match = adi.toString().trim().match(/^(\d+)[-/]?\s*([A-Za-zÇĞİÖŞÜçğıöşü]+)?$/);
+    if (!match) return null;
+    return {
+      seviye: parseInt(match[1], 10),
+      sube: (match[2] || '').toUpperCase()
+    };
+  };
+
+  // Tüm salonları al - salon adına göre (sınıf sırasına uygun) artan sırala
+  const tumSalonlar = [...(yerlestirmeSonucu?.tumSalonlar || [])].sort((a, b) => {
+    const adiA = (a.salonAdi || a.ad || '').toString().trim();
+    const adiB = (b.salonAdi || b.ad || '').toString().trim();
+    const parsedA = parseSalonAdi(adiA);
+    const parsedB = parseSalonAdi(adiB);
+
+    if (parsedA && parsedB) {
+      if (parsedA.seviye !== parsedB.seviye) return parsedA.seviye - parsedB.seviye;
+      if (parsedA.sube !== parsedB.sube) return parsedA.sube.localeCompare(parsedB.sube, 'tr-TR');
+      return 0;
+    }
+
+    // Sınıf formatında değilse salon adını doğal (numeric-aware) sırala
+    return adiA.localeCompare(adiB, 'tr-TR', { numeric: true, sensitivity: 'base' });
   });
 
   if (!tumSalonlar || tumSalonlar.length === 0) {

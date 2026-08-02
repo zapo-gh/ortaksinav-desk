@@ -1,4 +1,5 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import PageHeader from './common/PageHeader';
 import {
   Box,
   Card,
@@ -13,6 +14,7 @@ import {
   Divider,
   List,
   ListItem,
+  ListItemButton,
   ListItemText,
   ListItemSecondaryAction,
   IconButton,
@@ -37,11 +39,17 @@ import {
   School as SchoolIcon,
   EventSeat as EventSeatIcon
 } from '@mui/icons-material';
-import { useExam } from '../context/ExamContext';
+import { useExamSelector } from '../context/ExamContext';
 import { getPozisyon, calculateGroupBasedDeskNumbers } from './SalonPlani/utils';
 
 const SabitAtamalar = () => {
-  const { ogrenciler, salonlar, ayarlar, ogrenciPin, ogrenciUnpin, isWriteAllowed } = useExam();
+  const ogrenciler = useExamSelector((state) => state.ogrenciler);
+  const salonlar = useExamSelector((state) => state.salonlar);
+  const ayarlar = useExamSelector((state) => state.ayarlar);
+  const ogrenciPin = useExamSelector((state) => state.pinOgrenci);
+  const ogrenciUnpin = useExamSelector((state) => state.unpinOgrenci);
+  const role = useExamSelector((state) => state.role);
+  const isWriteAllowed = role === 'admin';
   const readOnly = !isWriteAllowed;
 
   const [query, setQuery] = useState('');
@@ -50,6 +58,9 @@ const SabitAtamalar = () => {
   const [selectedClass, setSelectedClass] = useState('ALL');
   const [viewMode, setViewMode] = useState('schema'); // 'schema' | 'list'
   const [confirmClearSalon, setConfirmClearSalon] = useState(false);
+
+  const normalizeId = useCallback((value) => (value != null ? String(value) : ''), []);
+  const getStudentKey = useCallback((student) => normalizeId(student?.id ?? student?.numara), [normalizeId]);
 
   // Türkçe karakterleri normalize eden fonksiyon
   const normalizeText = useCallback((text) => {
@@ -224,14 +235,60 @@ const SabitAtamalar = () => {
     return ogrenciler.filter(o => o.pinned && String(o.pinnedSalonId) === String(activeSalonId));
   }, [ogrenciler, activeSalonId]);
 
+  // Kendi kendini onaran güvenlik ağı: Farklı nedenlerle (eski/bozuk veri, geçmiş
+  // sürüm hataları vb.) iki öğrenci aynı koltuğa (pinnedMasaId) atanmış durumda
+  // kalırsa, bunu tespit edip çakışan (ilk öğrenci dışındaki) atamaları otomatik
+  // olarak kaldırır. Böylece kullanıcının elle silip yeniden atama yapmasına
+  // gerek kalmaz.
+  useEffect(() => {
+    if (readOnly || !activeSalonId || pinnedStudentsInSalon.length === 0) return;
+    const seenMasaIds = new Set();
+    const duplicateStudentKeys = [];
+    pinnedStudentsInSalon.forEach(o => {
+      if (o.pinnedMasaId == null || o.pinnedMasaId === '') return;
+      const key = String(o.pinnedMasaId);
+      if (seenMasaIds.has(key)) {
+        duplicateStudentKeys.push(getStudentKey(o));
+      } else {
+        seenMasaIds.add(key);
+      }
+    });
+    if (duplicateStudentKeys.length > 0) {
+      duplicateStudentKeys.forEach(studentKey => ogrenciUnpin(studentKey));
+    }
+  }, [pinnedStudentsInSalon, activeSalonId, readOnly, ogrenciUnpin, getStudentKey]);
+
+  // Koltuk (masa) id'lerinin TEKİL olmasını garanti eder.
+  // Bazı eski/kayıtlı salon verilerinde (Kayıtlı Planlar, yerleştirme algoritması vb.
+  // farklı kaynaklardan üretilmiş masa dizileri) birden fazla koltuk aynı .id değerine
+  // sahip olabiliyor. Bu durum, sabit atamada iki farklı öğrencinin aynı koltuğa
+  // atanmış gibi görünmesine (veri çakışmasına) yol açıyordu. Burada, orijinal id
+  // korunur ama tekil değilse dizideki konumuna (index) göre güvenli bir id atanır.
+  const ensureUniqueMasaIds = useCallback((masalarArray) => {
+    if (!Array.isArray(masalarArray)) return masalarArray;
+    const seenIds = new Set();
+    return masalarArray.map((masa, idx) => {
+      const originalKey = masa?.id != null ? String(masa.id) : null;
+      let safeId = masa?.id;
+      if (originalKey == null || seenIds.has(originalKey)) {
+        safeId = idx;
+      }
+      seenIds.add(String(safeId));
+      return { ...masa, id: safeId };
+    });
+  }, []);
+
   // Salon oturma düzeni oluşturma (SalonPlani.js ile birebir aynı grup numaralandırması ve sıralama)
   const sinifDuzeni = useMemo(() => {
     if (!activeSalon) return null;
     const sinif = activeSalon;
 
     const buildGroupedLayout = (masalarArray, satirCount, sutunCount) => {
+      // 0) Koltuk id'lerinin tekil olduğundan emin ol (bkz. ensureUniqueMasaIds açıklaması)
+      const uniqueMasalarArray = ensureUniqueMasaIds(masalarArray);
+
       // 1) Masa numaralarını grup sırasına göre hesapla (SalonPlani/utils -> calculateGroupBasedDeskNumbers)
-      const masalarWithGroupNumbers = calculateGroupBasedDeskNumbers(masalarArray);
+      const masalarWithGroupNumbers = calculateGroupBasedDeskNumbers(uniqueMasalarArray);
 
       // 2) Numaralandırılmış masalardan grupları oluştur
       const grupMasalar = {};
@@ -338,7 +395,7 @@ const SabitAtamalar = () => {
       }
     }
     return buildGroupedLayout(masalar, satirSayisi, sutunSayisi);
-  }, [activeSalon]);
+  }, [activeSalon, ensureUniqueMasaIds]);
 
   // Koltuk (masa.id) ile ona atanmış öğrenciyi eşleyen harita
   const seatStudentMap = useMemo(() => {
@@ -371,23 +428,30 @@ const SabitAtamalar = () => {
   // Koltuğa sabitleme aksiyonu
   const handlePinToSeat = useCallback((masaId) => {
     if (readOnly || !activeSalonId || !selectedStudentIds.length) return;
-    const studentId = selectedStudentIds[0];
+    const studentId = normalizeId(selectedStudentIds[0]);
+    if (!studentId) return;
     ogrenciPin(studentId, activeSalonId, masaId);
     setSelectedStudentIds(prev => prev.filter(id => id !== studentId));
-  }, [readOnly, activeSalonId, selectedStudentIds, ogrenciPin]);
+  }, [readOnly, activeSalonId, selectedStudentIds, ogrenciPin, normalizeId]);
 
-  // Boş ilk sıraya sabitleme
-  const handlePinToFirstEmptySeat = useCallback(() => {
-    if (readOnly || !selectedStudentIds.length || !activeSalonId || !sinifDuzeni) return;
-    const studentId = selectedStudentIds[0];
+  // Boş ilk sıraya sabitleme (öğrenci anahtarı doğrudan parametre olarak alınır;
+  // component state/selectedStudentIds'e bağımlı olmadığı için stale closure riski yoktur)
+  const pinStudentToFirstEmptySeat = useCallback((studentKey) => {
+    if (readOnly || !studentKey || !activeSalonId || !sinifDuzeni) return;
     const emptyMasa = sinifDuzeni.masalar.find(m => !seatStudentMap[String(m.id)]);
     if (emptyMasa) {
-      ogrenciPin(studentId, activeSalonId, emptyMasa.id);
+      ogrenciPin(studentKey, activeSalonId, emptyMasa.id);
     } else {
-      ogrenciPin(studentId, activeSalonId, null);
+      ogrenciPin(studentKey, activeSalonId, null);
     }
-    setSelectedStudentIds([]);
-  }, [readOnly, selectedStudentIds, activeSalonId, sinifDuzeni, seatStudentMap, ogrenciPin]);
+    setSelectedStudentIds(prev => prev.filter(id => id !== studentKey));
+  }, [readOnly, activeSalonId, sinifDuzeni, seatStudentMap, ogrenciPin]);
+
+  const handlePinToFirstEmptySeat = useCallback(() => {
+    if (!selectedStudentIds.length) return;
+    const studentId = normalizeId(selectedStudentIds[0]);
+    pinStudentToFirstEmptySeat(studentId);
+  }, [selectedStudentIds, normalizeId, pinStudentToFirstEmptySeat]);
 
   // Öğrencinin sabit atamasını kaldırma
   const handleUnpinStudent = useCallback((studentId) => {
@@ -399,48 +463,41 @@ const SabitAtamalar = () => {
   const handleClearSalonPins = useCallback(() => {
     if (readOnly || !activeSalonId) return;
     pinnedStudentsInSalon.forEach(o => {
-      ogrenciUnpin(o.id);
+      ogrenciUnpin(getStudentKey(o));
     });
     setConfirmClearSalon(false);
-  }, [readOnly, activeSalonId, pinnedStudentsInSalon, ogrenciUnpin]);
+  }, [readOnly, activeSalonId, pinnedStudentsInSalon, ogrenciUnpin, getStudentKey]);
+
+  const hasSelectedStudent = selectedStudentIds.length > 0 && normalizeId(selectedStudentIds[0]) !== '';
 
   const selectedStudent = useMemo(() => {
     if (!selectedStudentIds || selectedStudentIds.length === 0) return null;
-    return ogrenciler.find((o) => o.id === selectedStudentIds[0]) || null;
-  }, [selectedStudentIds, ogrenciler]);
+    const selectedId = normalizeId(selectedStudentIds[0]);
+    return ogrenciler.find((o) => getStudentKey(o) === selectedId) || null;
+  }, [selectedStudentIds, ogrenciler, normalizeId, getStudentKey]);
 
   const salonKapasite = activeSalon?.kapasite || sinifDuzeni?.masalar?.length || 0;
   const salonDolulukOrani = salonKapasite > 0 ? Math.round((pinnedStudentsInSalon.length / salonKapasite) * 100) : 0;
 
   return (
-    <Box sx={{ maxWidth: 1400, mx: 'auto', mt: 2, px: { xs: 1, sm: 2 } }}>
-      <Card elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: '16px', mb: 3 }}>
+    <Box sx={{ maxWidth: 1200, mx: 'auto', mt: 3, mb: 4, px: { xs: 1, sm: 2 } }}>
+      <PageHeader
+        icon={<PushPinIcon sx={{ color: '#4F46E5', fontSize: 24 }} />}
+        title="Sabit Atamalar & Görsel Oturma Şeması"
+        subtitle="Özel durumlu veya ön sırada oturması gereken öğrencileri istediğiniz koltuğa kolayca sabitleyin"
+        sx={{ mb: 3 }}
+        actions={
+          <Chip
+            icon={<SchoolIcon fontSize="small" />}
+            label={`Toplam Sabit: ${ogrenciler.filter(o => o.pinned).length} öğrenci`}
+            color="primary"
+            variant="outlined"
+            sx={{ fontWeight: 700 }}
+          />
+        }
+      />
+      <Card elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: '16px', mb: 4 }}>
         <CardContent sx={{ p: { xs: 1.5, sm: 2.5 } }}>
-          {/* Üst Başlık */}
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 1 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-              <Box sx={{ width: 40, height: 40, borderRadius: '12px', bgcolor: 'rgba(37, 99, 235, 0.12)', border: '1px solid rgba(37, 99, 235, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <PushPinIcon sx={{ color: '#2563eb', fontSize: 22 }} />
-              </Box>
-              <Box>
-                <Typography variant="h6" component="h1" sx={{ fontSize: { xs: '1.1rem', sm: '1.25rem' }, color: '#0f172a', fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1.2 }}>
-                  Sabit Atamalar & Görsel Oturma Şeması
-                </Typography>
-                <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                  Özel durumlu veya ön sırada oturması gereken öğrencileri istediğiniz koltuğa kolayca sabitleyin
-                </Typography>
-              </Box>
-            </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Chip
-                icon={<SchoolIcon fontSize="small" />}
-                label={`Toplam Sabit: ${ogrenciler.filter(o => o.pinned).length} öğrenci`}
-                color="primary"
-                variant="outlined"
-                sx={{ fontWeight: 700 }}
-              />
-            </Box>
-          </Box>
 
           {/* Salon Kapasite Sekmeleri / Kartları (Yatay Kaydırılabilir Bar) */}
           <Box
@@ -607,27 +664,33 @@ const SabitAtamalar = () => {
                   <List dense sx={{ maxHeight: 420, overflowY: 'auto', border: '1px solid #f1f5f9', borderRadius: 2 }}>
                     {filteredStudents.slice(0, 300).map((o) => {
                       const isPinnedHere = o.pinned && String(o.pinnedSalonId) === String(activeSalonId);
-                      const isSelected = selectedStudentIds.includes(o.id);
+                      const isSelected = selectedStudentIds.includes(getStudentKey(o));
                       const classStyle = getClassBadgeColor(o.sinif);
 
                       return (
                         <ListItem
                           key={`ogrenci-${o.id}`}
-                          button
-                          selected={isSelected}
-                          onClick={() => setSelectedStudentIds([o.id])}
-                          onDoubleClick={() => {
-                            if (!readOnly) handlePinToFirstEmptySeat();
-                          }}
+                          disablePadding
                           sx={{
                             borderRadius: 1.5,
                             mb: 0.5,
-                            borderLeft: isSelected ? '4px solid #2563eb' : '4px solid transparent',
-                            bgcolor: isSelected ? '#eff6ff' : (isPinnedHere ? '#f0fdf4' : undefined),
-                            '&:hover': { bgcolor: isSelected ? '#dbeafe' : '#f8fafc' }
+                            overflow: 'hidden'
                           }}
-                          disabled={readOnly}
                         >
+                          <ListItemButton
+                            selected={isSelected}
+                            onClick={() => setSelectedStudentIds([getStudentKey(o)])}
+                            onDoubleClick={() => {
+                              if (!readOnly) pinStudentToFirstEmptySeat(getStudentKey(o));
+                            }}
+                            disabled={readOnly}
+                            sx={{
+                              borderRadius: 1.5,
+                              borderLeft: isSelected ? '4px solid #2563eb' : '4px solid transparent',
+                              bgcolor: isSelected ? '#eff6ff' : (isPinnedHere ? '#f0fdf4' : undefined),
+                              '&:hover': { bgcolor: isSelected ? '#dbeafe' : '#f8fafc' }
+                            }}
+                          >
                           <ListItemText
                             primary={
                               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -659,7 +722,7 @@ const SabitAtamalar = () => {
                                   color={isPinnedHere ? 'success' : 'default'}
                                   icon={isPinnedHere ? <CheckIcon fontSize="small" /> : <PushPinIcon fontSize="small" />}
                                   label={isPinnedHere ? (o.pinnedMasaId ? `#${o.pinnedMasaId}` : 'Salonda') : getSalonAdi(o.pinnedSalonId)}
-                                  onDelete={!readOnly ? () => handleUnpinStudent(o.id) : undefined}
+                                  onDelete={!readOnly ? () => handleUnpinStudent(getStudentKey(o)) : undefined}
                                   sx={{ height: 20, fontSize: '0.66rem', fontWeight: 600 }}
                                 />
                               </Tooltip>
@@ -671,8 +734,7 @@ const SabitAtamalar = () => {
                                     size="small"
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      setSelectedStudentIds([o.id]);
-                                      setTimeout(() => handlePinToFirstEmptySeat(), 50);
+                                      pinStudentToFirstEmptySeat(getStudentKey(o));
                                     }}
                                   >
                                     <PersonAddIcon fontSize="small" color="primary" />
@@ -681,6 +743,7 @@ const SabitAtamalar = () => {
                               )
                             )}
                           </ListItemSecondaryAction>
+                          </ListItemButton>
                         </ListItem>
                       );
                     })}
@@ -807,12 +870,13 @@ const SabitAtamalar = () => {
                       {sinifDuzeni?.gruplar && Object.keys(sinifDuzeni.gruplar).length > 0 ? (
                         <Box
                           sx={{
-                            display: 'flex',
-                            flexDirection: { xs: 'column', sm: 'row' },
-                            flexWrap: 'wrap',
-                            gap: { xs: 1, sm: 1.25 },
-                            justifyContent: 'center',
-                            alignItems: { xs: 'center', sm: 'flex-start' },
+                            display: 'grid',
+                            gridTemplateColumns: {
+                              xs: '1fr',
+                              sm: 'repeat(2, minmax(0, 1fr))',
+                              md: 'repeat(4, minmax(0, 1fr))'
+                            },
+                            gap: { xs: 1, sm: 1, md: 0.85 },
                             width: '100%',
                             minWidth: 0
                           }}
@@ -825,13 +889,10 @@ const SabitAtamalar = () => {
                               <Box
                                 key={`grup-${grupId}`}
                                 sx={{
-                                  flex: '0 1 270px',
-                                  minWidth: '220px',
-                                  maxWidth: '270px',
                                   width: '100%',
                                   bgcolor: '#f8fafc',
-                                  p: { xs: 0.75, sm: 1 },
-                                  borderRadius: '10px',
+                                  p: { xs: 0.7, sm: 0.85, md: 0.75 },
+                                  borderRadius: '9px',
                                   border: '1px solid #e2e8f0',
                                   boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
                                 }}
@@ -842,10 +903,10 @@ const SabitAtamalar = () => {
                                     textAlign: 'center',
                                     fontWeight: 800,
                                     color: '#475569',
-                                    mb: 1,
-                                    fontSize: '0.78rem',
+                                    mb: 0.75,
+                                    fontSize: { xs: '0.76rem', md: '0.74rem' },
                                     borderBottom: '1px solid #e2e8f0',
-                                    pb: 0.5
+                                    pb: 0.4
                                   }}
                                 >
                                   Grup {index + 1}
@@ -855,13 +916,13 @@ const SabitAtamalar = () => {
                                   sx={{
                                     display: 'grid',
                                     gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-                                    gap: 0.6
+                                    gap: { xs: 0.6, md: 0.5 }
                                   }}
                                 >
                                   {grupMasalar.map((masa) => {
                                     const seatEntry = seatStudentMap[String(masa.id)];
                                     const student = seatEntry?.student || null;
-                                    const isSelectedStudent = selectedStudentIds.includes(student?.id);
+                                    const isSelectedStudent = selectedStudentIds.includes(getStudentKey(student));
                                     const classStyle = student ? getClassBadgeColor(student.sinif) : null;
 
                                     return (
@@ -869,37 +930,37 @@ const SabitAtamalar = () => {
                                         key={`masa-${masa.id}`}
                                         elevation={student ? (isSelectedStudent ? 6 : 1) : 0}
                                         onClick={() => {
-                                          if (!readOnly && !student && selectedStudent) {
+                                          if (!readOnly && !student && hasSelectedStudent) {
                                             handlePinToSeat(masa.id);
                                           }
                                         }}
                                         sx={{
-                                          p: 0.75,
-                                          borderRadius: '8px',
-                                          minHeight: 58,
+                                          p: { xs: 0.7, md: 0.6 },
+                                          borderRadius: '7px',
+                                          minHeight: { xs: 56, md: 52 },
                                           display: 'flex',
                                           flexDirection: 'column',
                                           justifyContent: 'space-between',
                                           position: 'relative',
-                                          cursor: !readOnly && !student && selectedStudent ? 'pointer' : 'default',
+                                          cursor: !readOnly && !student && hasSelectedStudent ? 'pointer' : 'default',
                                           border: '1.5px solid',
                                           borderColor: student
                                             ? classStyle.border
-                                            : (!readOnly && selectedStudent ? '#93c5fd' : '#e2e8f0'),
+                                            : (!readOnly && hasSelectedStudent ? '#93c5fd' : '#e2e8f0'),
                                           bgcolor: student
                                             ? classStyle.bgcolor
-                                            : (!readOnly && selectedStudent ? '#eff6ff' : '#ffffff'),
+                                            : (!readOnly && hasSelectedStudent ? '#eff6ff' : '#ffffff'),
                                           transition: 'all 0.15s ease',
                                           '&:hover': {
-                                            transform: !readOnly && !student && selectedStudent ? 'scale(1.02)' : 'none',
-                                            borderColor: !readOnly && !student && selectedStudent ? 'primary.main' : undefined,
-                                            boxShadow: !readOnly && !student && selectedStudent ? 2 : undefined
+                                            transform: !readOnly && !student && hasSelectedStudent ? 'scale(1.02)' : 'none',
+                                            borderColor: !readOnly && !student && hasSelectedStudent ? 'primary.main' : undefined,
+                                            boxShadow: !readOnly && !student && hasSelectedStudent ? 2 : undefined
                                           }
                                         }}
                                       >
                                         {/* Masa Numarası Badge (SalonPlani ile Birebir Aynı Sıralama) */}
                                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                          <Typography variant="caption" sx={{ fontWeight: 800, color: 'text.secondary', fontSize: '0.62rem' }}>
+                                          <Typography variant="caption" sx={{ fontWeight: 800, color: 'text.secondary', fontSize: { xs: '0.62rem', md: '0.6rem' } }}>
                                             #Sıra {masa.masaNumarasi || (masa.id + 1)}
                                           </Typography>
 
@@ -910,7 +971,7 @@ const SabitAtamalar = () => {
                                                 size="small"
                                                 onClick={(e) => {
                                                   e.stopPropagation();
-                                                  handleUnpinStudent(student.id);
+                                                  handleUnpinStudent(getStudentKey(student));
                                                 }}
                                                 sx={{ p: 0.15, color: 'text.secondary', '&:hover': { color: 'error.main' } }}
                                               >
@@ -927,7 +988,7 @@ const SabitAtamalar = () => {
                                               variant="body2"
                                               sx={{
                                                 fontWeight: 800,
-                                                fontSize: '0.72rem',
+                                                fontSize: { xs: '0.72rem', md: '0.69rem' },
                                                 color: '#0f172a',
                                                 lineHeight: 1.15,
                                                 mb: 0.35,
@@ -945,8 +1006,8 @@ const SabitAtamalar = () => {
                                                 size="small"
                                                 label={student.sinif || '-'}
                                                 sx={{
-                                                  height: 15,
-                                                  fontSize: '0.6rem',
+                                                  height: 14,
+                                                  fontSize: { xs: '0.6rem', md: '0.57rem' },
                                                   fontWeight: 700,
                                                   bgcolor: '#ffffff',
                                                   color: classStyle.color,
@@ -960,16 +1021,16 @@ const SabitAtamalar = () => {
                                           </Box>
                                         ) : (
                                           <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', my: 'auto', py: 0.25 }}>
-                                            <ChairIcon sx={{ fontSize: 16, color: !readOnly && selectedStudent ? '#3b82f6' : '#cbd5e1', mb: 0.15 }} />
+                                            <ChairIcon sx={{ fontSize: 16, color: !readOnly && hasSelectedStudent ? '#3b82f6' : '#cbd5e1', mb: 0.15 }} />
                                             <Typography
                                               variant="caption"
                                               sx={{
                                                 fontWeight: 700,
                                                 fontSize: '0.63rem',
-                                                color: !readOnly && selectedStudent ? '#1d4ed8' : '#94a3b8'
+                                                color: !readOnly && hasSelectedStudent ? '#1d4ed8' : '#94a3b8'
                                               }}
                                             >
-                                              {!readOnly && selectedStudent ? '➕ Buraya Koy' : 'Boş'}
+                                              {!readOnly && hasSelectedStudent ? '➕ Buraya Koy' : 'Boş'}
                                             </Typography>
                                           </Box>
                                         )}
@@ -1003,7 +1064,7 @@ const SabitAtamalar = () => {
                               secondaryAction={
                                 !readOnly && (
                                   <Tooltip title="Sabit atamayı kaldır">
-                                    <IconButton edge="end" size="small" onClick={() => handleUnpinStudent(o.id)}>
+                                    <IconButton edge="end" size="small" onClick={() => handleUnpinStudent(getStudentKey(o))}>
                                       <HighlightOffIcon fontSize="small" color="error" />
                                     </IconButton>
                                   </Tooltip>

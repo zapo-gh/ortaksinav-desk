@@ -8,16 +8,57 @@ const LoadingFallback = () => (
   </Box>
 );
 
+const lazyWithTimeout = (importer, {
+  timeoutMs = 15000,
+  retries = 1,
+  componentName = 'LazyComponent'
+} = {}) => {
+  const withTimeout = (promise, name) => {
+    return new Promise((resolve, reject) => {
+      const timeoutId = setTimeout(() => {
+        reject(new Error(`${name} yukleme zaman asimina ugradi (${timeoutMs}ms).`));
+      }, timeoutMs);
+
+      promise
+        .then((module) => {
+          clearTimeout(timeoutId);
+          resolve(module);
+        })
+        .catch((error) => {
+          clearTimeout(timeoutId);
+          reject(error);
+        });
+    });
+  };
+
+  return lazy(async () => {
+    let lastError = null;
+
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        return await withTimeout(importer(), componentName);
+      } catch (error) {
+        lastError = error;
+        if (attempt < retries) {
+          await new Promise((resolve) => setTimeout(resolve, 400));
+        }
+      }
+    }
+
+    throw lastError || new Error(`${componentName} yuklenemedi.`);
+  });
+};
+
 // Lazy loaded components - Test/Debug components
-export const LazyTestDashboard = lazy(() => import('./TestDashboard'));
-export const LazyDatabaseTest = lazy(() => import('./DatabaseTest'));
-export const LazyWelcomePage = lazy(() => import('./WelcomePage'));
+export const LazyTestDashboard = lazyWithTimeout(() => import('./TestDashboard'), { componentName: 'TestDashboard' });
+export const LazyDatabaseTest = lazyWithTimeout(() => import('./DatabaseTest'), { componentName: 'DatabaseTest' });
+export const LazyWelcomePage = lazyWithTimeout(() => import('./WelcomePage'), { componentName: 'WelcomePage' });
 
 // Lazy loaded components - Main application components (Code splitting)
-export const LazySalonPlani = lazy(() => import('./SalonPlani'));
-export const LazyPlanlamaYap = lazy(() => import('./PlanlamaYap'));
-export const LazySabitAtamalar = lazy(() => import('./SabitAtamalar'));
-export const LazyKayitliPlanlar = lazy(() => import('./KayitliPlanlar'));
+export const LazySalonPlani = lazyWithTimeout(() => import('./SalonPlani'), { componentName: 'SalonPlani' });
+export const LazyPlanlamaYap = lazyWithTimeout(() => import('./PlanlamaYap'), { componentName: 'PlanlamaYap' });
+export const LazySabitAtamalar = lazyWithTimeout(() => import('./SabitAtamalar'), { componentName: 'SabitAtamalar', retries: 2 });
+export const LazyKayitliPlanlar = lazyWithTimeout(() => import('./KayitliPlanlar'), { componentName: 'KayitliPlanlar' });
 
 
 // HOC for lazy loading with Suspense

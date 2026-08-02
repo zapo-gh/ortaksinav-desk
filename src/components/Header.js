@@ -10,9 +10,7 @@ import {
   MenuItem,
   Avatar,
   Chip,
-  useTheme
 } from '@mui/material';
-import { alpha } from '@mui/material/styles';
 import {
   AccountCircle,
   ExitToApp,
@@ -22,6 +20,8 @@ import {
   VpnKey as KeyIcon,
   Fullscreen as FullscreenIcon,
   FullscreenExit as FullscreenExitIcon,
+  DarkMode as DarkModeIcon,
+  LightMode as LightModeIcon,
 } from '@mui/icons-material';
 
 import QuickSearchModal from './QuickSearchModal';
@@ -29,20 +29,20 @@ import LoginDialog from './auth/LoginDialog';
 import LicenseManager from './LicenseManager';
 import LicenseInfoDialog from './LicenseInfoDialog';
 import { useExam } from '../context/ExamContext';
+import { useThemeMode } from '../context/ThemeContext';
 import { isSuperAdmin, getCurrentSession } from '../services/localAuth';
+import logger from '../utils/logger';
 
-const Header = ({ baslik, kullanici, onHomeClick, onTestDashboardClick, showNav = true }) => {
-  const theme = useTheme();
+const Header = ({ baslik, kullanici, onHomeClick, onTestDashboardClick }) => {
   const [anchorEl, setAnchorEl] = React.useState(null);
   const [showTestDashboard, setShowTestDashboard] = React.useState(false);
-  const [lastKeyPress, setLastKeyPress] = React.useState(0);
-  const [lastKeyCode, setLastKeyCode] = React.useState(null);
   const [openSearch, setOpenSearch] = React.useState(false);
   const [loginDialogOpen, setLoginDialogOpen] = React.useState(false);
   const [licenseManagerOpen, setLicenseManagerOpen] = React.useState(false);
   const [licenseInfoOpen, setLicenseInfoOpen] = React.useState(false);
   const [isFullscreen, setIsFullscreen] = React.useState(false);
   const superAdmin = isSuperAdmin(getCurrentSession());
+  const { mode, toggleColorMode } = useThemeMode();
 
   // Tam ekran geçiş fonksiyonu
   const toggleFullscreen = async () => {
@@ -70,7 +70,7 @@ const Header = ({ baslik, kullanici, onHomeClick, onTestDashboardClick, showNav 
         }
       }
     } catch (error) {
-      console.error('Tam ekran geçişi hatası:', error);
+      logger.error('Tam ekran geçişi hatası:', error);
     }
   };
 
@@ -82,7 +82,6 @@ const Header = ({ baslik, kullanici, onHomeClick, onTestDashboardClick, showNav 
   }
   const contextUser = examContext?.authUser || null;
   const role = examContext?.role || kullanici?.role || 'public';
-  const isWriteAllowed = examContext?.isWriteAllowed ?? (role === 'admin');
   const handleLogoutContext = examContext?.logout;
   const canAuth = Boolean(examContext?.login);
   const currentUser = kullanici || contextUser;
@@ -91,8 +90,6 @@ const Header = ({ baslik, kullanici, onHomeClick, onTestDashboardClick, showNav 
     currentUser?.ad ||
     currentUser?.email ||
     (role === 'admin' ? 'Yönetici' : 'Misafir');
-  const roleLabel = role === 'admin' ? 'Admin' : 'Misafir';
-
   // Test Dashboard görünürlüğünü kontrol et
   React.useEffect(() => {
     // Log kaldırıldı - gereksiz console spam'i önlemek için
@@ -126,16 +123,6 @@ const Header = ({ baslik, kullanici, onHomeClick, onTestDashboardClick, showNav 
 
     window.addEventListener('popstate', handleUrlChange);
 
-    // URL parametrelerini düzenli kontrol et - sadece değişiklik olduğunda kontrol et
-    let lastUrlState = window.location.search;
-    const urlCheckInterval = setInterval(() => {
-      const currentUrlState = window.location.search;
-      if (currentUrlState !== lastUrlState) {
-        lastUrlState = currentUrlState;
-        checkTestDashboardVisibility();
-      }
-    }, 500);
-
     // Space tuşunu globalde (form alanları hariç) engelle
     const preventSpaceToggle = (e) => {
       const isEditable = (el) => {
@@ -153,24 +140,13 @@ const Header = ({ baslik, kullanici, onHomeClick, onTestDashboardClick, showNav 
 
     // Klavye kısayolu handler - debounced
     const handleKeyDown = (e) => {
-      const now = Date.now();
       // Space tuşunu tamamen görmezden gel
       if (e.key === ' ' || e.code === 'Space' || e.keyCode === 32) {
         return;
       }
 
-      // Debounce: 1000ms içinde aynı tuş basılırsa ignore et
-      if (now - lastKeyPress < 1000 && e.keyCode === lastKeyCode) {
-        console.log('⏰ Debounce: Aynı tuş çok yakın zamanda basıldı, ignore ediliyor', e.keyCode);
-        return;
-      }
-
       // Test Dashboard toggle fonksiyonu - SADECE URL PARAMETRESİ İLE ÇALIŞIR
-      const toggleTestDashboard = (keyName) => {
-        console.log(`✅ ${keyName} algılandı! (Debounce geçildi)`);
-        setLastKeyPress(now);
-        setLastKeyCode(e.keyCode);
-
+      const toggleTestDashboard = () => {
         // URL parametresini ekle/kaldır
         const urlParams = new URLSearchParams(window.location.search);
         const hasTestParam = urlParams.has('test') || urlParams.get('showTestDashboard') === 'true';
@@ -183,7 +159,6 @@ const Header = ({ baslik, kullanici, onHomeClick, onTestDashboardClick, showNav 
           window.history.pushState({}, '', newUrl);
           setShowTestDashboard(false);
           localStorage.removeItem('show_test_dashboard');
-          console.log(`🧪 ${keyName} - Test Dashboard: KAPALI (URL parametresi kaldırıldı)`);
         } else {
           // URL'ye ?test parametresi ekle
           urlParams.set('test', '1');
@@ -191,7 +166,6 @@ const Header = ({ baslik, kullanici, onHomeClick, onTestDashboardClick, showNav 
           window.history.pushState({}, '', newUrl);
           setShowTestDashboard(true);
           localStorage.setItem('show_test_dashboard', 'true');
-          console.log(`🧪 ${keyName} - Test Dashboard: AÇIK (URL parametresi eklendi)`);
         }
       };
 
@@ -205,7 +179,7 @@ const Header = ({ baslik, kullanici, onHomeClick, onTestDashboardClick, showNav 
       // Sadece Ctrl+Alt+T kombinasyonu ile toggle
       if ((e.ctrlKey || e.metaKey) && e.altKey && (e.key === 't' || e.key === '₺')) {
         e.preventDefault();
-        toggleTestDashboard('Ctrl+Alt+T');
+        toggleTestDashboard();
       }
       // Diğer tüm tuşlar DEVRE DIŞI
     };
@@ -219,7 +193,6 @@ const Header = ({ baslik, kullanici, onHomeClick, onTestDashboardClick, showNav 
       document.removeEventListener('keydown', handleKeyDown);
       document.removeEventListener('keydown', preventSpaceToggle, true);
       window.removeEventListener('popstate', handleUrlChange);
-      clearInterval(urlCheckInterval);
     };
   }, []); // Dependency array'i boş bırak
 
@@ -256,16 +229,12 @@ const Header = ({ baslik, kullanici, onHomeClick, onTestDashboardClick, showNav 
           transition: 'all 0.3s ease',
         }}
       >
-        <Toolbar sx={{ position: 'relative', minHeight: '70px !important', px: { xs: 2, md: 3 } }}>
+        <Toolbar sx={{ minHeight: { xs: 66, md: 72 }, px: { xs: 1.5, sm: 2, md: 3 }, gap: 1 }}>
           {/* Sol taraf - Logo */}
           <Box
             onClick={onHomeClick}
             sx={{
-              position: 'absolute',
-              left: 16,
-              top: '50%',
-              transform: 'translateY(-50%)',
-              zIndex: 1,
+              flexShrink: 0,
               width: 48,
               height: 48,
               borderRadius: '12px',
@@ -278,11 +247,13 @@ const Header = ({ baslik, kullanici, onHomeClick, onTestDashboardClick, showNav 
               boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
               transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
               '&:hover': {
-                transform: 'translateY(-50%) scale(1.08)',
+                transform: 'scale(1.08)',
                 background: 'rgba(255, 255, 255, 0.14)',
                 boxShadow: '0 6px 16px rgba(0, 0, 0, 0.25)',
               }
             }}
+            role="button"
+            aria-label="Ana sayfaya dön"
           >
             <Box
               sx={{
@@ -319,15 +290,13 @@ const Header = ({ baslik, kullanici, onHomeClick, onTestDashboardClick, showNav 
           {/* Orta - Başlık & Sürüm/Aktiflik Rozeti */}
           <Box
             sx={{
-              position: 'absolute',
-              left: { xs: 76, sm: '50%' },
-              top: '50%',
-              transform: { xs: 'translateY(-50%)', sm: 'translate(-50%, -50%)' },
+              flexGrow: 1,
+              minWidth: 0,
               display: 'flex',
               alignItems: 'center',
+              justifyContent: { xs: 'flex-start', sm: 'center' },
               gap: 1.5,
-              zIndex: 1,
-              maxWidth: { xs: 'calc(100% - 160px)', sm: 'calc(100% - 320px)', md: 'calc(100% - 440px)' },
+              px: { xs: 0.5, sm: 2 },
             }}
           >
             <Typography
@@ -368,11 +337,12 @@ const Header = ({ baslik, kullanici, onHomeClick, onTestDashboardClick, showNav 
           </Box>
 
           {/* Sağ taraf - Tüm Butonlar Birlikte */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, sm: 1, md: 1.5 }, position: 'absolute', right: { xs: 8, sm: 12, md: 16 }, top: '50%', transform: 'translateY(-50%)' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, sm: 1, md: 1.5 }, flexShrink: 0 }}>
             <IconButton
               color="inherit"
               size="small"
               onClick={() => setOpenSearch(true)}
+              aria-label="Öğrenci ara"
               title="Öğrenci Ara (Ctrl+K)"
               sx={{
                 bgcolor: 'rgba(255, 255, 255, 0.08)',
@@ -393,6 +363,7 @@ const Header = ({ baslik, kullanici, onHomeClick, onTestDashboardClick, showNav 
               color="inherit"
               size="small"
               onClick={toggleFullscreen}
+              aria-label="Tam ekran"
               title="Tam Ekran (F11)"
               sx={{
                 bgcolor: 'rgba(255, 255, 255, 0.08)',
@@ -408,6 +379,27 @@ const Header = ({ baslik, kullanici, onHomeClick, onTestDashboardClick, showNav 
               }}
             >
               {isFullscreen ? <FullscreenExitIcon fontSize="small" /> : <FullscreenIcon fontSize="small" />}
+            </IconButton>
+            <IconButton
+              color="inherit"
+              size="small"
+              onClick={toggleColorMode}
+              aria-label="Tema değiştir"
+              title={mode === 'dark' ? "Aydınlık Mod" : "Karanlık Mod"}
+              sx={{
+                bgcolor: 'rgba(255, 255, 255, 0.08)',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
+                borderRadius: '10px',
+                p: 1,
+                transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                '&:hover': {
+                  bgcolor: 'rgba(255, 255, 255, 0.18)',
+                  transform: 'translateY(-2px)',
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
+                }
+              }}
+            >
+              {mode === 'dark' ? <LightModeIcon fontSize="small" /> : <DarkModeIcon fontSize="small" />}
             </IconButton>
             {/* Test Dashboard Butonu */}
             {showTestDashboard && (

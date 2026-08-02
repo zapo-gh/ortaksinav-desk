@@ -1,4 +1,5 @@
 import React, { memo, useState } from 'react';
+import PageHeader from './common/PageHeader';
 import {
   Card,
   CardContent,
@@ -273,69 +274,49 @@ const PlanlamaYap = memo(({
     }
   };
 
-  return (
-    <Card sx={{ maxWidth: 1040, mx: 'auto', mt: { xs: 1, sm: 2 }, mb: 2 }}>
-      <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: { xs: 2, sm: 3 }, flexWrap: 'wrap', gap: 2 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-            <Box sx={{
-              width: 40,
-              height: 40,
-              borderRadius: '12px',
-              bgcolor: 'rgba(37, 99, 235, 0.12)',
-              border: '1px solid rgba(37, 99, 235, 0.2)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 2px 6px rgba(37, 99, 235, 0.15)'
-            }}>
-              <AssessmentIcon sx={{ color: '#2563eb', fontSize: 22 }} />
-            </Box>
-            <Typography variant="h6" component="h1" sx={{ fontSize: { xs: '1.15rem', sm: '1.35rem' }, color: '#0f172a', fontWeight: 800, letterSpacing: '-0.02em' }}>
-              Sınav Yerleştirme Planlaması
-            </Typography>
-          </Box>
+  const yerlestirmeDisabled = !kontroller?.yerleştirmeYapilabilir && process.env.NODE_ENV !== 'test';
 
-          <Button
-            variant="contained"
-            startIcon={yukleme ? <CircularProgress size={20} sx={{ color: '#fff' }} /> : <AutoAwesomeIcon />}
-            onClick={process.env.NODE_ENV === 'test' ? onYerlestirmeYap : handleYerlestirmeBaslat}
-            disabled={process.env.NODE_ENV === 'test' ? !!yukleme : (!kontroller?.yerleştirmeYapilabilir || yukleme)}
-            sx={{
-              px: { xs: 3, sm: 4 },
-              py: 1.25,
-              borderRadius: '12px',
-              textTransform: 'none',
-              fontWeight: 800,
-              fontSize: { xs: '0.95rem', sm: '1.05rem' },
-              letterSpacing: '0.5px',
-              background: (!kontroller?.yerleştirmeYapilabilir && process.env.NODE_ENV !== 'test')
-                ? 'rgba(0, 0, 0, 0.12)'
-                : 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 50%, #4f46e5 100%)',
-              color: '#ffffff',
-              boxShadow: (!kontroller?.yerleştirmeYapilabilir && process.env.NODE_ENV !== 'test')
-                ? 'none'
-                : '0 8px 20px -4px rgba(37, 99, 235, 0.45), 0 4px 10px -4px rgba(37, 99, 235, 0.3)',
-              border: (!kontroller?.yerleştirmeYapilabilir && process.env.NODE_ENV !== 'test')
-                ? '1px solid rgba(234, 179, 8, 0.4)'
-                : '1px solid rgba(255, 255, 255, 0.2)',
-              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-              '&:hover': {
-                transform: (!kontroller?.yerleştirmeYapilabilir && process.env.NODE_ENV !== 'test') ? 'none' : 'translateY(-2px) scale(1.03)',
-                background: (!kontroller?.yerleştirmeYapilabilir && process.env.NODE_ENV !== 'test')
-                  ? 'rgba(0, 0, 0, 0.12)'
-                  : 'linear-gradient(135deg, #1d4ed8 0%, #2563eb 50%, #4338ca 100%)',
-                boxShadow: '0 12px 28px -4px rgba(37, 99, 235, 0.65)',
-              },
-              '&.Mui-disabled': {
-                color: 'rgba(0, 0, 0, 0.4)',
-                borderColor: 'rgba(0, 0, 0, 0.12)',
-              }
-            }}
-          >
-            {yukleme ? 'Yerleştirme Algoritması Çalışıyor...' : 'Yerleştirme Başlat'}
-          </Button>
-        </Box>
+  return (
+    <Box sx={{ maxWidth: 1200, mx: 'auto', mt: 3, mb: 4 }}>
+      <PageHeader
+        icon={<AssessmentIcon sx={{ color: '#4F46E5', fontSize: 24 }} />}
+        title="Sınav Yerleştirme Planlaması"
+        sx={{ mb: { xs: 2, sm: 3 } }}
+          actions={
+            <Button
+              variant="contained"
+              startIcon={yukleme ? <CircularProgress size={18} sx={{ color: '#fff' }} /> : <AutoAwesomeIcon sx={{ fontSize: 18 }} />}
+              onClick={process.env.NODE_ENV === 'test' ? onYerlestirmeYap : handleYerlestirmeBaslat}
+              disabled={process.env.NODE_ENV === 'test' ? !!yukleme : (!kontroller?.yerleştirmeYapilabilir || yukleme)}
+              sx={{
+                px: { xs: 2.5, sm: 3 },
+                py: 1,
+                borderRadius: '10px',
+                textTransform: 'none',
+                fontWeight: 600,
+                fontSize: { xs: '0.9rem', sm: '0.95rem' },
+                background: yerlestirmeDisabled ? 'rgba(0, 0, 0, 0.12)' : '#2563eb',
+                color: '#ffffff',
+                boxShadow: yerlestirmeDisabled ? 'none' : '0 1px 2px rgba(15, 23, 42, 0.08)',
+                border: yerlestirmeDisabled ? '1px solid rgba(234, 179, 8, 0.4)' : 'none',
+                transition: 'background-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease',
+                '&:hover': {
+                  transform: yerlestirmeDisabled ? 'none' : 'translateY(-1px)',
+                  background: yerlestirmeDisabled ? 'rgba(0, 0, 0, 0.12)' : '#1d4ed8',
+                  boxShadow: yerlestirmeDisabled ? 'none' : '0 4px 10px rgba(37, 99, 235, 0.25)',
+                },
+                '&.Mui-disabled': {
+                  color: 'rgba(0, 0, 0, 0.4)',
+                  borderColor: 'rgba(0, 0, 0, 0.12)',
+                }
+              }}
+            >
+              {yukleme ? 'Yerleştirme Algoritması Çalışıyor...' : 'Yerleştirme Başlat'}
+              </Button>
+          }
+      />
+      <Card>
+        <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
 
         {/* Genel Durum */}
         {kontroller?.tumHatalar && (
@@ -666,8 +647,9 @@ const PlanlamaYap = memo(({
           }, 0)
             }`} color="success" variant="outlined" />
         </Box>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    </Box>
   );
 });
 

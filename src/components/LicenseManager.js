@@ -7,12 +7,12 @@ import {
 import {
   VpnKey as KeyIcon,
   ContentCopy as CopyIcon,
-  Close as CloseIcon,
   DeleteOutline as DeleteIcon,
   CheckCircle as CheckIcon,
   Cancel as CancelIcon,
 } from '@mui/icons-material';
 import { generateLicenseKey, getStoredLicense, clearLicense, getLicenseDaysLeft, parseExpiryDateLocal } from '../services/licenseService';
+import DialogHeader from './common/DialogHeader';
 
 /**
  * Süper admin için lisans anahtarı üretme paneli.
@@ -85,14 +85,9 @@ const LicenseManager = ({ open, onClose }) => {
 
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
-      <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1, pb: 1 }}>
-        <KeyIcon color="primary" />
-        <Typography variant="h6" fontWeight={700} sx={{ flex: 1 }}>
-          Lisans Anahtarı Üretici
-        </Typography>
-        <IconButton size="small" onClick={handleClose}><CloseIcon /></IconButton>
+      <DialogTitle>
+        <DialogHeader icon={<KeyIcon color="primary" />} title="Lisans Anahtarı Üretici" onClose={handleClose} />
       </DialogTitle>
-      <Divider />
 
       <form onSubmit={handleGenerate}>
         <DialogContent sx={{ pt: 2.5 }}>
@@ -249,7 +244,7 @@ const LicenseManager = ({ open, onClose }) => {
         </DialogContent>
 
         <DialogActions sx={{ px: 3, pb: 2.5 }}>
-          <Button onClick={handleClose} color="inherit">Kapat</Button>
+          <Button onClick={handleClose} variant="outlined">Kapat</Button>
           <Button
             type="submit"
             variant="contained"

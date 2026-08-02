@@ -1,5 +1,6 @@
 import React, { useState, memo } from 'react';
 import deepEqual from '../utils/deepEqual';
+import PageHeader from './common/PageHeader';
 import {
   Card,
   CardContent,
@@ -36,7 +37,7 @@ import {
   Warning as WarningIcon
 } from '@mui/icons-material';
 import { useNotifications } from './NotificationSystem';
-import { useExam } from '../context/ExamContext';
+import { useExamSelector } from '../context/ExamContext';
 import logger from '../utils/logger';
 // Basit, sürükle-bıraksız salon kartı bileşeni
 const SalonItem = ({ form, index, onFormChange, onFormDelete, onFormCopy, yerlesimPlaniVarMi, topluSilmeModu, seciliSalonlar, onSalonSecimi }) => {
@@ -224,7 +225,7 @@ const SalonItem = ({ form, index, onFormChange, onFormDelete, onFormCopy, yerles
 const SalonFormu = memo(({ salonlar = [], onSalonlarDegistir, yerlestirmeSonucu = null, readOnly: readOnlyProp = false }) => {
   // Notification sistemi
   const { showSuccess, showError, showWarning } = useNotifications();
-  const { isWriteAllowed } = useExam();
+  const isWriteAllowed = useExamSelector((state) => state.role === 'admin');
   const readOnly = readOnlyProp || (process.env.NODE_ENV === 'test' ? false : !isWriteAllowed);
   const showReadOnlyMessage = React.useCallback(() => {
     showWarning('Bu işlemi gerçekleştirmek için yönetici olarak giriş yapmanız gerekir.');
@@ -795,16 +796,13 @@ const SalonFormu = memo(({ salonlar = [], onSalonlarDegistir, yerlestirmeSonucu 
   // readOnly görünümü: hook'lar tanımlandıktan sonra koşullu render
   if (readOnly) {
     return (
-      <Card sx={{ maxWidth: 1040, mx: 'auto', mt: 2 }}>
+      <Box sx={{ maxWidth: 1200, mx: 'auto', mt: 3, mb: 4 }}>
+      <PageHeader
+        icon={<MeetingRoomIcon sx={{ color: '#4F46E5', fontSize: 24 }} />}
+        title="Sınav Salonları Yönetimi"
+      />
+      <Card>
         <CardContent>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
-            <Box sx={{ width: 40, height: 40, borderRadius: '12px', bgcolor: 'rgba(37, 99, 235, 0.12)', border: '1px solid rgba(37, 99, 235, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 6px rgba(37, 99, 235, 0.15)' }}>
-              <MeetingRoomIcon sx={{ color: '#2563eb', fontSize: 22 }} />
-            </Box>
-            <Typography variant="h6" component="h1" sx={{ fontSize: { xs: '1.15rem', sm: '1.35rem' }, color: '#0f172a', fontWeight: 800, letterSpacing: '-0.02em' }}>
-              Sınav Salonları Yönetimi
-            </Typography>
-          </Box>
           <Alert severity="info" sx={{ mb: 3 }}>
             Salon listesi görüntüleme modunda. Düzenleme yapabilmek için yönetici olarak giriş yapın.
           </Alert>
@@ -837,42 +835,17 @@ const SalonFormu = memo(({ salonlar = [], onSalonlarDegistir, yerlestirmeSonucu 
           )}
         </CardContent>
       </Card>
+    </Box>
     );
   }
 
   return (
-    <>
-      <Card sx={{ maxWidth: 1040, mx: 'auto', mt: 2 }}>
-        <CardContent>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
-            <Box sx={{ width: 40, height: 40, borderRadius: '12px', bgcolor: 'rgba(37, 99, 235, 0.12)', border: '1px solid rgba(37, 99, 235, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 6px rgba(37, 99, 235, 0.15)' }}>
-              <MeetingRoomIcon sx={{ color: '#2563eb', fontSize: 22 }} />
-            </Box>
-            <Typography variant="h6" component="h1" sx={{ fontSize: { xs: '1.15rem', sm: '1.35rem' }, color: '#0f172a', fontWeight: 800, letterSpacing: '-0.02em' }}>
-              Sınav Salonları Yönetimi
-            </Typography>
-          </Box>
-
-          {/* Yerleştirme Planı Uyarısı */}
-          {yerlesimPlaniVarMi() && (
-            <Alert
-              severity="warning"
-              sx={{ mb: 3 }}
-              icon={<WarningIcon />}
-            >
-              <AlertTitle>Yerleştirme Planı Mevcut</AlertTitle>
-              <Typography variant="body2">
-                Mevcut bir yerleştirme planı bulunduğu için salon yapısında değişiklik yapılamaz.
-                Salon ekleme, silme, grup sayısı değiştirme ve sıra sayısı değiştirme işlemleri kısıtlanmıştır.
-                <br />
-                <strong>Önce mevcut planı temizleyin, sonra salon yapısını değiştirin.</strong>
-              </Typography>
-            </Alert>
-          )}
-
-
-          {/* Salon Ekleme ve Toplu Silme Butonları */}
-          <Box sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 2 }}>
+    <Box sx={{ maxWidth: 1200, mx: 'auto', mt: 3, mb: 4 }}>
+      <PageHeader
+        icon={<MeetingRoomIcon sx={{ color: '#4F46E5', fontSize: 24 }} />}
+        title="Sınav Salonları Yönetimi"
+        actions={
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
             <Button
               variant="outlined"
               startIcon={<AddIcon />}
@@ -904,10 +877,6 @@ const SalonFormu = memo(({ salonlar = [], onSalonlarDegistir, yerlestirmeSonucu 
                       size="small"
                       onClick={handleTumunuSec}
                       disabled={seciliSalonlar.length === aktifSalonFormlari.length}
-                      sx={{
-                        minWidth: 'auto',
-                        px: 2
-                      }}
                     >
                       Tümünü Seç
                     </Button>
@@ -920,13 +889,37 @@ const SalonFormu = memo(({ salonlar = [], onSalonlarDegistir, yerlestirmeSonucu 
                       onClick={handleTopluSilmeOnay}
                       disabled={seciliSalonlar.length === 0}
                     >
-                      Seçili Salonları Sil ({seciliSalonlar.length})
+                      Sil ({seciliSalonlar.length})
                     </Button>
                   </>
                 )}
               </>
             )}
           </Box>
+        }
+      />
+      <Card>
+        <CardContent>
+
+          {/* Yerleştirme Planı Uyarısı */}
+          {yerlesimPlaniVarMi() && (
+            <Alert
+              severity="warning"
+              sx={{ mb: 3 }}
+              icon={<WarningIcon />}
+            >
+              <AlertTitle>Yerleştirme Planı Mevcut</AlertTitle>
+              <Typography variant="body2">
+                Mevcut bir yerleştirme planı bulunduğu için salon yapısında değişiklik yapılamaz.
+                Salon ekleme, silme, grup sayısı değiştirme ve sıra sayısı değiştirme işlemleri kısıtlanmıştır.
+                <br />
+                <strong>Önce mevcut planı temizleyin, sonra salon yapısını değiştirin.</strong>
+              </Typography>
+            </Alert>
+          )}
+
+
+
 
           {/* Boş durum metni - yazılabilir modda, salonlar listesi boşken */}
           {Array.isArray(salonlar) && salonlar.length === 0 && aktifSalonFormlari.length === 0 && (
@@ -1047,29 +1040,34 @@ const SalonFormu = memo(({ salonlar = [], onSalonlarDegistir, yerlestirmeSonucu 
           px: 3
         }}>
           <Button
-            variant="outlined"
             onClick={handleTopluSilmeIptal}
+            variant="outlined"
             sx={{
-              minWidth: 100,
-              borderRadius: 2
+              borderRadius: 2,
+              px: 3,
+              py: 1,
+              fontWeight: 600
             }}
           >
             İptal
           </Button>
           <Button
+            onClick={handleTopluSilmeTamamla}
             variant="contained"
             color="error"
-            onClick={handleTopluSilmeTamamla}
             sx={{
-              minWidth: 100,
-              borderRadius: 2
+              borderRadius: 2,
+              px: 3,
+              py: 1,
+              fontWeight: 600,
+              boxShadow: 3
             }}
           >
             Evet, Sil
           </Button>
         </DialogActions>
       </Dialog>
-    </>
+    </Box>
   );
 });
 

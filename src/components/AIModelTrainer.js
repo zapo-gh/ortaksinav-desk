@@ -48,6 +48,7 @@ import {
 } from '@mui/icons-material';
 import dragDropLearning from '../utils/dragDropLearning';
 import learningDataManager from '../utils/learningDataManager';
+import DialogHeader from './common/DialogHeader';
 
 const AIModelTrainer = ({
   currentPlacement,
@@ -465,8 +466,10 @@ const AIModelTrainer = ({
       )}
 
       {/* Training Configuration Dialog */}
-      <Dialog open={settingsDialogOpen} onClose={() => setSettingsDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>AI Eğitim Ayarları</DialogTitle>
+      <Dialog open={settingsDialogOpen} onClose={() => setSettingsDialogOpen(false)} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
+        <DialogTitle>
+          <DialogHeader icon={<SettingsIcon color="primary" />} title="AI Eğitim Ayarları" />
+        </DialogTitle>
         <DialogContent>
           <TextField
             fullWidth
@@ -518,8 +521,8 @@ const AIModelTrainer = ({
             sx={{ mt: 1 }}
           />
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setSettingsDialogOpen(false)}>İptal</Button>
+        <DialogActions sx={{ px: 3, pb: 2.5 }}>
+          <Button onClick={() => setSettingsDialogOpen(false)} variant="outlined">İptal</Button>
           <Button onClick={() => updateConfig(trainingConfig)} variant="contained">
             Kaydet
           </Button>

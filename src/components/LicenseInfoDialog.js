@@ -16,11 +16,11 @@ import {
   VpnKey as KeyIcon,
   Computer as ComputerIcon,
   ContentCopy as CopyIcon,
-  Close as CloseIcon,
   CheckCircle as CheckCircleIcon,
   Cancel as CancelIcon,
 } from '@mui/icons-material';
 import { getMachineId, getStoredLicense, getLicenseDaysLeft, parseExpiryDateLocal } from '../services/licenseService';
+import DialogHeader from './common/DialogHeader';
 
 const LicenseInfoDialog = ({ open, onClose }) => {
   const [machineId, setMachineId] = React.useState('');
@@ -52,14 +52,9 @@ const LicenseInfoDialog = ({ open, onClose }) => {
 
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
-      <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1, pb: 1 }}>
-        <KeyIcon color="secondary" />
-        <Typography variant="h6" fontWeight={700} sx={{ flex: 1 }}>
-          Lisans Bilgileri
-        </Typography>
-        <IconButton size="small" onClick={handleClose}><CloseIcon /></IconButton>
+      <DialogTitle>
+        <DialogHeader icon={<KeyIcon color="secondary" />} title="Lisans Bilgileri" onClose={handleClose} />
       </DialogTitle>
-      <Divider />
 
       <DialogContent sx={{ pt: 2.5 }}>
         {/* Makine ID */}
@@ -136,7 +131,7 @@ const LicenseInfoDialog = ({ open, onClose }) => {
       </DialogContent>
 
       <DialogActions sx={{ px: 3, pb: 2.5 }}>
-        <Button onClick={handleClose} color="inherit">Kapat</Button>
+        <Button onClick={handleClose} variant="outlined">Kapat</Button>
       </DialogActions>
     </Dialog>
   );

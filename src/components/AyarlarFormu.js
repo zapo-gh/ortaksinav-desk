@@ -1,5 +1,7 @@
 import React, { useState, memo } from 'react';
 import deepEqual from '../utils/deepEqual';
+import PageHeader from './common/PageHeader';
+import DialogHeader from './common/DialogHeader';
 import {
   Card,
   CardContent,
@@ -8,7 +10,6 @@ import {
   Button,
   Grid,
   Box,
-  Divider,
   Chip,
   IconButton,
   FormControl,
@@ -25,7 +26,7 @@ import {
   Avatar
 } from '@mui/material';
 import { useNotifications } from './NotificationSystem';
-import { useExam } from '../context/ExamContext';
+import { useExamSelector } from '../context/ExamContext';
 import {
   Add as AddIcon,
   Delete as DeleteIcon,
@@ -121,7 +122,7 @@ const areSettingsEqual = (prev, next) => {
 
 const AyarlarFormu = memo(({ ayarlar, onAyarlarDegistir, ogrenciler, yerlestirmeSonucu = null, readOnly: readOnlyProp = false }) => {
   const { showError } = useNotifications();
-  const { isWriteAllowed } = useExam();
+  const isWriteAllowed = useExamSelector((state) => state.role === 'admin');
   const readOnly = readOnlyProp || (process.env.NODE_ENV === 'test' ? false : !isWriteAllowed);
   const showReadOnlyMessage = React.useCallback(() => {
     showError('Bu işlemi gerçekleştirmek için yönetici olarak giriş yapmalısınız.');
@@ -416,8 +417,15 @@ const AyarlarFormu = memo(({ ayarlar, onAyarlarDegistir, ogrenciler, yerlestirme
   };
 
   return (
-    <Card sx={{ maxWidth: 800, mx: 'auto', mt: 2 }}>
-      <CardContent>
+    <Box sx={{ maxWidth: 1200, mx: 'auto', mt: 3, mb: 4 }}>
+      <PageHeader
+        icon={<BookIcon sx={{ color: '#4F46E5', fontSize: 24 }} />}
+        title="Ders Yönetimi"
+        subtitle="Sınavı yapılacak dersleri ve bu dersleri alan sınıfları belirleyin"
+        sx={{ mb: 3 }}
+      />
+      <Card elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: '16px', mb: 4 }}>
+        <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
         {/* Sınav Ayarları bölümü: sadece test ortamında görünür, gerçek UI'dan kaldırıldı */}
         {process.env.NODE_ENV === 'test' && (
           <>
@@ -494,16 +502,11 @@ const AyarlarFormu = memo(({ ayarlar, onAyarlarDegistir, ogrenciler, yerlestirme
 
             {/* Ders Bilgileri */}
             <Grid size={12} key="ders-bilgileri-section">
-              <Divider sx={{ my: 2 }} />
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                  <Box sx={{ width: 40, height: 40, borderRadius: '12px', bgcolor: 'rgba(37, 99, 235, 0.12)', border: '1px solid rgba(37, 99, 235, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 6px rgba(37, 99, 235, 0.15)' }}>
-                    <BookIcon sx={{ color: '#2563eb', fontSize: 22 }} />
-                  </Box>
-                  <Typography variant="h6" component="h1" sx={{ fontSize: { xs: '1.15rem', sm: '1.35rem' }, color: '#0f172a', fontWeight: 800, letterSpacing: '-0.02em' }}>
-                    Ders Bilgileri
-                  </Typography>
-                </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                <BookIcon sx={{ color: '#64748b', fontSize: 20 }} />
+                <Typography variant="h6" sx={{ color: '#0f172a', fontWeight: 700, fontSize: { xs: '1.05rem', sm: '1.2rem' }, letterSpacing: '-0.01em' }}>
+                  Ders Bilgileri
+                </Typography>
               </Box>
 
               {formData.dersler.map((ders, index) => {
@@ -771,21 +774,22 @@ const AyarlarFormu = memo(({ ayarlar, onAyarlarDegistir, ogrenciler, yerlestirme
           </Grid>
         </form>
       </CardContent>
+    </Card>
+    
       {/* Ders Silme Onayı Dialogu */}
       <Dialog open={dersSilmeDialogAcik} onClose={dersSilIptal} maxWidth="xs" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
-        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <DeleteIcon color="error" fontSize="small" />
-          Ders Silme Onayı
+        <DialogTitle>
+          <DialogHeader icon={<DeleteIcon color="error" />} title="Ders Silme Onayı" />
         </DialogTitle>
         <DialogContent>
           <Typography variant="body2">Seçili dersi silmek istediğinize emin misiniz?</Typography>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={dersSilIptal}>İptal</Button>
+        <DialogActions sx={{ px: 3, pb: 2.5 }}>
+          <Button onClick={dersSilIptal} variant="outlined">İptal</Button>
           <Button onClick={dersSilOnayla} color="error" variant="contained">Sil</Button>
         </DialogActions>
       </Dialog>
-    </Card>
+    </Box>
   );
 });
 

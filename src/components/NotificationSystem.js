@@ -1,7 +1,5 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import {
-  Snackbar,
-  Alert,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -19,53 +17,41 @@ import {
   Warning as WarningIcon,
   Info as InfoIcon
 } from '@mui/icons-material';
+import { toast } from 'sonner';
+import DialogHeader from './common/DialogHeader';
 
 // Notification Context
 const NotificationContext = createContext();
 
 // Notification Provider
 export const NotificationProvider = ({ children }) => {
-  const [notifications, setNotifications] = useState([]);
   const [confirmDialog, setConfirmDialog] = useState(null);
   const [promptDialog, setPromptDialog] = useState(null);
 
-  // Toast notification
+  // Toast notification (general)
   const showToast = useCallback((message, type = 'info', duration = 4000) => {
-    const id = Date.now();
-    const notification = {
-      id,
-      message,
-      type,
-      duration
-    };
-    
-    setNotifications(prev => [...prev, notification]);
-    
-    // Auto remove after duration
-    setTimeout(() => {
-      setNotifications(prev => prev.filter(n => n.id !== id));
-    }, duration);
+    toast(message, { duration });
   }, []);
 
   // Success notification
   const showSuccess = useCallback((message, duration = 4000) => {
-    showToast(message, 'success', duration);
-  }, [showToast]);
+    toast.success(message, { duration });
+  }, []);
 
   // Error notification
   const showError = useCallback((message, duration = 6000) => {
-    showToast(message, 'error', duration);
-  }, [showToast]);
+    toast.error(message, { duration });
+  }, []);
 
   // Warning notification
   const showWarning = useCallback((message, duration = 5000) => {
-    showToast(message, 'warning', duration);
-  }, [showToast]);
+    toast.warning(message, { duration });
+  }, []);
 
   // Info notification
   const showInfo = useCallback((message, duration = 4000) => {
-    showToast(message, 'info', duration);
-  }, [showToast]);
+    toast.info(message, { duration });
+  }, []);
 
   // Confirm dialog
   const showConfirm = useCallback((message, title = 'Onay', confirmText = 'Evet', cancelText = 'İptal') => {
@@ -111,7 +97,7 @@ export const NotificationProvider = ({ children }) => {
 
   // Remove notification
   const removeNotification = useCallback((id) => {
-    setNotifications(prev => prev.filter(n => n.id !== id));
+    toast.dismiss(id);
   }, []);
 
   const value = {
@@ -128,36 +114,7 @@ export const NotificationProvider = ({ children }) => {
   return (
     <NotificationContext.Provider value={value}>
       {children}
-      
-      {/* Toast Notifications */}
-      <Box sx={{ 
-        position: 'fixed', 
-        top: 20, 
-        right: 20, 
-        zIndex: 9999,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 1,
-        maxWidth: '400px',
-        pointerEvents: 'none' // Box'ın kendisi pointer event'leri engellemesin
-      }}>
-        {notifications.map((notification) => (
-          <Alert
-            key={notification.id}
-            severity={notification.type}
-            onClose={() => removeNotification(notification.id)}
-            sx={{ 
-              minWidth: 300, 
-              width: '100%',
-              pointerEvents: 'auto', // Alert'in kendisi pointer event'leri alabilsin
-              boxShadow: 3,
-              animation: 'slideIn 0.3s ease-out'
-            }}
-          >
-            {notification.message}
-          </Alert>
-        ))}
-      </Box>
+
 
       {/* Confirm Dialog */}
       {confirmDialog && (
@@ -168,27 +125,17 @@ export const NotificationProvider = ({ children }) => {
           fullWidth
           PaperProps={{ sx: { borderRadius: 3 } }}
         >
-          <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <WarningIcon color="warning" fontSize="small" />
-            {confirmDialog.title}
+          <DialogTitle>
+            <DialogHeader icon={<WarningIcon color="warning" />} title={confirmDialog.title} />
           </DialogTitle>
           <DialogContent>
             <Typography variant="body1">{confirmDialog.message}</Typography>
           </DialogContent>
-          <DialogActions sx={{ justifyContent: 'center', gap: 2, pb: 2, px: 3 }}>
-            <Button
-              onClick={confirmDialog.onCancel}
-              variant="outlined"
-              sx={{ borderRadius: 2, px: 3, py: 1, fontWeight: 600 }}
-            >
+          <DialogActions sx={{ px: 3, pb: 2.5 }}>
+            <Button onClick={confirmDialog.onCancel} variant="outlined">
               {confirmDialog.cancelText}
             </Button>
-            <Button
-              onClick={confirmDialog.onConfirm}
-              variant="contained"
-              color="error"
-              sx={{ borderRadius: 2, px: 3, py: 1, fontWeight: 600 }}
-            >
+            <Button onClick={confirmDialog.onConfirm} variant="contained" color="error">
               {confirmDialog.confirmText}
             </Button>
           </DialogActions>
@@ -233,9 +180,8 @@ const PromptDialog = ({ open, title, message, placeholder, defaultValue, onConfi
       fullWidth
       PaperProps={{ sx: { borderRadius: 3 } }}
     >
-      <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-        <InfoIcon color="info" />
-        {title}
+      <DialogTitle>
+        <DialogHeader icon={<InfoIcon color="info" />} title={title} />
       </DialogTitle>
       <DialogContent>
         <Typography sx={{ mb: 2 }}>{message}</Typography>
@@ -253,8 +199,8 @@ const PromptDialog = ({ open, title, message, placeholder, defaultValue, onConfi
           }}
         />
       </DialogContent>
-      <DialogActions>
-        <Button onClick={onCancel} color="inherit">
+      <DialogActions sx={{ px: 3, pb: 2.5 }}>
+        <Button onClick={onCancel} variant="outlined">
           İptal
         </Button>
         <Button onClick={handleConfirm} variant="contained" color="primary">

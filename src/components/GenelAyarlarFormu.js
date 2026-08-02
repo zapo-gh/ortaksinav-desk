@@ -21,7 +21,9 @@ import {
   ReportProblem as AlertIcon,
   CalendarToday as CalendarIcon,
   AccessTime as TimeIcon,
+  Settings as SettingsIcon,
 } from '@mui/icons-material';
+import PageHeader from './common/PageHeader';
 import { sanitizeText } from '../utils/sanitizer';
 import { useExamStore } from '../store/useExamStore';
 
@@ -195,22 +197,29 @@ const GenelAyarlarFormu = memo(({ ayarlar, onAyarlarDegistir, readOnly: readOnly
   };
 
   return (
-    <Card sx={{ maxWidth: 800, mx: 'auto', mt: 2 }}>
-      <CardContent>
-        {readOnly && (
-          <Alert severity="info" sx={{ mb: 3 }}>
-            Bu alanı sadece görüntüleyebilirsiniz. Değişiklik yapmak için yönetici olarak giriş yapın.
-          </Alert>
-        )}
+    <Box sx={{ maxWidth: 1200, mx: 'auto', mt: 3, mb: 4 }}>
+      <PageHeader
+        icon={<SettingsIcon sx={{ color: '#4F46E5', fontSize: 24 }} />}
+        title="Genel Ayarlar"
+        subtitle="Okul, dönem ve sınav saatleri gibi temel bilgileri yönetin"
+        sx={{ mb: 3 }}
+      />
+      
+      {readOnly && (
+        <Alert severity="info" sx={{ mb: 3 }}>
+          Bu alanı sadece görüntüleyebilirsiniz. Değişiklik yapmak için yönetici olarak giriş yapın.
+        </Alert>
+      )}
+
+      <Card elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: '16px', mb: 4 }}>
+        <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
 
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
           {/* Okul Bilgileri */}
           <Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, mb: 1 }}>
-              <Box sx={{ width: 34, height: 34, borderRadius: '10px', bgcolor: 'rgba(37, 99, 235, 0.12)', border: '1px solid rgba(37, 99, 235, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <SchoolIcon sx={{ color: '#2563eb', fontSize: 18 }} />
-              </Box>
-              <Typography variant="h6" sx={{ color: '#0f172a', fontWeight: 800, fontSize: { xs: '1.05rem', sm: '1.2rem' }, letterSpacing: '-0.015em' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+              <SchoolIcon sx={{ color: '#64748b', fontSize: 20 }} />
+              <Typography variant="h6" sx={{ color: '#0f172a', fontWeight: 700, fontSize: { xs: '1.05rem', sm: '1.2rem' }, letterSpacing: '-0.01em' }}>
                 Okul Bilgileri
               </Typography>
             </Box>
@@ -260,11 +269,9 @@ const GenelAyarlarFormu = memo(({ ayarlar, onAyarlarDegistir, readOnly: readOnly
 
           {/* Sınav Bilgileri */}
           <Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, mb: 1 }}>
-              <Box sx={{ width: 34, height: 34, borderRadius: '10px', bgcolor: 'rgba(37, 99, 235, 0.12)', border: '1px solid rgba(37, 99, 235, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <BookIcon sx={{ color: '#2563eb', fontSize: 18 }} />
-              </Box>
-              <Typography variant="h6" sx={{ color: '#0f172a', fontWeight: 800, fontSize: { xs: '1.05rem', sm: '1.2rem' }, letterSpacing: '-0.015em' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+              <BookIcon sx={{ color: '#64748b', fontSize: 20 }} />
+              <Typography variant="h6" sx={{ color: '#0f172a', fontWeight: 700, fontSize: { xs: '1.05rem', sm: '1.2rem' }, letterSpacing: '-0.01em' }}>
                 Sınav Bilgileri
               </Typography>
             </Box>
@@ -344,11 +351,9 @@ const GenelAyarlarFormu = memo(({ ayarlar, onAyarlarDegistir, readOnly: readOnly
           {/* Algoritma Kısıtlamaları */}
           <Box sx={{ mt: 3 }}>
             <Divider sx={{ mb: 2 }} />
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, mb: 1 }}>
-              <Box sx={{ width: 34, height: 34, borderRadius: '10px', bgcolor: 'rgba(37, 99, 235, 0.12)', border: '1px solid rgba(37, 99, 235, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <AlertIcon sx={{ color: '#2563eb', fontSize: 18 }} />
-              </Box>
-              <Typography variant="h6" sx={{ color: '#0f172a', fontWeight: 800, fontSize: { xs: '1.05rem', sm: '1.2rem' }, letterSpacing: '-0.015em' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+              <AlertIcon sx={{ color: '#64748b', fontSize: 20 }} />
+              <Typography variant="h6" sx={{ color: '#0f172a', fontWeight: 700, fontSize: { xs: '1.05rem', sm: '1.2rem' }, letterSpacing: '-0.01em' }}>
                 Algoritma Kısıtlamaları
               </Typography>
             </Box>
@@ -407,8 +412,9 @@ const GenelAyarlarFormu = memo(({ ayarlar, onAyarlarDegistir, readOnly: readOnly
             </Box>
           </Box>
         </Box>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    </Box>
   );
 });
 

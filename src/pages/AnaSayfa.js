@@ -46,6 +46,7 @@ import {
 import { useReactToPrint } from 'react-to-print';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
+import { motion, AnimatePresence } from 'framer-motion';
 
 import Header from '../components/Header';
 import Footer from '../components/Footer';
@@ -644,7 +645,6 @@ const AnaSayfaContent = React.memo(() => {
 
     const { active, over } = event;
 
-    // Debug: drop yakalanıyor mu?
     const activeId = active?.id;
     const overId = over?.id;
 
@@ -656,17 +656,7 @@ const AnaSayfaContent = React.memo(() => {
       ? parseInt(overId.replace('masa-', ''), 10)
       : NaN;
 
-    console.log('[DnD] dragEnd', {
-      overExists: Boolean(over),
-      activeId,
-      overId,
-      activeMasaIdParsed,
-      overMasaIdParsed,
-      activeDataCurrent: active?.data?.current,
-    });
-
     if (!over) {
-      console.log('[DnD] dragEnd: OVER NULL (drop yok)');
       return;
     }
 
@@ -676,14 +666,6 @@ const AnaSayfaContent = React.memo(() => {
 
     const draggedStudent = active?.data?.current?.ogrenci;
 
-    console.log('[DnD] move decision', {
-      activeMasaId,
-      overMasaId,
-      draggedStudentFound: Boolean(draggedStudent),
-      draggedStudentId: draggedStudent?.id,
-      idsMatch: activeMasaId === overMasaId
-    });
-
     if (activeMasaId !== overMasaId) {
       if (draggedStudent && onOgrenciSecCallback) {
         onOgrenciSecCallback('move', {
@@ -691,8 +673,6 @@ const AnaSayfaContent = React.memo(() => {
           to: overMasaId,
           draggedStudent,
         });
-      } else {
-        console.log('[DnD] move skipped', { draggedStudent, onOgrenciSecCallbackExists: Boolean(onOgrenciSecCallback) });
       }
     }
   }, [onOgrenciSecCallback]);
@@ -732,7 +712,7 @@ const AnaSayfaContent = React.memo(() => {
                 mb: { xs: 2, sm: 3 },
                 position: { xs: 'sticky', sm: 'relative' },
                 top: { xs: 0, sm: 0 },
-                zIndex: { xs: 1100, sm: 1 },
+                zIndex: { xs: 1000, sm: 1 },
                 backgroundColor: 'background.paper',
                 width: '100%'
               }}
@@ -754,8 +734,9 @@ const AnaSayfaContent = React.memo(() => {
                   },
                   '& .MuiTab-root': {
                     minWidth: { xs: 'auto', sm: 'auto' },
-                    px: { xs: 1, sm: 2 },
-                    fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                    minHeight: { xs: 46, sm: 48 },
+                    px: { xs: 1.25, sm: 2 },
+                    fontSize: { xs: '0.84rem', sm: '0.89rem' },
                     whiteSpace: 'nowrap'
                   }
                 }}

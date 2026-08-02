@@ -184,17 +184,24 @@ export const ExamProvider = ({ children }) => {
         startLoading();
       }
       try {
-        await Promise.all([
-          queryClient.invalidateQueries(['students']),
-          queryClient.invalidateQueries(['salons']),
-          queryClient.invalidateQueries(['settings'])
+        const [students, salons, settings, user, newRole] = await Promise.all([
+          db.getAllStudents(),
+          db.getAllSalons(),
+          db.getSettings(),
+          waitForAuth(),
+          getUserRole()
         ]);
 
-        const user = await waitForAuth();
-        setAuthUser(mapAuthUser(user));
+        setOgrenciler(Array.isArray(students) ? students : []);
+        setSalonlar(Array.isArray(salons) ? salons : []);
+        updateAyarlar(settings && typeof settings === 'object' ? settings : {});
 
-        const newRole = await getUserRole();
-        setRoleAction(newRole);
+        queryClient.setQueryData(['students'], Array.isArray(students) ? students : []);
+        queryClient.setQueryData(['salons'], Array.isArray(salons) ? salons : []);
+        queryClient.setQueryData(['settings'], settings && typeof settings === 'object' ? settings : {});
+
+        setAuthUser(mapAuthUser(user));
+        setRoleAction(newRole || 'public');
 
         return { success: true };
       } catch (error) {
@@ -206,7 +213,16 @@ export const ExamProvider = ({ children }) => {
         }
       }
     },
-    [startLoading, stopLoading, setAuthUser, setRoleAction, queryClient]
+    [
+      startLoading,
+      stopLoading,
+      setAuthUser,
+      setRoleAction,
+      setOgrenciler,
+      setSalonlar,
+      updateAyarlar,
+      queryClient
+    ]
   );
 
   const login = React.useCallback(
@@ -383,6 +399,8 @@ export const useExam = () => {
   }
   return context;
 };
+
+export const useExamSelector = (selector, equalityFn) => useExamStore(selector, equalityFn);
 
 export default ExamContext;
 

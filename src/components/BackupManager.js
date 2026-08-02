@@ -39,6 +39,7 @@ import {
 import backupManager from '../utils/backupManager';
 import logger from '../utils/logger';
 import { useNotifications } from './NotificationSystem';
+import DialogHeader from './common/DialogHeader';
 
 const BackupManager = ({ onPlansUpdated }) => {
   const [backups, setBackups] = useState([]);
@@ -245,7 +246,9 @@ const BackupManager = ({ onPlansUpdated }) => {
 
       {/* Geri Yükleme Onay Dialog'u */}
       <Dialog open={restoreDialogOpen} onClose={() => setRestoreDialogOpen(false)} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
-        <DialogTitle>Backup Geri Yükle</DialogTitle>
+        <DialogTitle>
+          <DialogHeader icon={<RestoreIcon color="primary" />} title="Backup Geri Yükle" />
+        </DialogTitle>
         <DialogContent>
           {selectedBackup && (
             <Box>
@@ -273,8 +276,8 @@ const BackupManager = ({ onPlansUpdated }) => {
             </Box>
           )}
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setRestoreDialogOpen(false)}>
+        <DialogActions sx={{ px: 3, pb: 2.5 }}>
+          <Button onClick={() => setRestoreDialogOpen(false)} variant="outlined">
             İptal
           </Button>
           <Button

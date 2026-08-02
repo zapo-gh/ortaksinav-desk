@@ -72,12 +72,15 @@ export const usePlacementAlgorithm = (
             };
 
             const masalar = salon.koltukMatrisi?.masalar || [];
+            const planLookup = new Map(
+                (salon.plan || []).map((planItem) => [
+                    `${planItem.satir}-${planItem.sutun}-${planItem.grup}`,
+                    planItem.ogrenci || null
+                ])
+            );
             formatlanmisSalon.masalar = masalar.map((koltuk) => {
-                const ogrenci = salon.plan?.find(p =>
-                    p.satir === koltuk.satir &&
-                    p.sutun === koltuk.sutun &&
-                    p.grup === koltuk.grup
-                )?.ogrenci || null;
+                const lookupKey = `${koltuk.satir}-${koltuk.sutun}-${koltuk.grup}`;
+                const ogrenci = planLookup.get(lookupKey) || null;
 
                 return {
                     id: koltuk.id,
@@ -213,8 +216,9 @@ export const usePlacementAlgorithm = (
             });
 
             if (sonuc && sonuc.istatistikler) {
-                sonuc.istatistikler.toplamOgrenci = ogrenciler.length;
-                sonuc.istatistikler.yerlesemeyenOgrenci = ogrenciler.length - (sonuc.istatistikler.yerlesenOgrenci || 0);
+                const hedefOgrenciSayisi = seciliSinifOgrencileri.length;
+                sonuc.istatistikler.toplamOgrenci = hedefOgrenciSayisi;
+                sonuc.istatistikler.yerlesemeyenOgrenci = hedefOgrenciSayisi - (sonuc.istatistikler.yerlesenOgrenci || 0);
             }
 
             if (!sonuc || !sonuc.salonlar || sonuc.salonlar.length === 0) {

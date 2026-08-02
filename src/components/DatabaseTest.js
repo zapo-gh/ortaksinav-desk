@@ -12,14 +12,15 @@ import {
   ListItemText,
   Divider
 } from '@mui/material';
-import { useExam } from '../context/ExamContext';
+import { useExamSelector } from '../context/ExamContext';
 
 const DatabaseTest = () => {
   const [testResults, setTestResults] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const { startLoading, stopLoading } = useExam();
+  const startLoading = useExamSelector((state) => state.startLoading);
+  const stopLoading = useExamSelector((state) => state.stopLoading);
 
   const addTestResult = (test, status, message, data = null) => {
     setTestResults(prev => [...prev, {

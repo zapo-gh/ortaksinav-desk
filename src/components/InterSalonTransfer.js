@@ -27,6 +27,7 @@ import {
   ArrowForward as ArrowIcon
 } from '@mui/icons-material';
 import { useNotifications } from './NotificationSystem';
+import DialogHeader from './common/DialogHeader';
 
 const InterSalonTransfer = ({ 
   open, 
@@ -157,14 +158,10 @@ const InterSalonTransfer = ({
       onClose={handleClose}
       maxWidth="sm"
       fullWidth
+      PaperProps={{ sx: { borderRadius: 3 } }}
     >
-      <DialogTitle sx={{ px: 2, py: 1.5 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <SwapIcon color="primary" />
-          <Typography variant="h6" sx={{ fontSize: '1rem' }}>
-            Transfer
-          </Typography>
-        </Box>
+      <DialogTitle>
+        <DialogHeader icon={<SwapIcon color="primary" />} title="Transfer" />
       </DialogTitle>
 
       <DialogContent sx={{ px: 2, pt: 1.5, pb: 1 }}>
@@ -302,8 +299,8 @@ const InterSalonTransfer = ({
         )}
       </DialogContent>
 
-      <DialogActions sx={{ px: 2, py: 1 }}>
-        <Button onClick={handleClose} disabled={isTransferring} size="small">
+      <DialogActions sx={{ px: 3, pb: 2.5 }}>
+        <Button onClick={handleClose} disabled={isTransferring} variant="outlined">
           İptal
         </Button>
         <Button
@@ -311,7 +308,6 @@ const InterSalonTransfer = ({
           variant="contained"
           disabled={!selectedTargetSalon || isTransferring}
           startIcon={isTransferring ? <CircularProgress size={16} /> : <SwapIcon />}
-          size="small"
         >
           {isTransferring ? 'Transfer...' : 'Transfer'}
         </Button>

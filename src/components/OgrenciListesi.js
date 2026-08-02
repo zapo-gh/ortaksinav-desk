@@ -1,4 +1,6 @@
 import React, { useState, memo, useRef, useEffect, useCallback } from 'react';
+import PageHeader from './common/PageHeader';
+import EmptyState from './common/EmptyState';
 import {
   Card,
   CardContent,
@@ -1108,6 +1110,17 @@ const OgrenciListesi = memo(({ ogrenciler, yerlestirmeSonucu = null, ayarlar = n
         // Her grup için öğrencileri işle
         const yeniOgrenciler = [];
 
+        // ÖNEMLİ: id üretimi "ogrenciler.length" değerine değil, mevcut kayıtlardaki
+        // EN YÜKSEK id değerine dayanmalıdır. Aksi halde öğrenci silindikten sonra
+        // yapılan yeni bir içe aktarmada yeni öğrenciler, hâlâ listede duran başka
+        // bir öğrenciyle AYNI id'yi alabilir (silme sonrası oluşan boşluklar yüzünden).
+        // Bu durum sabit atama/seçim işlemlerinde yanlış öğrenciye işlem yapılmasına
+        // (iki öğrencinin aynı id'yi paylaşmasına) neden olur.
+        const mevcutMaksimumId = ogrenciler.reduce((max, o) => {
+          const numericId = typeof o?.id === 'number' ? o.id : parseInt(o?.id, 10);
+          return Number.isFinite(numericId) && numericId > max ? numericId : max;
+        }, 0);
+
         logger.debug('Toplam grup sayısı:', ogrenciGruplari.length);
 
         ogrenciGruplari.forEach((grup, grupIndex) => {
@@ -1346,7 +1359,7 @@ const OgrenciListesi = memo(({ ogrenciler, yerlestirmeSonucu = null, ayarlar = n
             let ozelDurum = false;
 
             const ogrenci = {
-              id: (ogrenciler.length || 0) + yeniOgrenciler.length + index + 1,
+              id: mevcutMaksimumId + yeniOgrenciler.length + index + 1,
               ad: adi,
               soyad: soyadi || '', // Soyad yoksa boş string
               numara: ogrenciNo,
@@ -1492,37 +1505,72 @@ const OgrenciListesi = memo(({ ogrenciler, yerlestirmeSonucu = null, ayarlar = n
   // Örnek indirme kaldırıldı
 
   return (
-    <>
-      <Card sx={{ maxWidth: 1040, mx: 'auto', mt: 2 }}>
-        <CardContent>
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 3, gap: 2, flexWrap: 'wrap' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-              <Box sx={{ width: 40, height: 40, borderRadius: '12px', bgcolor: 'rgba(37, 99, 235, 0.12)', border: '1px solid rgba(37, 99, 235, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 6px rgba(37, 99, 235, 0.15)' }}>
-                <PeopleIcon sx={{ color: '#2563eb', fontSize: 22 }} />
-              </Box>
-              <Typography variant="h6" component="h1" sx={{ fontSize: { xs: '1.15rem', sm: '1.35rem' }, color: '#0f172a', fontWeight: 800, letterSpacing: '-0.02em' }}>
-                Öğrenci Listesi ve Seçimi
-              </Typography>
-            </Box>
+    <Box sx={{ maxWidth: 1200, mx: 'auto', mt: 3, mb: 4 }}>
+      <PageHeader
+        icon={<PeopleIcon sx={{ color: '#4F46E5', fontSize: 24 }} />}
+        title="Öğrenci Listesi ve Seçimi"
+            actions={
+              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                <Button
+                  variant="outlined"
+                  startIcon={<UploadIcon />}
+                  component="label"
+                  size="small"
+                  disabled={readOnly}
+                >
+                  Excel Yükle
+                  <input
+                    id="excel-file-input"
+                    type="file"
+                    accept=".xlsx,.xls"
+                    hidden
+                    onChange={handleExcelUpload}
+                  />
+                </Button>
 
-            <Box sx={{ ml: 'auto', display: 'flex', gap: 1, alignItems: 'center' }}>
-              <Button
-                variant="outlined"
-                size="small"
-                onClick={() => {
-                  if (!isWriteAllowed) return;
-                  if (yerlesimPlaniVarMi) {
-                    showError('Mevcut bir yerleştirme planı bulunduğu için dal listesi değiştirilemez.');
-                    return;
-                  }
-                  setDallarDialogAcik(true);
-                }}
-                disabled={!isWriteAllowed}
-              >
-                Dalları Düzenle
-              </Button>
-            </Box>
-          </Box>
+                <Button
+                  variant="contained"
+                  startIcon={<AddIcon />}
+                  size="small"
+                  onClick={() => setManualEklemeAcik(true)}
+                  disabled={readOnly}
+                >
+                  Öğrenci Ekle
+                </Button>
+
+                {ogrenciler.length > 0 && (
+                  <Button
+                    variant="outlined"
+                    color="error"
+                    size="small"
+                    startIcon={<DeleteIcon />}
+                    onClick={handleTumOgrencileriSil}
+                    disabled={readOnly}
+                  >
+                    Tümünü Sil
+                  </Button>
+                )}
+
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={() => {
+                    if (!isWriteAllowed) return;
+                    if (yerlesimPlaniVarMi) {
+                      showError('Mevcut bir yerleştirme planı bulunduğu için dal listesi değiştirilemez.');
+                      return;
+                    }
+                    setDallarDialogAcik(true);
+                  }}
+                  disabled={!isWriteAllowed}
+                >
+                  Dalları Düzenle
+                </Button>
+              </Box>
+            }
+          />
+      <Card>
+        <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
 
           {/* Yerleştirme Planı Uyarısı */}
           {yerlesimPlaniVarMi && (
@@ -1552,40 +1600,7 @@ const OgrenciListesi = memo(({ ogrenciler, yerlestirmeSonucu = null, ayarlar = n
             </Box>
           )}
 
-          {/* Dosya Yükleme Bölümü */}
-          <Paper elevation={1} sx={{ p: 3, mb: 3, bgcolor: 'grey.50' }}>
-            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
-              <Button
-                variant="outlined"
-                startIcon={<UploadIcon />}
-                component="label"
-                size="small"
-              >
-                Excel Yükle
-                <input
-                  id="excel-file-input"
-                  type="file"
-                  accept=".xlsx,.xls"
-                  hidden
-                  onChange={handleExcelUpload}
-                />
-              </Button>
 
-              <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-                size="small"
-                onClick={() => setManualEklemeAcik(true)}
-                disabled={readOnly}
-              >
-                Öğrenci Ekle
-              </Button>
-
-              <Typography variant="body2" color="text.secondary">
-                e-Okul'dan indirdiğiniz Excel dosyasını yükleyebilir veya manuel olarak öğrenci ekleyebilirsiniz.
-              </Typography>
-            </Box>
-          </Paper>
 
           {/* İstatistikler ve Arama */}
           <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -1706,19 +1721,6 @@ const OgrenciListesi = memo(({ ogrenciler, yerlestirmeSonucu = null, ayarlar = n
               />
             </Box>
 
-            {ogrenciler.length > 0 && (
-              <Button
-                variant="outlined"
-                color="error"
-                size="small"
-                startIcon={<DeleteIcon />}
-                onClick={handleTumOgrencileriSil}
-                sx={{ ml: 'auto' }}
-                disabled={readOnly}
-              >
-                Tümünü Sil
-              </Button>
-            )}
           </Box>
 
           {/* Öğrenci Tablosu - Dialog açıkken render etme (performans optimizasyonu) */}
@@ -1770,37 +1772,22 @@ const OgrenciListesi = memo(({ ogrenciler, yerlestirmeSonucu = null, ayarlar = n
 
           {/* Arama sonucu bulunamadığında */}
           {!manualEklemeAcik && aramaTerimi && filtrelenmisOgrenciler.length === 0 && ogrenciler.length > 0 && (
-            <Box sx={{ textAlign: 'center', py: 4 }}>
-              <SearchIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
-              <Typography variant="h6" color="text.secondary" gutterBottom>
-                Arama sonucu bulunamadı
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                "{aramaTerimi}" için hiçbir öğrenci bulunamadı
-              </Typography>
-              <Button
-                variant="outlined"
-                size="small"
-                onClick={() => setAramaTerimi('')}
-                sx={{ mt: 2 }}
-                disabled={readOnly}
-              >
-                Aramayı Temizle
-              </Button>
-            </Box>
+            <EmptyState
+              icon={SearchIcon}
+              title="Arama sonucu bulunamadı"
+              description={`"${aramaTerimi}" için hiçbir öğrenci bulunamadı.`}
+              actionLabel={!readOnly ? "Aramayı Temizle" : undefined}
+              onAction={!readOnly ? () => setAramaTerimi('') : undefined}
+            />
           )}
 
           {/* Hiç öğrenci yoksa */}
           {ogrenciler.length === 0 && (
-            <Box sx={{ textAlign: 'center', py: 4 }}>
-              <PeopleIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
-              <Typography variant="h6" color="text.secondary" gutterBottom>
-                Henüz öğrenci bulunmuyor
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                CSV veya Excel dosyası yükleyerek öğrenci listesini içe aktarın
-              </Typography>
-            </Box>
+            <EmptyState
+              icon={PeopleIcon}
+              title="Henüz öğrenci bulunmuyor"
+              description="CSV veya Excel dosyası yükleyerek veya manuel olarak öğrenci listesini içe aktarın."
+            />
           )}
         </CardContent>
       </Card>
@@ -2337,7 +2324,7 @@ const OgrenciListesi = memo(({ ogrenciler, yerlestirmeSonucu = null, ayarlar = n
           </Button>
         </DialogActions>
       </Dialog>
-    </>
+    </Box>
   );
 });
 
