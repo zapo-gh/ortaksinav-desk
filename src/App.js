@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { CssBaseline, Box, CircularProgress, Typography } from '@mui/material';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AppToaster } from './components/NotificationSystem';
@@ -89,19 +89,14 @@ function App() {
   // Login başarılı olunca lisans kontrolünü tetikle
   React.useEffect(() => {
     if (authReady && isLoggedIn && licenseOk === null) {
-      const session = getCurrentSession();
-      if (isSuperAdmin(session)) {
-        setLicenseOk(true);
-      } else {
-        checkStoredLicense().then((result) => {
-          if (result.valid) {
-            setLicenseOk(true);
-          } else {
-            setLicenseOk(false);
-            if (result.expired) setLicenseExpiredInfo(result);
-          }
-        }).catch(() => setLicenseOk(false));
-      }
+      checkStoredLicense().then((result) => {
+        if (result.valid) {
+          setLicenseOk(true);
+        } else {
+          setLicenseOk(false);
+          if (result.expired) setLicenseExpiredInfo(result);
+        }
+      }).catch(() => setLicenseOk(false));
     } else if (!isLoggedIn) {
       setLicenseOk(null);
       setLicenseExpiredInfo(null);

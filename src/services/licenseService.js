@@ -11,11 +11,6 @@
  * Geliştirici, tools/key-generator.html aracını kullanarak anahtar üretir.
  */
 
-// ⚠️  Bu değeri asla paylaşmayın / kaynak kodunuzu herkese açık yapmayın.
-const SECRET = 'KelBK-2024-xLic-9fTq-mNpR';
-
-// SQLite bağlantısı (localStorage yerine)
-const DB_URL = 'sqlite:kelebek.db';
 const LICENSE_USER_ID = '_system_';
 const LICENSE_DB_KEY = 'license';
 
@@ -42,33 +37,6 @@ export function getLicenseDaysLeft(expiryStr) {
   return Math.floor((expiry - today) / (1000 * 60 * 60 * 24));
 }
 
-async function hmacSign(data, secret) {
-  const enc = new TextEncoder();
-  const cryptoKey = await crypto.subtle.importKey(
-    'raw', enc.encode(secret),
-    { name: 'HMAC', hash: 'SHA-256' },
-    false, ['sign']
-  );
-  const sig = await crypto.subtle.sign('HMAC', cryptoKey, enc.encode(data));
-  return Array.from(new Uint8Array(sig))
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('');
-}
-
-function strToHex(str) {
-  return Array.from(new TextEncoder().encode(str))
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('');
-}
-
-function hexToStr(hex) {
-  const bytes = new Uint8Array(hex.length / 2);
-  for (let i = 0; i < hex.length / 2; i++) {
-    bytes[i] = parseInt(hex.substr(i * 2, 2), 16);
-  }
-  return new TextDecoder().decode(bytes);
-}
-
 // ─── Makine Kimliği ────────────────────────────────────────────────────────────
 
 /**
@@ -84,110 +52,87 @@ export async function getMachineId() {
   }
 }
 
-// ─── Lisans Anahtarı Üretimi ─────────────────────────────────────────────────
-
-/**
- * @param {string} expiryDate  'YYYY-MM-DD'
- * @param {string} schoolNote  Okul adı (opsiyonel)
- * @param {string} machineId   Makine ID hex'i (opsiyonel — boşsa evrensel lisans)
- * @param {string} [secret]    Varsayılan: yerleşik SECRET
- */
-export async function generateLicenseKey(expiryDate, schoolNote = '', machineId = '', secret = SECRET) {
-  // Tarihi kompakt sakla: "2027-07-12" → "20270712"
-  const dateCompact = expiryDate.replace(/-/g, '');
-  const payload = {
-    e: dateCompact,
-    ...(schoolNote.trim() ? { n: schoolNote.trim() } : {}),
-    ...(machineId.trim() ? { m: machineId.trim().toUpperCase() } : {}),
-  };
-  const json = JSON.stringify(payload);
-  const payloadHex = strToHex(json).toUpperCase();
-  const sig = (await hmacSign(payloadHex, secret)).slice(0, 16).toUpperCase();
-  const raw = payloadHex + sig;
-  return raw.match(/.{1,4}/g).join('-');
-}
-
 // ─── Lisans Doğrulama ────────────────────────────────────────────────────────
 
 /**
- * Girilen lisans anahtarını doğrular.
+ * Girilen lisans anahtarını Rust (Backend) tarafında doğrular.
  * @param {string} rawKey  Kullanıcının girdiği anahtar (tireler/boşluklar dahil)
- * @returns {Promise<{valid, expired?, expiryDate?, schoolNote?, machineId?, daysLeft?, error?}>}
+ * @returns {Promise<{valid, expired?, expiryDate?, schoolName?, kurumKodu?, machineId?, daysLeft?, error?}>}
  */
 export async function validateLicenseKey(rawKey) {
   try {
-    // Sadece tire ve boşlukları temizle, BÜYÜK HARFE çevir (hex büyük harf)
-    const clean = rawKey.replace(/[-\s]/g, '').toUpperCase();
+    const { invoke } = await import('@tauri-apps/api/core');
+    
+    // Rust tarafına göndermeden önce mevcut makine ID'sini alıyoruz (opsiyonel)
+    const current_machine_id = await getMachineId();
 
-    if (clean.length < 20) {
-      return { valid: false, error: 'Lisans anahtarı çok kısa.' };
-    }
+    const result = await invoke('verify_license', { 
+      key: rawKey,
+      currentMachineId: current_machine_id ? current_machine_id.toUpperCase() : null
+    });
 
-    // Son 16 karakter imza, geri kalanı payload (hex)
-    const sig = clean.slice(-16).toLowerCase();
-    const payload = clean.slice(0, -16); // büyük harf hex
+    if (result.valid) {
+      // Geçerli ise gün hesaplaması yapabiliriz. Rust bize tarihi dönmüyor, 
+      // bu yüzden JS'de tireleri kaldırıp ortadaki tarihi tekrar çıkarabiliriz
+      // ya da sadece daysLeft = 999 diyelim.
+      // Ama uyumluluk için formatı çözelim:
+      const clean = rawKey.replace(/[-\s]/g, '').toUpperCase();
+      const payloadHex = clean.slice(0, -128); // son 128 karakter imza
+      
+      let expiryStr = '';
+      let schoolName = '';
+      let kurumKodu = '';
+      let machineId = null;
+      let daysLeft = 999;
 
-    // İmzayı doğrula (payload büyük harf hex üzerinden)
-    const expectedSig = (await hmacSign(payload, SECRET)).slice(0, 16);
-    if (sig !== expectedSig) {
-      return { valid: false, error: 'Lisans anahtarı geçersiz veya değiştirilmiş.' };
-    }
+      try {
+        const bytes = new Uint8Array(payloadHex.length / 2);
+        for (let i = 0; i < payloadHex.length / 2; i++) {
+          bytes[i] = parseInt(payloadHex.substr(i * 2, 2), 16);
+        }
+        const jsonStr = new TextDecoder().decode(bytes);
+        const data = JSON.parse(jsonStr);
+        
+        if (data.e && data.e.length === 8) {
+          expiryStr = `${data.e.slice(0, 4)}-${data.e.slice(4, 6)}-${data.e.slice(6, 8)}`;
+          daysLeft = getLicenseDaysLeft(expiryStr);
+        }
+        schoolName = data.n || '';
+        kurumKodu = data.k || '';
+        machineId = data.m || null;
+      } catch (e) {
+        // Rust doğruladıysa veriler mutlaka doğrudur, ignore error
+      }
 
-    // Hex payload'ı JSON'a çevir
-    let data;
-    try {
-      data = JSON.parse(hexToStr(payload));
-    } catch {
-      return { valid: false, error: 'Lisans anahtarı okunamadı.' };
-    }
-
-    if (!data.e || data.e.length !== 8) {
-      return { valid: false, error: 'Lisans tarihi bulunamadı.' };
-    }
-
-    // Kompakt tarih: "20270712" → "2027-07-12"
-    const expiryStr = `${data.e.slice(0, 4)}-${data.e.slice(4, 6)}-${data.e.slice(6, 8)}`;
-    const expiryDate = parseExpiryDateLocal(expiryStr);
-    if (isNaN(expiryDate.getTime())) {
-      return { valid: false, error: 'Lisans tarihi geçersiz.' };
-    }
-
-    const daysLeft = getLicenseDaysLeft(expiryStr);
-    if (daysLeft < 0) {
       return {
-        valid: false,
-        expired: true,
+        valid: true,
         expiryDate: expiryStr,
-        schoolNote: data.n || '',
-        error: `Lisans süresi ${expiryDate.toLocaleDateString('tr-TR')} tarihinde dolmuştur.`,
+        schoolName,
+        kurumKodu,
+        machineId,
+        daysLeft,
       };
-    }
-
-    // ─── Makine ID Kontrolü ──────────────────────────────────────────────────
-    // "m" alanı varsa bu cihaz için üretilmiş; makine ID'sini karşılaştır
-    if (data.m) {
-      const currentMachineId = await getMachineId();
-      if (!currentMachineId) {
-        // Makine ID alınamadıysa uyarı ver ama engelleme
-        console.warn('Makine ID alınamadı, kontrol atlanıyor.');
-      } else if (data.m.toUpperCase() !== currentMachineId.toUpperCase()) {
+    } else {
+      // Geçersiz ise (error mesajı Rust'tan gelir)
+      if (result.expired_info) {
         return {
           valid: false,
-          error: 'Bu lisans başka bir cihaz için üretilmiştir. Lütfen yazılım sağlayıcınızla iletişime geçin.',
+          expired: true,
+          expiryDate: result.expired_info.expiryDate,
+          schoolName: result.expired_info.schoolName || '',
+          kurumKodu: result.expired_info.kurumKodu || '',
+          error: result.error || 'Lisans süresi dolmuştur.',
         };
       }
-    }
-    // "m" alanı yoksa → evrensel lisans, makine kontrolü yapılmaz
 
-    return {
-      valid: true,
-      expiryDate: expiryStr,
-      schoolNote: data.n || '',
-      machineId: data.m || null,
-      daysLeft,
-    };
-  } catch {
-    return { valid: false, error: 'Lisans doğrulanırken bir hata oluştu.' };
+      return { 
+        valid: false, 
+        error: result.error || 'Lisans anahtarı geçersiz.' 
+      };
+    }
+  } catch (error) {
+    console.error("Lisans doğrulama hatası:", error);
+    return { valid: false, error: 'Lisans doğrulanırken sistem hatası oluştu.' };
   }
 }
 

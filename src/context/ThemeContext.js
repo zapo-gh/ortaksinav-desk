@@ -18,9 +18,8 @@ export const CustomThemeProvider = ({ children }) => {
     if (savedMode && (savedMode === 'light' || savedMode === 'dark')) {
       setMode(savedMode);
     } else {
-      // Check OS preference
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      setMode(prefersDark ? 'dark' : 'light');
+      // OS tercihini yoksay ve her zaman aydınlık modda başlat
+      setMode('light');
     }
   }, []);
 

@@ -11,6 +11,8 @@ import {
   Paper,
   useTheme
 } from '@mui/material';
+import EmptyState from './common/EmptyState';
+import { BorderColor as BorderColorIcon } from '@mui/icons-material';
 
 import { calculateDeskNumberForMasa } from '../utils/placementHelper';
 
@@ -57,9 +59,11 @@ const SalonImzaListesiPrintable = forwardRef(({ yerlestirmeSonucu, ayarlar = {},
   if (!tumSalonlar || tumSalonlar.length === 0) {
     return (
       <Box ref={ref} sx={{ p: 2 }}>
-        <Typography variant="h6" color="text.secondary">
-          Henüz yerleştirme yapılmadı
-        </Typography>
+        <EmptyState 
+          icon={BorderColorIcon} 
+          title="Henüz yerleştirme yapılmadı" 
+          description="İmza listelerini yazdırabilmek için önce otomatik yerleştirme yapmalısınız." 
+        />
       </Box>
     );
   }

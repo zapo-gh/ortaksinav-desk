@@ -129,6 +129,9 @@ const PlanlamaYap = memo(({
     const hatalar = [];
     const uyarilar = [];
 
+    let ogrenciSayisi = 0;
+    let seciliSinifSayisi = 0;
+
     if (!ogrenciler || ogrenciler.length === 0) {
       hatalar.push('Öğrenci listesi boş');
     } else {
@@ -144,11 +147,13 @@ const PlanlamaYap = memo(({
 
       // Benzersiz sınıfları al
       const benzersizSeciliSiniflar = [...new Set(seciliSiniflar)];
+      seciliSinifSayisi = benzersizSeciliSiniflar.length;
 
       // Seçili sınıflardaki öğrencileri filtrele
       const seciliSinifOgrencileri = ogrenciler.filter(ogrenci =>
         benzersizSeciliSiniflar.includes(ogrenci.sinif)
       );
+      ogrenciSayisi = seciliSinifOgrencileri.length;
 
       const toplamKapasite = salonlar?.reduce((toplam, salon) => {
         let salonKapasite = salon.kapasite;
@@ -202,7 +207,7 @@ const PlanlamaYap = memo(({
       }
     }
 
-    return { hatalar, uyarilar };
+    return { hatalar, uyarilar, ogrenciSayisi, seciliSinifSayisi };
   };
 
   // Tüm kontrolleri çalıştır
@@ -392,6 +397,21 @@ const PlanlamaYap = memo(({
                 Öğrenci bulunamadı
               </Alert>
             )}
+
+            {!kontroller?.ogrenciler?.hatalar.some(h => (typeof h === 'string' ? h : h?.mesaj)?.includes('Öğrenci listesi boş')) && (
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                {getDurumIconu(kontroller?.ogrenciler?.hatalar || [], kontroller?.ogrenciler?.uyarilar || [])}
+                <Box sx={{ ml: 1 }}>
+                  <Typography variant="body2">
+                    {kontroller?.ogrenciler?.ogrenciSayisi || 0} öğrenci seçildi
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {kontroller?.ogrenciler?.seciliSinifSayisi || 0} farklı sınıftan
+                  </Typography>
+                </Box>
+              </Box>
+            )}
+
             {kontroller?.ogrenciler?.hatalar.map((hata, index) => {
               const mesaj = typeof hata === 'string' ? hata : hata.mesaj;
               const tip = typeof hata === 'object' ? hata.tip : 'hata';

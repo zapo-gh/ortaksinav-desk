@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions,
   DialogContentText, TextField, Button, Alert, Box,
@@ -10,8 +10,10 @@ import {
   Warning as WarningIcon,
   Computer as ComputerIcon,
   ContentCopy as CopyIcon,
+  Email as EmailIcon,
 } from '@mui/icons-material';
 import { validateLicenseKey, storeLicense, getMachineId } from '../services/licenseService';
+import ContactFormDialog from './ContactFormDialog';
 
 /**
  * Lisans aktivasyon ekranı.
@@ -23,6 +25,7 @@ const LicenseActivationDialog = ({ onActivated, expiredInfo = null, onClose }) =
   const [error, setError] = React.useState(null);
   const [machineId, setMachineId] = React.useState('');
   const [machineIdCopied, setMachineIdCopied] = React.useState(false);
+  const [contactOpen, setContactOpen] = React.useState(false);
 
   React.useEffect(() => {
     getMachineId().then(setMachineId).catch(() => setMachineId(''));
@@ -102,16 +105,16 @@ const LicenseActivationDialog = ({ onActivated, expiredInfo = null, onClose }) =
         <DialogContent sx={{ pt: 3 }}>
           {expiredInfo && (
             <Alert severity="warning" sx={{ mb: 2 }}>
-              <strong>{expiredInfo.schoolNote && `${expiredInfo.schoolNote} — `}</strong>
+              <strong>{expiredInfo.schoolName && `${expiredInfo.schoolName} `} {expiredInfo.kurumKodu && `(${expiredInfo.kurumKodu}) — `}</strong>
               Lisansınızın süresi {new Date(expiredInfo.expiryDate).toLocaleDateString('tr-TR')} tarihinde dolmuştur.
-              Yenileme için aşağıdaki Makine ID'yi yazılım sağlayıcınıza gönderin.
+              Yenileme için lütfen sistem yöneticiniz ile iletişime geçin. (Aşağıdaki Makine ID'yi iletmeniz gerekmektedir.)
             </Alert>
           )}
 
           {!expiredInfo && (
             <DialogContentText sx={{ mb: 2, textAlign: 'center' }}>
               Bu yazılımı kullanmak için lisans anahtarı gereklidir.
-              Önce aşağıdaki Makine ID'yi yazılım sağlayıcınıza gönderin, ardından aldığınız anahtarı girin.
+              Önce aşağıdaki Makine ID'yi sistem yöneticisine gönderin, ardından aldığınız anahtarı girin.
             </DialogContentText>
           )}
 
@@ -153,7 +156,7 @@ const LicenseActivationDialog = ({ onActivated, expiredInfo = null, onClose }) =
               </Tooltip>
             </Box>
             <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
-              Lisans anahtarı almak için bu ID'yi yazılım sağlayıcınıza iletin.
+              Lisans anahtarı almak için bu ID'yi sistem yöneticinize iletin.
             </Typography>
           </Box>
 
@@ -205,8 +208,18 @@ const LicenseActivationDialog = ({ onActivated, expiredInfo = null, onClose }) =
           <Typography variant="caption" color="text.secondary" textAlign="center">
             Yazılım lisanslaması hakkında bilgi için iletişime geçin.
           </Typography>
+          <Button
+            variant="text"
+            color="primary"
+            startIcon={<EmailIcon />}
+            onClick={() => setContactOpen(true)}
+            sx={{ mt: 1 }}
+          >
+            Sistem Yöneticisi ile İletişime Geç
+          </Button>
         </DialogActions>
       </form>
+      <ContactFormDialog open={contactOpen} onClose={() => setContactOpen(false)} />
     </Dialog>
   );
 };

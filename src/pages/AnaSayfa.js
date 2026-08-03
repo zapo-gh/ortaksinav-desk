@@ -368,7 +368,19 @@ const AnaSayfaContent = React.memo(() => {
         tumSalonlar: guncellenmisTumSalonlar
       });
     }
-  }, [salonlarGuncelle, yerlestirmeSonucu, yerlestirmeGuncelle, readOnly]);
+  }, [salonlarGuncelle, yerlestirmeSonucu, yerlestirmeGuncelle, readOnly, showError]);
+
+  const handleSalonlarDBKaydet = useCallback(async (guncelSalonlar) => {
+    if (readOnly) return;
+    try {
+      const db = (await import('../database')).default;
+      await db.saveSalons(guncelSalonlar);
+      showSuccess('Sınav salonları veritabanına kaydedildi.');
+    } catch (e) {
+      console.error('Veritabanına kaydetme hatası:', e);
+      showError('Değişiklikler kaydedilemedi.');
+    }
+  }, [readOnly, showSuccess, showError]);
 
   // Yerleştirme sonuçlarını temizle - useCallback ile optimize edildi
   const handleYerlestirmeTemizle = useCallback(() => {
@@ -404,10 +416,11 @@ const AnaSayfaContent = React.memo(() => {
     <SalonFormu
       salonlar={salonlar}
       onSalonlarDegistir={handleSalonlarDegistir}
+      onKaydet={handleSalonlarDBKaydet}
       yerlestirmeSonucu={yerlestirmeSonucu}
       readOnly={readOnly}
     />
-  ), [salonlar, handleSalonlarDegistir, yerlestirmeSonucu, readOnly]);
+  ), [salonlar, handleSalonlarDegistir, handleSalonlarDBKaydet, yerlestirmeSonucu, readOnly]);
 
   const ayarlarTabContent = useMemo(() => (
     <AyarlarFormu

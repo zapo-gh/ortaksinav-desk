@@ -2,6 +2,7 @@ import React, { useState, memo } from 'react';
 import deepEqual from '../utils/deepEqual';
 import PageHeader from './common/PageHeader';
 import DialogHeader from './common/DialogHeader';
+import EmptyState from './common/EmptyState';
 import {
   Card,
   CardContent,
@@ -517,6 +518,15 @@ const AyarlarFormu = memo(({ ayarlar, onAyarlarDegistir, ogrenciler, yerlestirme
 
             {/* Ders Kartlari - yan yana */}
             <Box sx={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: 2, alignItems: 'flex-start' }}>
+              {formData.dersler.length === 0 && (
+                <Box sx={{ width: '100%', py: 2 }}>
+                  <EmptyState 
+                    icon={BookIcon} 
+                    title="Henüz ders eklenmemiş" 
+                    description="Yeni bir ders eklemek için yukarıdaki 'Ders Ekle' butonunu kullanabilirsiniz." 
+                  />
+                </Box>
+              )}
               {formData.dersler.map((ders, index) => {
                 const dersIdForHandlers = ders?.id ?? createGeneratedDersId(ders, index);
                 const dersKey = `${dersIdForHandlers}-${index}`;

@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import emailjs from '@emailjs/browser';
 import {
   Dialog,
@@ -53,7 +53,7 @@ const ContactFormDialog = ({ open, onClose }) => {
   const validateForm = () => {
     const newErrors = {};
     if (!formData.name.trim()) {
-      newErrors.name = 'Adınız gereklidir';
+      newErrors.name = 'Adınız Soyadınız gereklidir';
     }
     if (!formData.email.trim()) {
       newErrors.email = 'E-posta adresi gereklidir';
@@ -151,7 +151,7 @@ const ContactFormDialog = ({ open, onClose }) => {
           )}
 
           <TextField
-            label="Adınız"
+            label="Adınız Soyadınız"
             name="name"
             value={formData.name}
             onChange={handleChange}

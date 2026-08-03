@@ -7,6 +7,8 @@ import {
   GlobalStyles
 } from '@mui/material';
 import PrintHeader from './common/PrintHeader';
+import EmptyState from './common/EmptyState';
+import { Chair as ChairIcon } from '@mui/icons-material';
 
 /**
  * Yazdırılabilir Salon Planı Bileşeni
@@ -189,9 +191,11 @@ export const SalonPlaniPrintable = forwardRef(({ yerlestirmeSonucu, ayarlar = {}
   if (!tumSalonlar || tumSalonlar.length === 0) {
     return (
       <Box ref={ref} sx={{ p: 2 }}>
-        <Typography variant="h6" color="text.secondary">
-          Henüz yerleştirme yapılmadı
-        </Typography>
+        <EmptyState 
+          icon={ChairIcon} 
+          title="Henüz yerleştirme yapılmadı" 
+          description="Salon planını yazdırabilmek için önce otomatik yerleştirme yapmalısınız." 
+        />
       </Box>
     );
   }

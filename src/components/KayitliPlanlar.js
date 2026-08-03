@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Container, Typography, Box, Card, CardContent, Button,
   List, ListItem, ListItemText, ListItemSecondaryAction,
@@ -23,6 +23,7 @@ import {
 import ArchiveDialog from './ArchiveDialog';
 import PageHeader from './common/PageHeader';
 import DialogHeader from './common/DialogHeader';
+import EmptyState from './common/EmptyState';
 import planManager from '../utils/planManager';
 import { useNotifications } from './NotificationSystem';
 import logger from '../utils/logger';
@@ -517,7 +518,13 @@ const KayitliPlanlar = ({ onPlanYukle }) => {
             </Box>
           ) : activeTab === 0 ? (
             kayitliPlanlar.filter(p => !p.isArchived).length === 0 ? (
-              <Alert severity="info" sx={{ mt: 2, borderRadius: 2 }}>Henüz kayıtlı aktif plan yok.</Alert>
+              <Box sx={{ width: '100%', py: 4 }}>
+                <EmptyState 
+                  icon={EventNoteIcon} 
+                  title="Henüz kayıtlı aktif plan yok" 
+                  description="Ortak sınav yerleştirme planı oluşturduğunuzda burada listelenecektir." 
+                />
+              </Box>
             ) : (
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                 {kayitliPlanlar.filter(p => !p.isArchived).map((plan) => {
@@ -653,9 +660,13 @@ const KayitliPlanlar = ({ onPlanYukle }) => {
             )
           ) : (
             archivedPlansList.length === 0 ? (
-              <Alert severity="info" sx={{ mt: 2, borderRadius: 2 }}>
-                Henüz arşivlenmiş plan bulunmamaktadır. Aktif planlarınızın yanındaki arşiv ikonuna tıklayarak planlarınızı buraya taşıyabilirsiniz.
-              </Alert>
+              <Box sx={{ width: '100%', py: 4 }}>
+                <EmptyState 
+                  icon={ArchiveIcon} 
+                  title="Henüz arşivlenmiş plan bulunmuyor" 
+                  description="Aktif planlarınızın yanındaki arşiv ikonuna tıklayarak planlarınızı buraya taşıyabilirsiniz." 
+                />
+              </Box>
             ) : (
               <Box sx={{ mt: 2 }}>
                 {/* Konsept 2.1: Üst Bar - Zaman Tüneli Başlığı, Arama Çubuğu ve Hızlı Yıl/Dönem Çipleri */}

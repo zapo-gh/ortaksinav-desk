@@ -40,7 +40,6 @@ import { isSuperAdmin, getCurrentSession } from '../../services/localAuth';
 import logger from '../../utils/logger';
 import QuickSearchModal from '../QuickSearchModal';
 import LoginDialog from '../auth/LoginDialog';
-import LicenseManager from '../LicenseManager';
 import LicenseInfoDialog from '../LicenseInfoDialog';
 import ContactFormDialog from '../ContactFormDialog';
 import {
@@ -71,7 +70,6 @@ const Sidebar = ({ isMobile, mobileOpen, setMobileOpen, collapsed, setCollapsed,
   const [anchorEl, setAnchorEl] = React.useState(null);
   const [openSearch, setOpenSearch] = React.useState(false);
   const [loginDialogOpen, setLoginDialogOpen] = React.useState(false);
-  const [licenseManagerOpen, setLicenseManagerOpen] = React.useState(false);
   const [licenseInfoOpen, setLicenseInfoOpen] = React.useState(false);
   const [showTestDashboard, setShowTestDashboard] = React.useState(false);
   const [contactDialogOpen, setContactDialogOpen] = React.useState(false);
@@ -487,7 +485,6 @@ const Sidebar = ({ isMobile, mobileOpen, setMobileOpen, collapsed, setCollapsed,
             <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleClose} transformOrigin={{ horizontal: 'left', vertical: 'bottom' }} anchorOrigin={{ horizontal: 'left', vertical: 'top' }}>
               <MenuItem disabled><AccountCircle sx={{ mr: 1 }} />{displayName}</MenuItem>
               <MenuItem onClick={() => { handleClose(); setLicenseInfoOpen(true); }}><KeyIcon sx={{ mr: 1, fontSize: 20 }} />Lisans Bilgileri</MenuItem>
-              {superAdmin && <MenuItem onClick={() => { handleClose(); setLicenseManagerOpen(true); }}><KeyIcon sx={{ mr: 1, fontSize: 20 }} />Lisans Yönetimi</MenuItem>}
               <MenuItem onClick={handleLogout}><ExitToApp sx={{ mr: 1 }} />Çıkış Yap</MenuItem>
             </Menu>
           </>
@@ -569,7 +566,6 @@ const Sidebar = ({ isMobile, mobileOpen, setMobileOpen, collapsed, setCollapsed,
       {/* Modals moved from Header */}
       <QuickSearchModal open={openSearch} onClose={() => setOpenSearch(false)} />
       {canAuth ? <LoginDialog open={loginDialogOpen} onClose={() => setLoginDialogOpen(false)} /> : null}
-      <LicenseManager open={licenseManagerOpen} onClose={() => setLicenseManagerOpen(false)} />
       <LicenseInfoDialog open={licenseInfoOpen} onClose={() => setLicenseInfoOpen(false)} />
       <ContactFormDialog open={contactDialogOpen} onClose={() => setContactDialogOpen(false)} />
     </Box>

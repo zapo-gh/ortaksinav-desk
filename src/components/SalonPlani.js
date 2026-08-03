@@ -8,6 +8,7 @@ import dragDropLearning from '../utils/dragDropLearning';
 import logger from '../utils/logger';
 import { useNotifications } from './NotificationSystem';
 import PageHeader from './common/PageHeader';
+import EmptyState from './common/EmptyState';
 import {
   Card,
   CardContent,
@@ -1148,13 +1149,13 @@ const SalonPlani = memo(({ sinif, ogrenciler, seciliOgrenciId, kalanOgrenciler =
   }, [sinifDuzeni]);
   if (!sinifDuzeni) {
     return (
-      <Card sx={{ width: '100%', mt: 0, mb: 4 }}>
-        <CardContent>
-          <Typography variant="h6" color="text.secondary" textAlign="center">
-            {sinif ? 'Salon yükleniyor...' : 'Salon bilgisi bulunamadı'}
-          </Typography>
-        </CardContent>
-      </Card>
+      <Box sx={{ width: '100%', py: 4 }}>
+        <EmptyState 
+          icon={MeetingRoomIcon} 
+          title="Salon bilgisi bulunamadı" 
+          description={sinif ? 'Salon yükleniyor...' : 'Salon bilgilerini görüntüleyebilmek için lütfen önce salon ekleyin.'} 
+        />
+      </Box>
     );
   }
 

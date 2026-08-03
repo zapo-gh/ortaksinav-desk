@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -123,8 +123,12 @@ const LicenseInfoDialog = ({ open, onClose }) => {
           </Box>
           {licenseInfo && (
             <Typography variant="caption" color="text.secondary">
-              {licenseInfo.schoolNote && `${licenseInfo.schoolNote} — `}
-              Son kullanma: {licenseExpiry?.toLocaleDateString('tr-TR')}
+              <Box>
+                {licenseInfo.schoolName && `${licenseInfo.schoolName} `}
+                {licenseInfo.kurumKodu && `(${licenseInfo.kurumKodu})`}
+                {(licenseInfo.schoolName || licenseInfo.kurumKodu) && ` — `}
+                Lisansınızın süresi {new Date(licenseInfo.expiryDate).toLocaleDateString('tr-TR')} tarihinde dolacaktır.
+              </Box>
             </Typography>
           )}
         </Box>

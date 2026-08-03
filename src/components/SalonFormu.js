@@ -2,6 +2,7 @@ import React, { useState, memo, useRef, useEffect, useCallback } from 'react';
 import deepEqual from '../utils/deepEqual';
 import PageHeader from './common/PageHeader';
 import DialogHeader from './common/DialogHeader';
+import EmptyState from './common/EmptyState';
 import {
   Card,
   CardContent,
@@ -35,7 +36,8 @@ import {
   Person as PersonIcon,
   Chair as ChairIcon,
   DragIndicator as DragIndicatorIcon,
-  Warning as WarningIcon
+  Warning as WarningIcon,
+  Save as SaveIcon
 } from '@mui/icons-material';
 import { useNotifications } from './NotificationSystem';
 import { useExamSelector } from '../context/ExamContext';
@@ -240,7 +242,7 @@ const SalonItem = ({ form, index, onFormChange, onFormDelete, onFormCopy, yerles
   );
 };
 
-const SalonFormu = memo(({ salonlar = [], onSalonlarDegistir, yerlestirmeSonucu = null, readOnly: readOnlyProp = false }) => {
+const SalonFormu = memo(({ salonlar = [], onSalonlarDegistir: onSalonlarDegistirProp, onKaydet, yerlestirmeSonucu = null, readOnly: readOnlyProp = false }) => {
   // Notification sistemi
   const { showSuccess, showError, showWarning } = useNotifications();
   const isWriteAllowed = useExamSelector((state) => state.role === 'admin');
@@ -248,6 +250,19 @@ const SalonFormu = memo(({ salonlar = [], onSalonlarDegistir, yerlestirmeSonucu 
   const showReadOnlyMessage = React.useCallback(() => {
     showWarning('Bu işlemi gerçekleştirmek için yönetici olarak giriş yapmanız gerekir.');
   }, [showWarning]);
+
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const onSalonlarDegistir = useCallback((yeniSalonlar) => {
+    setHasUnsavedChanges(true);
+    if (onSalonlarDegistirProp) onSalonlarDegistirProp(yeniSalonlar);
+  }, [onSalonlarDegistirProp]);
+
+  const handleKaydet = async () => {
+    if (onKaydet) {
+      await onKaydet(salonlar);
+      setHasUnsavedChanges(false);
+    }
+  };
 
   // Basit state yönetimi - sadece salonlar listesi
   const [aktifSalonFormlari, setAktifSalonFormlari] = useState([]);
@@ -873,6 +888,26 @@ const SalonFormu = memo(({ salonlar = [], onSalonlarDegistir, yerlestirmeSonucu 
         title="Sınav Salonları Yönetimi"
         actions={
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+            {hasUnsavedChanges && (
+              <Button
+                variant="contained"
+                color="warning"
+                startIcon={<SaveIcon />}
+                size="small"
+                onClick={handleKaydet}
+                disabled={yerlesimPlaniVarMi() || readOnly}
+                sx={{ 
+                  animation: 'pulse 2s infinite',
+                  '@keyframes pulse': {
+                    '0%': { opacity: 1 },
+                    '50%': { opacity: 0.7 },
+                    '100%': { opacity: 1 },
+                  }
+                }}
+              >
+                Değişiklikleri Kaydet
+              </Button>
+            )}
             <Button
               variant="outlined"
               startIcon={<AddIcon />}
@@ -950,9 +985,13 @@ const SalonFormu = memo(({ salonlar = [], onSalonlarDegistir, yerlestirmeSonucu 
 
           {/* Boş durum metni - yazılabilir modda, salonlar listesi boşken */}
           {Array.isArray(salonlar) && salonlar.length === 0 && aktifSalonFormlari.length === 0 && (
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Henüz salon eklenmemiş
-            </Typography>
+            <Box sx={{ width: '100%', py: 2 }}>
+              <EmptyState 
+                icon={MeetingRoomIcon} 
+                title="Henüz salon eklenmemiş" 
+                description="Sınav salonu eklemek için 'Yeni Salon Ekle' butonunu kullanabilirsiniz." 
+              />
+            </Box>
           )}
 
           {/* Salon Formları */}

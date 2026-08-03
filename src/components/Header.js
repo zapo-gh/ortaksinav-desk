@@ -22,11 +22,11 @@ import {
   FullscreenExit as FullscreenExitIcon,
   DarkMode as DarkModeIcon,
   LightMode as LightModeIcon,
+  Menu as MenuIcon,
 } from '@mui/icons-material';
 
 import QuickSearchModal from './QuickSearchModal';
 import LoginDialog from './auth/LoginDialog';
-import LicenseManager from './LicenseManager';
 import LicenseInfoDialog from './LicenseInfoDialog';
 import { useExam } from '../context/ExamContext';
 import { useThemeMode } from '../context/ThemeContext';
@@ -38,7 +38,6 @@ const Header = ({ baslik, kullanici, onHomeClick, onTestDashboardClick, showNav,
   const [showTestDashboard, setShowTestDashboard] = React.useState(false);
   const [openSearch, setOpenSearch] = React.useState(false);
   const [loginDialogOpen, setLoginDialogOpen] = React.useState(false);
-  const [licenseManagerOpen, setLicenseManagerOpen] = React.useState(false);
   const [licenseInfoOpen, setLicenseInfoOpen] = React.useState(false);
   const [isFullscreen, setIsFullscreen] = React.useState(false);
   const superAdmin = isSuperAdmin(getCurrentSession());
@@ -447,12 +446,6 @@ const Header = ({ baslik, kullanici, onHomeClick, onTestDashboardClick, showNav,
                     <KeyIcon sx={{ mr: 1, fontSize: 20 }} />
                     Lisans Bilgileri
                   </MenuItem>
-                  {superAdmin && (
-                    <MenuItem onClick={() => { handleClose(); setLicenseManagerOpen(true); }}>
-                      <KeyIcon sx={{ mr: 1, fontSize: 20 }} />
-                      Lisans Yönetimi
-                    </MenuItem>
-                  )}
                   <MenuItem onClick={handleLogout}>
                     <ExitToApp sx={{ mr: 1 }} />
                     Çıkış Yap
@@ -481,7 +474,6 @@ const Header = ({ baslik, kullanici, onHomeClick, onTestDashboardClick, showNav,
           onClose={() => setLoginDialogOpen(false)}
         />
       ) : null}
-      <LicenseManager open={licenseManagerOpen} onClose={() => setLicenseManagerOpen(false)} />
       <LicenseInfoDialog open={licenseInfoOpen} onClose={() => setLicenseInfoOpen(false)} />
     </>
   );

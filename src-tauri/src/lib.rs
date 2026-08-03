@@ -357,7 +357,8 @@ pub fn run() {
       commands::import_export::save_template_csv,
       commands::import_export::export_students_csv,
       commands::import_export::import_students_csv,
-      commands::import_export::batch_save_students_fast
+      commands::import_export::batch_save_students_fast,
+      commands::license::verify_license
     ])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");

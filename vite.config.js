@@ -17,6 +17,9 @@ export default defineConfig({
   server: {
     port: 3000,
     strictPort: true,
+    watch: {
+      ignored: ['**/src-tauri/**'],
+    },
   },
   build: {
     outDir: 'dist',
@@ -50,9 +53,16 @@ export default defineConfig({
   },
   // .js dosyalarını JSX olarak işle (CRA projeleri için)
   esbuild: {
-    include: /\.js$/,
-    exclude: /node_modules/,
-    loader: 'jsx',
+    loader: "jsx",
+    include: /src\/.*\.js$/,
+    exclude: [],
     drop: process.env.NODE_ENV === 'production' ? ['console', 'debugger'] : [],
+  },
+  optimizeDeps: {
+    esbuildOptions: {
+      loader: {
+        '.js': 'jsx',
+      },
+    },
   },
 });

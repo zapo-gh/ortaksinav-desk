@@ -13,6 +13,8 @@ import {
 } from '@mui/material';
 import { getPlacementMap, resolveStudentPlacement } from '../utils/placementHelper';
 import PrintHeader from './common/PrintHeader';
+import EmptyState from './common/EmptyState';
+import { People as PeopleIcon } from '@mui/icons-material';
 
 const SalonOgrenciListesiPrintable = forwardRef(({ ogrenciler, yerlestirmeSonucu, ayarlar = {} }, ref) => {
   // Merkezi yerleşim haritasını oluştur (her render'da çalışır ama hızlıdır, useMemo eklenebilir ama şu an için yeterli)
@@ -217,26 +219,12 @@ const SalonOgrenciListesiPrintable = forwardRef(({ ogrenciler, yerlestirmeSonucu
   // Öğrenci yoksa uygun mesaj göster (yerleştirme yoksa bile öğrencileri göster)
   if (!Array.isArray(ogrenciler) || ogrenciler.length === 0) {
     return (
-      <Box
-        ref={ref}
-        sx={{
-          p: 4,
-          textAlign: 'center',
-          minHeight: '100vh',
-          width: '210mm',
-          margin: '0 auto',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-          alignItems: 'center'
-        }}
-      >
-        <Typography variant="h4" sx={{ mb: 2, color: 'text.secondary' }}>
-          Öğrenci Bulunamadı
-        </Typography>
-        <Typography variant="body1" sx={{ color: 'text.secondary' }}>
-          Liste oluşturmak için öğrenci verisi bulunmamaktadır.
-        </Typography>
+      <Box ref={ref} sx={{ p: 2 }}>
+        <EmptyState 
+          icon={PeopleIcon} 
+          title="Öğrenci bulunamadı" 
+          description="Liste oluşturmak için öğrenci verisi bulunmamaktadır." 
+        />
       </Box>
     );
   }
@@ -244,26 +232,12 @@ const SalonOgrenciListesiPrintable = forwardRef(({ ogrenciler, yerlestirmeSonucu
   // Filtrelenmiş öğrenci yoksa uygun mesaj göster
   if (filtreliOgrenciler.length === 0) {
     return (
-      <Box
-        ref={ref}
-        sx={{
-          p: 4,
-          textAlign: 'center',
-          minHeight: '100vh',
-          width: '210mm',
-          margin: '0 auto',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-          alignItems: 'center'
-        }}
-      >
-        <Typography variant="h4" sx={{ mb: 2, color: 'text.secondary' }}>
-          Öğrenci Bulunamadı
-        </Typography>
-        <Typography variant="body1" sx={{ color: 'text.secondary' }}>
-          Liste oluşturmak için öğrenci verisi bulunmamaktadır.
-        </Typography>
+      <Box ref={ref} sx={{ p: 2 }}>
+        <EmptyState 
+          icon={PeopleIcon} 
+          title="Filtrelenen öğrenci bulunamadı" 
+          description="Seçilen kriterlere uygun öğrenci listelenemedi." 
+        />
       </Box>
     );
   }

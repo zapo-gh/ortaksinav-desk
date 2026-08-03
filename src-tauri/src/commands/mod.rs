@@ -5,3 +5,4 @@ pub mod salons;
 pub mod plans;
 pub mod settings;
 pub mod import_export;
+pub mod license;
