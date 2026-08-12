@@ -21,9 +21,12 @@ pub struct VerifyResult {
 
 #[derive(Serialize)]
 pub struct ExpiredInfo {
-    pub expiryDate: String,
-    pub schoolName: Option<String>,
-    pub kurumKodu: Option<String>,
+    #[serde(rename = "expiryDate")]
+    pub expiry_date: String,
+    #[serde(rename = "schoolName")]
+    pub school_name: Option<String>,
+    #[serde(rename = "kurumKodu")]
+    pub kurum_kodu: Option<String>,
 }
 
 // RAW_PUB from our generator
@@ -34,7 +37,7 @@ fn hex_to_bytes(hex: &str) -> Result<Vec<u8>, String> {
 }
 
 #[tauri::command]
-pub fn verify_license(key: String, currentMachineId: Option<String>) -> VerifyResult {
+pub fn verify_license(key: String, current_machine_id: Option<String>) -> VerifyResult {
     // 1. Remove dashes
     let raw = key.replace("-", "").to_uppercase();
     
@@ -99,7 +102,7 @@ pub fn verify_license(key: String, currentMachineId: Option<String>) -> VerifyRe
 
     let payload_hex_bytes = payload_hex.as_bytes(); // We sign the payload hex string bytes in JS generator
 
-    if let Err(_) = public_key.verify(payload_hex_bytes, &signature) {
+    if public_key.verify(payload_hex_bytes, &signature).is_err() {
         return VerifyResult {
             valid: false,
             expired_info: None,
@@ -152,16 +155,16 @@ pub fn verify_license(key: String, currentMachineId: Option<String>) -> VerifyRe
     let today = chrono::Local::now().naive_local().date();
 
     if today > expiry_date {
-        let expiry_formatted = format!("{}-{}-{}", payload.e[0..4].to_string(), payload.e[4..6].to_string(), payload.e[6..8].to_string());
+        let expiry_formatted = format!("{}-{}-{}", &payload.e[0..4], &payload.e[4..6], &payload.e[6..8]);
         
         return VerifyResult {
             valid: false,
             expired_info: Some(ExpiredInfo {
-                expiryDate: expiry_formatted,
-                schoolName: payload.n.clone(),
-                kurumKodu: payload.k.clone(),
+                expiry_date: expiry_formatted,
+                school_name: payload.n.clone(),
+                kurum_kodu: payload.k.clone(),
             }),
-            error: Some(format!("Lisans süresi dolmuştur.")),
+            error: Some("Lisans süresi dolmuştur.".to_string()),
         };
     }
 
@@ -180,7 +183,7 @@ pub fn verify_license(key: String, currentMachineId: Option<String>) -> VerifyRe
         }
         
         let m = payload.m.unwrap();
-        if let Some(ref current) = currentMachineId {
+        if let Some(ref current) = current_machine_id {
             if m.to_uppercase() != current.to_uppercase() {
                 return VerifyResult {
                     valid: false,

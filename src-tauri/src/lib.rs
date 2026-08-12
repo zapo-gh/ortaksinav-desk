@@ -21,7 +21,7 @@ async fn export_db_backup(app: tauri::AppHandle) -> Result<Vec<u8>, String> {
   }
 
   // WAL'ı DB'ye flush et (bekleyen yazmaları main db'ye yaz)
-  if let Some(window) = app.get_webview_window("main") {
+  if let Some(_window) = app.get_webview_window("main") {
     // WebView üzerinden SQLite PRAGMA çalıştır (plugin-sql üzerinden)
     // En güvenilir yöntem: Rust tarafında SQLite'a bağlanıp checkpoint yap
     // Ama plugin-sql dışında bağlanmak sorun çıkarabilir.
@@ -106,7 +106,7 @@ fn import_db_backup(app: tauri::AppHandle, bytes: Vec<u8>) -> Result<(), String>
           break;
         }
         Err(e) => {
-          last_err = Some(format!("{e}"));
+          last_err = Some(e.to_string());
           let _ = std::fs::remove_file(&tmp_path);
           let _ = std::fs::remove_file(&backup_old_path);
           std::thread::sleep(std::time::Duration::from_millis(200 * (attempt as u64) + 100 * (replace_attempt as u64)));

@@ -23,6 +23,9 @@ export async function getSharedDb() {
     } catch (error) {
       _connectionPromise = null;
       console.error('❌ SQLite bağlantı hatası:', error);
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('app-error', { detail: 'Veritabanı bağlantısı kurulamadı: ' + error.message }));
+      }
       throw error;
     }
   })();

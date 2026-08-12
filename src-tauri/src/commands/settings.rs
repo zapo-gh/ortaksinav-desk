@@ -159,13 +159,11 @@ pub async fn get_setting(
         })
         .map_err(|e| format!("Sorgu çalıştırılamadı: {e}"))?;
 
-    if let Some(row) = rows.next() {
-        if let Ok(val_str) = row {
-            if let Ok(json_val) = serde_json::from_str::<Value>(&val_str) {
-                return Ok(Some(json_val));
-            } else {
-                return Ok(Some(Value::String(val_str)));
-            }
+    if let Some(Ok(val_str)) = rows.next() {
+        if let Ok(json_val) = serde_json::from_str::<Value>(&val_str) {
+            return Ok(Some(json_val));
+        } else {
+            return Ok(Some(Value::String(val_str)));
         }
     }
 
@@ -228,17 +226,15 @@ pub async fn get_temp_data(
         })
         .map_err(|e| format!("Sorgu çalıştırılamadı: {e}"))?;
 
-    if let Some(row) = rows.next() {
-        if let Ok((val_str, exp_str)) = row {
-            if exp_str < now_str {
-                let _ = conn.execute("DELETE FROM temp_data WHERE key = ?1", params![key]);
-                return Ok(None);
-            }
-            if let Ok(json_val) = serde_json::from_str::<Value>(&val_str) {
-                return Ok(Some(json_val));
-            } else {
-                return Ok(Some(Value::String(val_str)));
-            }
+    if let Some(Ok((val_str, exp_str))) = rows.next() {
+        if exp_str < now_str {
+            let _ = conn.execute("DELETE FROM temp_data WHERE key = ?1", params![key]);
+            return Ok(None);
+        }
+        if let Ok(json_val) = serde_json::from_str::<Value>(&val_str) {
+            return Ok(Some(json_val));
+        } else {
+            return Ok(Some(Value::String(val_str)));
         }
     }
 

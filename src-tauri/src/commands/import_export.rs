@@ -27,7 +27,7 @@ pub async fn export_students_csv(
         .delimiter(b';') // Excel uyumluluğu için noktalı virgül
         .from_writer(vec![]);
 
-    wtr.write_record(&["numara", "ad", "soyad", "sinif", "cinsiyet"])
+    wtr.write_record(["numara", "ad", "soyad", "sinif", "cinsiyet"])
         .map_err(|e| e.to_string())?;
 
     let rows = stmt
@@ -60,7 +60,7 @@ pub async fn export_students_csv(
                 .and_then(|v| v.as_str())
                 .unwrap_or_default();
 
-            wtr.write_record(&[numara, ad, soyad, sinif, cinsiyet])
+            wtr.write_record([numara, ad, soyad, sinif, cinsiyet])
                 .map_err(|e| e.to_string())?;
             count += 1;
         }
@@ -188,10 +188,8 @@ pub async fn batch_save_students_fast(
             .and_then(|v| {
                 if let Some(s) = v.as_str() {
                     Some(s.to_string())
-                } else if let Some(n) = v.as_i64() {
-                    Some(n.to_string())
                 } else {
-                    None
+                    v.as_i64().map(|n| n.to_string())
                 }
             })
             .unwrap_or_default();

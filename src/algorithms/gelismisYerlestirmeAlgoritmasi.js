@@ -4898,11 +4898,7 @@ export const gercekYerlesimSonucunuKontrolEt = () => {
     return sonuc;
 
   } catch (error) {
-    console.error('❌ Yerleştirme kontrolü sırasında hata:', error.message);
-    return {
-      hata: true,
-      mesaj: error.message
-    };
+    throw new Error('Yerleştirme kontrolü sırasında hata: ' + error.message);
   }
 };
 

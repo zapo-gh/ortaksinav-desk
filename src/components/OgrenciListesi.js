@@ -256,7 +256,7 @@ const OgrenciListesi = memo(({ ogrenciler, yerlestirmeSonucu = null, ayarlar = n
       }
       setOgrenciler(yeniOgrenciler);
     } catch (error) {
-      console.error('Öğrenciler kaydedilemedi:', error);
+      showError('Öğrenciler kaydedilemedi: ' + error.message);
       throw error;
     }
   }, [setOgrenciler]);
@@ -272,7 +272,7 @@ const OgrenciListesi = memo(({ ogrenciler, yerlestirmeSonucu = null, ayarlar = n
       }
       clearOgrenciler();
     } catch (error) {
-      console.error('Öğrenciler temizlenemedi:', error);
+      showError('Öğrenciler temizlenemedi: ' + error.message);
       throw error;
     }
   }, [clearOgrenciler]);
@@ -304,7 +304,7 @@ const OgrenciListesi = memo(({ ogrenciler, yerlestirmeSonucu = null, ayarlar = n
 
       if (toSave) {
         saveStudentsToDb(toSave).catch(err => {
-          console.error('Öğrenci DB güncelleme hatası:', err);
+          showError('Öğrenci DB güncelleme hatası: ' + err.message);
         });
       }
     }, 500);
@@ -467,7 +467,7 @@ const OgrenciListesi = memo(({ ogrenciler, yerlestirmeSonucu = null, ayarlar = n
     const ogrenci = ogrenciler.find(o => o.id === ogrenciId);
 
     if (!ogrenci) {
-      console.error('Silinecek öğrenci bulunamadı:', ogrenciId);
+      showError('Silinecek öğrenci bulunamadı.');
       return;
     }
 
@@ -540,7 +540,6 @@ const OgrenciListesi = memo(({ ogrenciler, yerlestirmeSonucu = null, ayarlar = n
       setDialogAcik(false);
 
     } catch (error) {
-      console.error('Silme hatası:', error);
       showError('Öğrenciler silinirken bir hata oluştu: ' + (error.message || 'Bilinmeyen hata'));
     } finally {
       setYukleme(false);
