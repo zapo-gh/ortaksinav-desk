@@ -46,7 +46,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: build-files
-        path: build/
+        path: dist/
         retention-days: 7
         
     - name: Test coverage özeti
@@ -83,15 +83,12 @@ jobs:
     - name: Build dosyalarını kontrol et
       run: |
         echo "📦 Build dosyaları:"
-        if [ -d "build/static/js" ]; then
-          ls -lh build/static/js/ | head -10
-        fi
-        if [ -d "build/static/css" ]; then
-          ls -lh build/static/css/ | head -5
+        if [ -d "dist/assets" ]; then
+          ls -lh dist/assets/ | head -10
         fi
         
         # Build başarısızlığı kontrolü
-        if [ ! -f "build/index.html" ]; then
+        if [ ! -f "dist/index.html" ]; then
           echo "❌ Build başarısız - index.html bulunamadı"
           exit 1
         fi
@@ -102,7 +99,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: production-build
-        path: build/
+        path: dist/
         retention-days: 30
         compression-level: 6
 
