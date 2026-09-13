@@ -1,6 +1,6 @@
 {
   "name": "ortak-sinav-yerlesim-sistemi",
-  "version": "2.0.2",
+  "version": "2.0.3",
   "private": true,
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
