@@ -497,7 +497,11 @@ const SalonPlani = memo(({ sinif, ogrenciler, seciliOgrenciId, kalanOgrenciler =
         unique.set(key, salon);
       }
     });
-    return Array.from(unique.values());
+    return Array.from(unique.values()).sort((a, b) => {
+      const nameA = a?.salonAdi || a?.ad || '';
+      const nameB = b?.salonAdi || b?.ad || '';
+      return nameA.localeCompare(nameB, 'tr', { numeric: true });
+    });
   }, [tumSalonlar]);
 
   const sortedSalonlar = useMemo(() => {
@@ -509,7 +513,11 @@ const SalonPlani = memo(({ sinif, ogrenciler, seciliOgrenciId, kalanOgrenciler =
         unique.set(key, salon);
       }
     });
-    return Array.from(unique.values());
+    return Array.from(unique.values()).sort((a, b) => {
+      const nameA = a?.ad || a?.salonAdi || '';
+      const nameB = b?.ad || b?.salonAdi || '';
+      return nameA.localeCompare(nameB, 'tr', { numeric: true });
+    });
   }, [salonlar]);
 
 

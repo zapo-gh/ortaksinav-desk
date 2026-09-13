@@ -294,7 +294,12 @@ export const SalonPlaniPrintable = forwardRef(({ yerlestirmeSonucu, ayarlar = {}
             <PrintHeader 
               schoolName={ayarlar.okulAdi || 'T.C. MİLLİ EĞİTİM BAKANLIĞI'}
               subTitle={`${ayarlar.egitimYili || '2025-2026'} Eğitim Öğretim Yılı`}
-              documentTitle={`${salon.salonAdi || salon.ad || `Salon ${salonIndex + 1}`} Salon Yerleşim Planı - ${ayarlar.donem || '1. Dönem'}. Dönem ${ayarlar.sinavDonemi || '1. Ortak Sınavı'}. Ortak Sınavı`}
+              documentTitle={`${salon.salonAdi || salon.ad || `Salon ${salonIndex + 1}`} Salon Yerleşim Planı - ${(() => {
+                const dersAdi = ayarlar.dersler && ayarlar.dersler.length > 0
+                  ? ayarlar.dersler[0].ad || 'Ders Adı'
+                  : 'Ders Adı';
+                return `${dersAdi} ${ayarlar.donem || '1'}. Dönem ${ayarlar.sinavDonemi || '1'}. Ortak Sınavı`;
+              })()}`}
               date={`${ayarlar.sinavTarihi ? new Date(ayarlar.sinavTarihi).toLocaleDateString('tr-TR') : new Date().toLocaleDateString('tr-TR')} ${ayarlar.sinavSaati ? `- ${ayarlar.sinavSaati}` : ''}`}
             />
 

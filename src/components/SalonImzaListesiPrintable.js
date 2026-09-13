@@ -176,10 +176,14 @@ const SalonImzaListesiPrintable = forwardRef(({ yerlestirmeSonucu, ayarlar = {},
                   {ayarlar.okulAdi}
                 </Typography>
                 <Typography variant="body2" sx={{ mb: 0.2, lineHeight: 1.3, fontSize: '1.0rem' }}>
-                  {ayarlar.egitimYili ? ` Egitim Ogretim Yili` : ''}
-                </Typography>
-                <Typography variant="body2" sx={{ mb: 0.2, lineHeight: 1.3, fontSize: '1.0rem' }}>
-                  {ayarlar.donem || '1'}. Dönem {ayarlar.sinavDonemi || '1'}. Ortak Sınavı
+                  {(() => {
+                    const yil = ayarlar.egitimYili ? `${ayarlar.egitimYili} Eğitim Öğretim Yılı` : '';
+                    const dersAdi = ayarlar.dersler && ayarlar.dersler.length > 0
+                      ? ayarlar.dersler[0].ad || 'Ders Adı'
+                      : 'Ders Adı';
+                    const sinav = `${dersAdi} ${ayarlar.donem || '1'}. Dönem ${ayarlar.sinavDonemi || '1'}. Ortak Sınavı`;
+                    return yil ? `${yil} - ${sinav}` : sinav;
+                  })()}
                 </Typography>
                 <Typography variant="body1" component="h3" sx={{ fontWeight: 700, color: 'primary.main', lineHeight: 1.3, fontSize: '1.1rem' }}>
                   {salon.salonAdi || salon.ad || `Salon ${salonIndex + 1}`} - İmza Listesi
@@ -208,9 +212,12 @@ const SalonImzaListesiPrintable = forwardRef(({ yerlestirmeSonucu, ayarlar = {},
                   '& .MuiTableCell-root': {
                     padding: '1px 4px',
                     fontSize: '0.8rem',
-                    lineHeight: 0.6,
+                    lineHeight: 1.2,
                     border: `1px solid ${theme.palette.divider}`,
                     textAlign: 'center'
+                  },
+                  '& .MuiTableHead-root .MuiTableCell-root': {
+                    fontSize: '0.7rem',
                   },
                   '& .MuiTableRow-root': {
                     height: '26px'
@@ -496,10 +503,14 @@ const SalonImzaListesiPrintable = forwardRef(({ yerlestirmeSonucu, ayarlar = {},
                   {ayarlar.okulAdi}
                 </Typography>
                 <Typography variant="body2" sx={{ mb: 0.2, lineHeight: 1.3, fontSize: '1.0rem' }}>
-                  {ayarlar.egitimYili ? ` Egitim Ogretim Yili` : ''}
-                </Typography>
-                <Typography variant="body2" sx={{ mb: 0.2, lineHeight: 1.3, fontSize: '1.0rem' }}>
-                  {ayarlar.donem || '1'}. Dönem {ayarlar.sinavDonemi || '1'}. Ortak Sınavı
+                  {(() => {
+                    const yil = ayarlar.egitimYili ? `${ayarlar.egitimYili} Eğitim Öğretim Yılı` : '';
+                    const dersAdi = ayarlar.dersler && ayarlar.dersler.length > 0
+                      ? ayarlar.dersler[0].ad || 'Ders Adı'
+                      : 'Ders Adı';
+                    const sinav = `${dersAdi} ${ayarlar.donem || '1'}. Dönem ${ayarlar.sinavDonemi || '1'}. Ortak Sınavı`;
+                    return yil ? `${yil} - ${sinav}` : sinav;
+                  })()}
                 </Typography>
                 <Typography variant="body1" component="h3" sx={{ fontWeight: 700, color: 'primary.main', lineHeight: 1.3, fontSize: '1.1rem' }}>
                   Sabit Öğrenciler Listesi

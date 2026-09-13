@@ -15,23 +15,21 @@ const PrintHeader = ({
         flexDirection: 'column', 
         alignItems: 'center', 
         justifyContent: 'center', 
-        mb: 4,
-        borderBottom: '2px solid #000',
-        pb: 2,
+        mb: 2,
         width: '100%'
       } 
     }}>
-      <Typography variant="h6" sx={{ fontWeight: 'bold', fontSize: '14pt', textAlign: 'center', fontFamily: '"Times New Roman", Times, serif' }}>
+      <Typography variant="h6" sx={{ fontWeight: 'bold', fontSize: '13pt', lineHeight: 1.2, textAlign: 'center', fontFamily: '"Times New Roman", Times, serif' }}>
         {schoolName}
       </Typography>
-      <Typography variant="subtitle1" sx={{ fontWeight: 'bold', fontSize: '12pt', textAlign: 'center', fontFamily: '"Times New Roman", Times, serif' }}>
+      <Typography variant="subtitle1" sx={{ fontWeight: 'bold', fontSize: '11pt', lineHeight: 1.2, textAlign: 'center', fontFamily: '"Times New Roman", Times, serif' }}>
         {subTitle}
       </Typography>
-      <Box sx={{ width: '100%', display: 'flex', justifyContent: 'space-between', mt: 2, px: 2 }}>
-        <Typography variant="body2" sx={{ fontWeight: 'bold', fontSize: '11pt', fontFamily: '"Times New Roman", Times, serif' }}>
+      <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', mt: 0.5 }}>
+        <Typography variant="body1" sx={{ fontWeight: 'bold', fontSize: '11pt', lineHeight: 1.2, textAlign: 'center', fontFamily: '"Times New Roman", Times, serif', mb: 0.2 }}>
           {documentTitle}
         </Typography>
-        <Typography variant="body2" sx={{ fontWeight: 'bold', fontSize: '11pt', fontFamily: '"Times New Roman", Times, serif' }}>
+        <Typography variant="body2" sx={{ fontWeight: 'bold', fontSize: '10pt', lineHeight: 1.2, textAlign: 'center', fontFamily: '"Times New Roman", Times, serif' }}>
           Tarih: {date}
         </Typography>
       </Box>

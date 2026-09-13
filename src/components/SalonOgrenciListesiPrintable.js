@@ -327,8 +327,11 @@ const SalonOgrenciListesiPrintable = forwardRef(({ ogrenciler, yerlestirmeSonucu
                 <Table size="small" sx={{
                   '& .MuiTableCell-root': {
                     padding: '1px 4px',
-                    fontSize: '0.9rem',
-                    lineHeight: 0.6
+                    fontSize: '0.85rem',
+                    lineHeight: 1.2
+                  },
+                  '& .MuiTableHead-root .MuiTableCell-root': {
+                    fontSize: '0.75rem',
                   },
                   '& .MuiTableRow-root': {
                     height: '27px'
