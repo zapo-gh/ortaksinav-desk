@@ -43,6 +43,7 @@ import QuickSearchModal from '../QuickSearchModal';
 import LoginDialog from '../auth/LoginDialog';
 import LicenseInfoDialog from '../LicenseInfoDialog';
 import ContactFormDialog from '../ContactFormDialog';
+import {
   Email as EmailIcon
 } from '@mui/icons-material';
 import pkg from '../../../package.json';
