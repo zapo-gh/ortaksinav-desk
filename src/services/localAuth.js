@@ -6,7 +6,7 @@
  */
 
 import logger from '../utils/logger';
-
+import tauriDb from '../database/tauriDb';
 const DB_URL = 'sqlite:kelebek.db';
 
 // ─── Super Admin sabitleri ────────────────────────────────────────────────────
@@ -180,6 +180,15 @@ export async function login(username, password, rememberMe = false) {
     throw new Error('Kullanıcı adı ve şifre zorunludur.');
   }
 
+  // Rate Limiting Kontrolü
+  const lockKey = `login_lock_${trimmedUsername}`;
+  const attemptsKey = `login_attempts_${trimmedUsername}`;
+  
+  const isLocked = await tauriDb.getTempData(lockKey);
+  if (isLocked) {
+     throw new Error('Çok fazla hatalı giriş yaptınız. Lütfen 15 dakika bekleyin.');
+  }
+
   // Super admin girişinde hesabı garantile (DB ilk açılışta hazır olmayabilir)
   if (trimmedUsername === SUPER_ADMIN_EMAIL.toLowerCase()) {
     await ensureSuperAdmin();
@@ -189,20 +198,42 @@ export async function login(username, password, rememberMe = false) {
     'SELECT * FROM users WHERE username = ?',
     [trimmedUsername]
   );
+  
   if (rows.length === 0) {
-    throw new Error('Kullanıcı adı veya şifre hatalı.');
+    await handleFailedLogin(attemptsKey, lockKey);
   }
 
   const user = rows[0];
   const { hash } = await hashPassword(password, user.salt);
 
   if (hash !== user.password_hash) {
-    throw new Error('Kullanıcı adı veya şifre hatalı.');
+    await handleFailedLogin(attemptsKey, lockKey);
   }
+
+  // Başarılı giriş, attempts'i sıfırla
+  await tauriDb.saveTempData(attemptsKey, 0, 'number', 1);
 
   const session = { id: String(user.id), username: user.username, displayName: user.display_name };
   await saveSession(session, rememberMe);
   return session;
+}
+
+// Hatalı giriş işleyici yardımcı fonksiyon
+async function handleFailedLogin(attemptsKey, lockKey) {
+  const MAX_LOGIN_ATTEMPTS = 5;
+  const LOCKOUT_HOURS = 0.25; // 15 dakika
+
+  let attempts = await tauriDb.getTempData(attemptsKey);
+  attempts = (typeof attempts === 'number' ? attempts : 0);
+
+  if (attempts + 1 >= MAX_LOGIN_ATTEMPTS) {
+     await tauriDb.saveTempData(lockKey, true, 'boolean', LOCKOUT_HOURS);
+     await tauriDb.saveTempData(attemptsKey, 0, 'number', LOCKOUT_HOURS); // reset
+     throw new Error('Çok fazla hatalı giriş yaptınız. Hesabınız 15 dakika süreyle kilitlendi.');
+  } else {
+     await tauriDb.saveTempData(attemptsKey, attempts + 1, 'number', 1);
+     throw new Error(`Kullanıcı adı veya şifre hatalı. (Kalan deneme hakkı: ${MAX_LOGIN_ATTEMPTS - attempts - 1})`);
+  }
 }
 export async function logout() {
   await saveSession(null);

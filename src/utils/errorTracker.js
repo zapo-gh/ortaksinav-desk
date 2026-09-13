@@ -5,7 +5,7 @@
  */
 
 import logger from './logger';
-
+import tauriDb from '../database/tauriDb';
 class ErrorTracker {
   constructor() {
     this.errorQueue = [];
@@ -20,31 +20,44 @@ class ErrorTracker {
     if (this.isEnabled) {
       this.startAutoFlush();
     }
+
+    // logger.error'u patchle
+    const originalError = logger.error;
+    logger.error = (...args) => {
+      originalError(...args);
+      // Sadece asıl uygulama çalışırken ve web worker değilken kaydet (Worker'da Tauri çağrılamaz)
+      if (typeof window !== 'undefined' && typeof window.document !== 'undefined') {
+        this.trackError(args.length > 0 ? args[0] : new Error('Unknown logged error'), {
+          loggerContext: args.slice(1),
+          critical: true
+        });
+      }
+    };
   }
 
   /**
    * Hata track et
    */
-  trackError(error, context = {}) {
+  async trackError(error, context = {}) {
     try {
       const errorData = this.createErrorData(error, context);
       
       // Development'ta console'a yaz
       if (process.env.NODE_ENV === 'development') {
-        logger.error('Error tracked:', errorData);
+        console.error('Error tracked:', errorData);
       }
 
-      // Her ortamda localStorage'a kaydet (hata takibi her yerde önemli)
+      // Her ortamda SQLite'a kaydet (hata takibi her yerde önemli)
       this.queueError(errorData);
-      this.persistToStorage(errorData);
+      await this.persistToStorage(errorData);
 
       // Kritik hataları say ve raporla
       if (context.errorBoundary || context.critical) {
         this.criticalErrorCount++;
-        this.handleCriticalError(errorData);
+        await this.handleCriticalError(errorData);
       }
     } catch (e) {
-      logger.error('Error tracking failed:', e);
+      console.error('Error tracking failed:', e);
     }
   }
 
@@ -106,28 +119,28 @@ class ErrorTracker {
   }
 
   /**
-   * localStorage'a kaydet
+   * SQLite'a kaydet
    */
-  persistToStorage(errorData) {
+  async persistToStorage(errorData) {
     try {
-      const errorLogs = this.getStoredErrors();
+      const errorLogs = await this.getStoredErrors();
       errorLogs.push(errorData);
       
       // Son 50 error'u tut
       const recentLogs = errorLogs.slice(-50);
-      localStorage.setItem('error_logs', JSON.stringify(recentLogs));
+      await tauriDb.saveTempData('error_logs', recentLogs, 'json', 168); // 7 gün sakla
     } catch (e) {
       logger.debug('Failed to store error:', e);
     }
   }
 
   /**
-   * localStorage'dan error'ları al
+   * SQLite'dan error'ları al
    */
-  getStoredErrors() {
+  async getStoredErrors() {
     try {
-      const data = localStorage.getItem('error_logs');
-      return data ? JSON.parse(data) : [];
+      const data = await tauriDb.getTempData('error_logs');
+      return Array.isArray(data) ? data : [];
     } catch (e) {
       logger.debug('Failed to read stored errors:', e);
       return [];
@@ -144,15 +157,15 @@ class ErrorTracker {
     this.errorQueue = [];
     
     try {
-      // Şimdilik sadece localStorage'a kaydet
+      // Şimdilik sadece SQLite'a kaydet
       // Future: Custom endpoint'e gönder
-      const existingErrors = this.getStoredErrors();
+      const existingErrors = await this.getStoredErrors();
       const updatedErrors = [...existingErrors, ...errorsToSend].slice(-50);
-      localStorage.setItem('error_logs', JSON.stringify(updatedErrors));
+      await tauriDb.saveTempData('error_logs', updatedErrors, 'json', 168);
       
-      logger.debug(`Flushed ${errorsToSend.length} errors to storage`);
+      console.debug(`Flushed ${errorsToSend.length} errors to storage`);
     } catch (e) {
-      logger.error('Failed to flush errors:', e);
+      console.error('Failed to flush errors:', e);
       // Başarısız olursa kuyruğa geri ekle
       this.errorQueue.unshift(...errorsToSend);
     }
@@ -183,11 +196,11 @@ class ErrorTracker {
   /**
    * Kritik hata işleme
    */
-  handleCriticalError(errorData) {
-    logger.error(`🚨 Kritik hata #${this.criticalErrorCount}:`, errorData.message);
+  async handleCriticalError(errorData) {
+    console.error(`🚨 Kritik hata #${this.criticalErrorCount}:`, errorData.message);
 
     // Flush hemen tetikle
-    this.flushErrors();
+    await this.flushErrors();
   }
 
   /**
@@ -251,14 +264,14 @@ class ErrorTracker {
   /**
    * Error geçmişini temizle
    */
-  clearHistory() {
+  async clearHistory() {
     try {
       this.errorQueue = [];
       this.criticalErrorCount = 0;
-      localStorage.removeItem('error_logs');
+      await tauriDb.saveTempData('error_logs', [], 'json', 168);
       logger.info('Error history cleared');
     } catch (e) {
-      logger.error('Failed to clear error history:', e);
+      console.error('Failed to clear error history:', e);
     }
   }
 

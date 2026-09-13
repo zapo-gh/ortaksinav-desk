@@ -34,7 +34,7 @@ export default defineConfig({
           'vendor-react': ['react', 'react-dom'],
           'vendor-mui': ['@mui/material', '@mui/icons-material', '@emotion/react', '@emotion/styled'],
           'vendor-xlsx': ['xlsx'],
-          'vendor-dnd': ['@dnd-kit/core', '@dnd-kit/sortable', 'react-dnd', 'react-dnd-html5-backend'],
+          'vendor-dnd': ['@dnd-kit/core', '@dnd-kit/sortable'],
         },
       },
     },

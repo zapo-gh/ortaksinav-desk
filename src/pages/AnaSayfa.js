@@ -44,8 +44,7 @@ import {
   School as SchoolIcon
 } from '@mui/icons-material';
 import { useReactToPrint } from 'react-to-print';
-import { DndProvider } from 'react-dnd';
-import { HTML5Backend } from 'react-dnd-html5-backend';
+
 import { motion, AnimatePresence } from 'framer-motion';
 
 import Sidebar from '../components/common/Sidebar';
@@ -851,11 +850,9 @@ const AnaSayfaContent = React.memo(() => {
 
 const AnaSayfa = () => {
   return (
-    <DndProvider backend={HTML5Backend}>
-      <NotificationProvider>
-        <AnaSayfaContent />
-      </NotificationProvider>
-    </DndProvider>
+    <NotificationProvider>
+      <AnaSayfaContent />
+    </NotificationProvider>
   );
 };
 

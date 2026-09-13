@@ -1,8 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '../../utils/test-utils';
 import { createTheme } from '@mui/material/styles';
-import { DndProvider } from 'react-dnd';
-import { HTML5Backend } from 'react-dnd-html5-backend';
+
 import AnaSayfa from '../../pages/AnaSayfa';
 import { useExamStore } from '../../store/useExamStore';
 import { act } from '@testing-library/react';
