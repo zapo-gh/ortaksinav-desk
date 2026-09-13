@@ -14,22 +14,37 @@ export default function UpdaterDialog() {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
+    const handleManualCheck = () => {
+      checkForUpdates(true);
+    };
+    window.addEventListener('check-for-updates', handleManualCheck);
+
     // Sadece Tauri içinde çalışıyorsa güncellemeleri kontrol et
     if (window.__TAURI_INTERNALS__) {
-      checkForUpdates();
+      checkForUpdates(false);
     }
+
+    return () => {
+      window.removeEventListener('check-for-updates', handleManualCheck);
+    };
   }, []);
 
-  const checkForUpdates = async () => {
+  const checkForUpdates = async (isManual = false) => {
     try {
       const updateResult = await check();
       if (updateResult) {
         logger.info(`Yeni güncelleme bulundu: ${updateResult.version}`);
         setUpdate(updateResult);
         setOpen(true);
+      } else if (isManual) {
+        // Güncelleme yoksa ve kullanıcı manuel olarak tetiklediyse bildir
+        window.dispatchEvent(new CustomEvent('app-toast', { detail: { message: 'Uygulamanız güncel.', severity: 'success' } }));
       }
     } catch (err) {
       logger.error('Güncelleme kontrolü başarısız:', err);
+      if (isManual) {
+        window.dispatchEvent(new CustomEvent('app-toast', { detail: { message: 'Güncelleme kontrol edilemedi.', severity: 'error' } }));
+      }
     }
   };
 

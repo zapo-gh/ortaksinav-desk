@@ -32,7 +32,8 @@ import {
   AccountCircle,
   ExitToApp,
   Login,
-  VpnKey as KeyIcon
+  VpnKey as KeyIcon,
+  SystemUpdateAlt as UpdateIcon
 } from '@mui/icons-material';
 import { useExamStore } from '../../store/useExamStore';
 import { useExam } from '../../context/ExamContext';
@@ -485,6 +486,9 @@ const Sidebar = ({ isMobile, mobileOpen, setMobileOpen, collapsed, setCollapsed,
             <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleClose} transformOrigin={{ horizontal: 'left', vertical: 'bottom' }} anchorOrigin={{ horizontal: 'left', vertical: 'top' }}>
               <MenuItem disabled><AccountCircle sx={{ mr: 1 }} />{displayName}</MenuItem>
               <MenuItem onClick={() => { handleClose(); setLicenseInfoOpen(true); }}><KeyIcon sx={{ mr: 1, fontSize: 20 }} />Lisans Bilgileri</MenuItem>
+              {window.__TAURI_INTERNALS__ && (
+                <MenuItem onClick={() => { handleClose(); window.dispatchEvent(new CustomEvent('check-for-updates')); }}><UpdateIcon sx={{ mr: 1, fontSize: 20 }} />Güncellemeleri Kontrol Et</MenuItem>
+              )}
               <MenuItem onClick={handleLogout}><ExitToApp sx={{ mr: 1 }} />Çıkış Yap</MenuItem>
             </Menu>
           </>
