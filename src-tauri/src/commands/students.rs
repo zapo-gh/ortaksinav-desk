@@ -26,7 +26,9 @@ pub async fn save_students(
 
     {
         let mut stmt = tx
-            .prepare("INSERT OR REPLACE INTO students (userId, studentId, data) VALUES (?1, ?2, ?3)")
+            .prepare(
+                "INSERT OR REPLACE INTO students (userId, studentId, data) VALUES (?1, ?2, ?3)",
+            )
             .map_err(|e| format!("Sorgu hazırlanamadı: {e}"))?;
 
         for student in &students {
@@ -43,8 +45,8 @@ pub async fn save_students(
                 })
                 .unwrap_or_default();
 
-            let data_str = serde_json::to_string(student)
-                .map_err(|e| format!("JSON dönüşüm hatası: {e}"))?;
+            let data_str =
+                serde_json::to_string(student).map_err(|e| format!("JSON dönüşüm hatası: {e}"))?;
 
             stmt.execute(params![user_id, sid, data_str])
                 .map_err(|e| format!("Öğrenci eklenemedi ({sid}): {e}"))?;

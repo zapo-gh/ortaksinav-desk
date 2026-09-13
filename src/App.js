@@ -12,6 +12,7 @@ import { getCurrentSession, isSuperAdmin, ensureSuperAdmin, initAuth } from "./s
 import { subscribeToAuthChanges, notifyAuthListeners } from './auth/authState';
 import { checkStoredLicense } from './services/licenseService';
 import logger from './utils/logger';
+import UpdaterDialog from './components/UpdaterDialog';
 import './App.css';
 
 const queryClient = new QueryClient({
@@ -108,6 +109,7 @@ function App() {
     <ErrorBoundary>
       <CustomThemeProvider>
         <AppToaster />
+        <UpdaterDialog />
         {/* Giriş yapılmamışsa veya authReady bekleniyor ve oturum yoksa: LoginPage göster */}
         {!isLoggedIn ? (
           <LoginPage onSuccess={() => setIsLoggedIn(true)} />

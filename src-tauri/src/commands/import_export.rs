@@ -46,7 +46,10 @@ pub async fn export_students_csv(
                 .or_else(|| student.get("ogrenciNo"))
                 .and_then(|v| v.as_str())
                 .unwrap_or_default();
-            let ad = student.get("ad").and_then(|v| v.as_str()).unwrap_or_default();
+            let ad = student
+                .get("ad")
+                .and_then(|v| v.as_str())
+                .unwrap_or_default();
             let soyad = student
                 .get("soyad")
                 .and_then(|v| v.as_str())
@@ -194,8 +197,8 @@ pub async fn batch_save_students_fast(
             })
             .unwrap_or_default();
 
-        let data_str = serde_json::to_string(student)
-            .map_err(|e| format!("JSON dönüşüm hatası: {e}"))?;
+        let data_str =
+            serde_json::to_string(student).map_err(|e| format!("JSON dönüşüm hatası: {e}"))?;
 
         stmt.execute(params![user_id, sid, data_str])
             .map_err(|e| format!("Öğrenci eklenemedi ({sid}): {e}"))?;

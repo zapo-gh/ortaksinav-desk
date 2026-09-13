@@ -49,10 +49,7 @@ pub async fn save_settings(
             } else if val.is_number() || val.is_boolean() {
                 (val.to_string(), "primitive")
             } else {
-                (
-                    serde_json::to_string(val).unwrap_or_default(),
-                    "json",
-                )
+                (serde_json::to_string(val).unwrap_or_default(), "json")
             };
 
             stmt.execute(params![user_id, key, val_str, val_type, now])
@@ -68,10 +65,7 @@ pub async fn save_settings(
 }
 
 #[tauri::command]
-pub async fn get_settings(
-    state: State<'_, DbState>,
-    user_id: String,
-) -> Result<Value, String> {
+pub async fn get_settings(state: State<'_, DbState>, user_id: String) -> Result<Value, String> {
     let conn = state
         .0
         .lock()
@@ -116,10 +110,7 @@ pub async fn save_setting(
     } else if value.is_number() || value.is_boolean() {
         (value.to_string(), "primitive")
     } else {
-        (
-            serde_json::to_string(&value).unwrap_or_default(),
-            "json",
-        )
+        (serde_json::to_string(&value).unwrap_or_default(), "json")
     };
     let now = now_iso();
 
@@ -197,7 +188,10 @@ pub async fn save_temp_data(
     .map_err(|e| format!("Geçici veri kaydedilemedi: {e}"))?;
 
     let now_str = now_iso();
-    let _ = conn.execute("DELETE FROM temp_data WHERE expiresAt < ?1", params![now_str]);
+    let _ = conn.execute(
+        "DELETE FROM temp_data WHERE expiresAt < ?1",
+        params![now_str],
+    );
 
     Ok(())
 }
@@ -297,10 +291,7 @@ pub async fn get_database_stats(
 }
 
 #[tauri::command]
-pub async fn clear_database(
-    state: State<'_, DbState>,
-    user_id: String,
-) -> Result<(), String> {
+pub async fn clear_database(state: State<'_, DbState>, user_id: String) -> Result<(), String> {
     let mut conn = state
         .0
         .lock()

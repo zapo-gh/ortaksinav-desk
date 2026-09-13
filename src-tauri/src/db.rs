@@ -21,14 +21,29 @@ pub fn init_db(path: &PathBuf) -> Result<Connection> {
     let conn = Connection::open(path)?;
     conn.execute_batch("PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;")?;
     create_schema(&conn)?;
-    
+
     // Güvenli migration kontrolleri (var olan tablolara eksik kolon eklemesi)
-    let _ = conn.execute("ALTER TABLE plans ADD COLUMN isArchived INTEGER DEFAULT 0", []);
+    let _ = conn.execute(
+        "ALTER TABLE plans ADD COLUMN isArchived INTEGER DEFAULT 0",
+        [],
+    );
     let _ = conn.execute("ALTER TABLE plans ADD COLUMN archiveMetadata TEXT", []);
-    let _ = conn.execute("ALTER TABLE plans ADD COLUMN userId TEXT NOT NULL DEFAULT ''", []);
-    let _ = conn.execute("ALTER TABLE students ADD COLUMN userId TEXT NOT NULL DEFAULT ''", []);
-    let _ = conn.execute("ALTER TABLE salons ADD COLUMN userId TEXT NOT NULL DEFAULT ''", []);
-    let _ = conn.execute("ALTER TABLE settings ADD COLUMN userId TEXT NOT NULL DEFAULT ''", []);
+    let _ = conn.execute(
+        "ALTER TABLE plans ADD COLUMN userId TEXT NOT NULL DEFAULT ''",
+        [],
+    );
+    let _ = conn.execute(
+        "ALTER TABLE students ADD COLUMN userId TEXT NOT NULL DEFAULT ''",
+        [],
+    );
+    let _ = conn.execute(
+        "ALTER TABLE salons ADD COLUMN userId TEXT NOT NULL DEFAULT ''",
+        [],
+    );
+    let _ = conn.execute(
+        "ALTER TABLE settings ADD COLUMN userId TEXT NOT NULL DEFAULT ''",
+        [],
+    );
 
     Ok(conn)
 }

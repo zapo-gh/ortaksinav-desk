@@ -49,8 +49,8 @@ pub async fn save_salons(
                 })
                 .unwrap_or_else(|| format!("salon-{idx}"));
 
-            let data_str = serde_json::to_string(salon)
-                .map_err(|e| format!("JSON dönüşüm hatası: {e}"))?;
+            let data_str =
+                serde_json::to_string(salon).map_err(|e| format!("JSON dönüşüm hatası: {e}"))?;
 
             stmt.execute(params![user_id, sid, data_str])
                 .map_err(|e| format!("Salon eklenemedi ({sid}): {e}"))?;

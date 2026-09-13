@@ -135,7 +135,8 @@ pub async fn save_plan(
         .and_then(|v| v.as_bool())
         .unwrap_or(false);
     let archive_metadata = plan_data.get("archiveMetadata");
-    let archive_metadata_str = archive_metadata.map(|m| serde_json::to_string(m).unwrap_or_default());
+    let archive_metadata_str =
+        archive_metadata.map(|m| serde_json::to_string(m).unwrap_or_default());
 
     let now = now_iso();
 
@@ -223,7 +224,8 @@ pub async fn update_plan(
         .and_then(|v| v.as_bool())
         .unwrap_or(false);
     let archive_metadata = plan_data.get("archiveMetadata");
-    let archive_metadata_str = archive_metadata.map(|m| serde_json::to_string(m).unwrap_or_default());
+    let archive_metadata_str =
+        archive_metadata.map(|m| serde_json::to_string(m).unwrap_or_default());
 
     let now = now_iso();
 
@@ -428,10 +430,7 @@ pub async fn restore_plan(
 }
 
 #[tauri::command]
-pub async fn clear_auto_plans(
-    state: State<'_, DbState>,
-    user_id: String,
-) -> Result<(), String> {
+pub async fn clear_auto_plans(state: State<'_, DbState>, user_id: String) -> Result<(), String> {
     let conn = state
         .0
         .lock()

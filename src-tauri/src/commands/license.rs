@@ -1,5 +1,5 @@
+use ed25519_dalek::{Signature, Verifier, VerifyingKey};
 use serde::{Deserialize, Serialize};
-use ed25519_dalek::{VerifyingKey, Signature, Verifier};
 
 #[derive(Serialize, Deserialize, Debug)]
 struct LicensePayload {
@@ -40,7 +40,7 @@ fn hex_to_bytes(hex: &str) -> Result<Vec<u8>, String> {
 pub fn verify_license(key: String, current_machine_id: Option<String>) -> VerifyResult {
     // 1. Remove dashes
     let raw = key.replace("-", "").to_uppercase();
-    
+
     // 2. Minimum length check: Signature is 128 hex chars (64 bytes). Payload must be at least some chars.
     if raw.len() <= 128 {
         return VerifyResult {
@@ -57,22 +57,26 @@ pub fn verify_license(key: String, current_machine_id: Option<String>) -> Verify
     // 4. Decode hex
     let payload_bytes = match hex_to_bytes(payload_hex) {
         Ok(b) => b,
-        Err(_) => return VerifyResult {
-            valid: false,
-            expired_info: None,
-            error: Some("Lisans verisi hatalı.".to_string()),
-        },
+        Err(_) => {
+            return VerifyResult {
+                valid: false,
+                expired_info: None,
+                error: Some("Lisans verisi hatalı.".to_string()),
+            }
+        }
     };
 
     let signature_bytes = match hex_to_bytes(signature_hex) {
         Ok(b) => b,
-        Err(_) => return VerifyResult {
-            valid: false,
-            expired_info: None,
-            error: Some("Lisans imzası hatalı.".to_string()),
-        },
+        Err(_) => {
+            return VerifyResult {
+                valid: false,
+                expired_info: None,
+                error: Some("Lisans imzası hatalı.".to_string()),
+            }
+        }
     };
-    
+
     if signature_bytes.len() != 64 {
         return VerifyResult {
             valid: false,
@@ -80,7 +84,7 @@ pub fn verify_license(key: String, current_machine_id: Option<String>) -> Verify
             error: Some("Geçersiz imza uzunluğu.".to_string()),
         };
     }
-    
+
     let mut sig_arr = [0u8; 64];
     sig_arr.copy_from_slice(&signature_bytes);
 
@@ -88,14 +92,16 @@ pub fn verify_license(key: String, current_machine_id: Option<String>) -> Verify
     let pub_key_bytes = hex_to_bytes(PUBLIC_KEY_HEX).unwrap();
     let mut pub_arr = [0u8; 32];
     pub_arr.copy_from_slice(&pub_key_bytes);
-    
+
     let public_key = match VerifyingKey::from_bytes(&pub_arr) {
         Ok(k) => k,
-        Err(_) => return VerifyResult {
-            valid: false,
-            expired_info: None,
-            error: Some("Sistem açık anahtar hatası.".to_string()),
-        },
+        Err(_) => {
+            return VerifyResult {
+                valid: false,
+                expired_info: None,
+                error: Some("Sistem açık anahtar hatası.".to_string()),
+            }
+        }
     };
 
     let signature = Signature::from_bytes(&sig_arr);
@@ -113,20 +119,24 @@ pub fn verify_license(key: String, current_machine_id: Option<String>) -> Verify
     // 6. Parse JSON payload
     let json_str = match String::from_utf8(payload_bytes) {
         Ok(s) => s,
-        Err(_) => return VerifyResult {
-            valid: false,
-            expired_info: None,
-            error: Some("Lisans verisi okunamadı.".to_string()),
-        },
+        Err(_) => {
+            return VerifyResult {
+                valid: false,
+                expired_info: None,
+                error: Some("Lisans verisi okunamadı.".to_string()),
+            }
+        }
     };
 
     let payload: LicensePayload = match serde_json::from_str(&json_str) {
         Ok(p) => p,
-        Err(_) => return VerifyResult {
-            valid: false,
-            expired_info: None,
-            error: Some("Lisans verisi formatı hatalı.".to_string()),
-        },
+        Err(_) => {
+            return VerifyResult {
+                valid: false,
+                expired_info: None,
+                error: Some("Lisans verisi formatı hatalı.".to_string()),
+            }
+        }
     };
 
     // 7. Check expiration
@@ -155,8 +165,13 @@ pub fn verify_license(key: String, current_machine_id: Option<String>) -> Verify
     let today = chrono::Local::now().naive_local().date();
 
     if today > expiry_date {
-        let expiry_formatted = format!("{}-{}-{}", &payload.e[0..4], &payload.e[4..6], &payload.e[6..8]);
-        
+        let expiry_formatted = format!(
+            "{}-{}-{}",
+            &payload.e[0..4],
+            &payload.e[4..6],
+            &payload.e[6..8]
+        );
+
         return VerifyResult {
             valid: false,
             expired_info: Some(ExpiredInfo {
@@ -172,7 +187,7 @@ pub fn verify_license(key: String, current_machine_id: Option<String>) -> Verify
     // If ANY of m, n, k are provided, they ALL must be verified (Non-universal license)
     // Universal license means m, n, k are ALL None.
     let is_universal = payload.m.is_none() && payload.n.is_none() && payload.k.is_none();
-    
+
     if !is_universal {
         if payload.m.is_none() || payload.n.is_none() || payload.k.is_none() {
             return VerifyResult {
@@ -181,7 +196,7 @@ pub fn verify_license(key: String, current_machine_id: Option<String>) -> Verify
                 error: Some("Lisans anahtarı eksik bilgi içeriyor. Makine ID, Okul İsmi ve Kurum Kodu zorunludur.".to_string()),
             };
         }
-        
+
         let m = payload.m.unwrap();
         if let Some(ref current) = current_machine_id {
             if m.to_uppercase() != current.to_uppercase() {
