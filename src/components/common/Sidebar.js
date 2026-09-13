@@ -43,9 +43,9 @@ import QuickSearchModal from '../QuickSearchModal';
 import LoginDialog from '../auth/LoginDialog';
 import LicenseInfoDialog from '../LicenseInfoDialog';
 import ContactFormDialog from '../ContactFormDialog';
-import {
   Email as EmailIcon
 } from '@mui/icons-material';
+import pkg from '../../../package.json';
 
 const drawerWidth = 260;
 const collapsedWidth = 72;
@@ -512,6 +512,13 @@ const Sidebar = ({ isMobile, mobileOpen, setMobileOpen, collapsed, setCollapsed,
             </ListItemIcon>
             {!collapsed && <ListItemText primary="Giriş Yap" primaryTypographyProps={{ fontSize: '0.875rem', fontWeight: 500 }} />}
           </ListItemButton>
+        )}
+
+        {/* App Version */}
+        {!collapsed && (
+          <Typography variant="caption" sx={{ color: '#64748b', textAlign: 'center', mt: 1, display: 'block', fontSize: '0.7rem' }}>
+            v{pkg.version}
+          </Typography>
         )}
       </Box>
     </Box>

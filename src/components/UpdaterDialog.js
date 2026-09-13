@@ -3,6 +3,7 @@ import {
   Dialog, DialogTitle, DialogContent, DialogActions, 
   Button, Typography, CircularProgress, Box 
 } from '@mui/material';
+import { toast } from 'sonner';
 import { check } from '@tauri-apps/plugin-updater';
 import { relaunch } from '@tauri-apps/plugin-process';
 import logger from '../utils/logger';
@@ -37,13 +38,12 @@ export default function UpdaterDialog() {
         setUpdate(updateResult);
         setOpen(true);
       } else if (isManual) {
-        // Güncelleme yoksa ve kullanıcı manuel olarak tetiklediyse bildir
-        window.dispatchEvent(new CustomEvent('app-toast', { detail: { message: 'Uygulamanız güncel.', severity: 'success' } }));
+        toast.success('Uygulamanız güncel.');
       }
     } catch (err) {
       logger.error('Güncelleme kontrolü başarısız:', err);
       if (isManual) {
-        window.dispatchEvent(new CustomEvent('app-toast', { detail: { message: 'Güncelleme kontrol edilemedi.', severity: 'error' } }));
+        toast.error('Güncelleme kontrol edilemedi.');
       }
     }
   };
