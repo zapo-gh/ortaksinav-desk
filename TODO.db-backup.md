@@ -1,4 +1,0 @@
-- [ ] src-tauri/Cargo.toml: base64 ekle
-- [ ] src-tauri/src/lib.rs: export_db_backup command ekle
-- [ ] src/components/KayitliPlanlar.js: “DB Yedeği Al” butonu ekle ve download uygula
-- [ ] Derleme/çalıştırma testi: butonla download oluşuyor mu?

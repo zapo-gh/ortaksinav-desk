@@ -222,15 +222,12 @@ const Sidebar = ({ isMobile, mobileOpen, setMobileOpen, collapsed, setCollapsed,
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, overflow: 'hidden' }}>
               <Box sx={{ 
                 width: 32, height: 32, 
-                borderRadius: '8px', 
-                bgcolor: '#2563eb', 
-                color: 'white', 
                 display: 'flex', 
                 alignItems: 'center', 
                 justifyContent: 'center',
                 flexShrink: 0
               }}>
-                <SchoolIcon sx={{ fontSize: 20 }} />
+                <img src="/logo.png" alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
               </Box>
               <Typography variant="subtitle1" fontWeight="bold" noWrap sx={{ letterSpacing: '-0.02em', color: '#ffffff' }}>
                 Ortak Sınav

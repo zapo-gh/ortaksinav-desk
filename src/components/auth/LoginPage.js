@@ -90,6 +90,7 @@ const LoginPage = ({ onSuccess }) => {
       >
         {/* Logo alanı */}
         <Box sx={{ bgcolor: 'primary.main', py: 3, px: 2, textAlign: 'center' }}>
+          <img src="/logo.png" alt="Logo" style={{ height: 64, marginBottom: 16 }} />
           <Typography variant="h5" sx={{ fontWeight: 700, color: 'white', mb: 0.5 }}>
             Ortak Sınav Yerleşim Programı
           </Typography>
