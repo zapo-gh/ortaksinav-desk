@@ -9,9 +9,9 @@ import {
 } from '@mui/icons-material';
 
 const getGenderColor = (ogrenci) => {
-  if (!ogrenci || !ogrenci.cinsiyet) return 'primary';
+  if (!ogrenci || !ogrenci.cinsiyet) return 'male';
   const cinsiyet = ogrenci.cinsiyet.toString().toLowerCase().trim();
-  return cinsiyet === 'kız' || cinsiyet === 'kadin' || cinsiyet === 'k' ? 'secondary' : 'primary';
+  return ['kız', 'kadin', 'k', 'kadın', 'f', 'bayan', 'female'].includes(cinsiyet) ? 'female' : 'male';
 };
 
 const TransferButton = ({

@@ -103,8 +103,7 @@ export const calculateGroupBasedDeskNumbers = (masalar) => {
  * Öğrenci cinsiyetine göre MUI renk döndürür
  */
 export const getGenderColor = (ogrenci) => {
-  if (!ogrenci) return 'primary';
-  const cinsiyet = (ogrenci.cinsiyet || '').toLowerCase();
-  if (cinsiyet === 'k' || cinsiyet === 'kız' || cinsiyet === 'kiz') return 'secondary';
-  return 'primary';
+  if (!ogrenci) return 'male';
+  const cinsiyet = (ogrenci.cinsiyet || '').toLowerCase().trim();
+  return ['kız', 'kadin', 'k', 'kadın', 'f', 'bayan', 'female'].includes(cinsiyet) ? 'female' : 'male';
 };

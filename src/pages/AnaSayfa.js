@@ -275,6 +275,11 @@ const AnaSayfaContent = React.memo(() => {
     readOnly
   );
 
+  const handleYuklemeDurumu = useCallback((durum) => {
+    if (durum) startLoading();
+    else stopLoading();
+  }, [startLoading, stopLoading]);
+
   const { handleYerlestirmeYap } = usePlacementAlgorithm(
     ogrenciler,
     salonlar,
@@ -285,7 +290,7 @@ const AnaSayfaContent = React.memo(() => {
     hataAyarla,
     setActivePlanMeta,
     showError,
-    yukleme
+    handleYuklemeDurumu
   );
 
   // Kaydetme fonksiyonları - useCallback ile optimize edildi

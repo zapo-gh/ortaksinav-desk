@@ -289,9 +289,9 @@ const PlanlamaYap = memo(({
           actions={
             <Button
               variant="contained"
-              startIcon={yukleme ? <CircularProgress size={18} sx={{ color: '#fff' }} /> : <AutoAwesomeIcon sx={{ fontSize: 18 }} />}
+              startIcon={<AutoAwesomeIcon sx={{ fontSize: 18 }} />}
               onClick={process.env.NODE_ENV === 'test' ? onYerlestirmeYap : handleYerlestirmeBaslat}
-              disabled={process.env.NODE_ENV === 'test' ? !!yukleme : (!kontroller?.yerleştirmeYapilabilir || yukleme)}
+              disabled={process.env.NODE_ENV === 'test' ? false : !kontroller?.yerleştirmeYapilabilir}
               sx={{
                 px: { xs: 2.5, sm: 3 },
                 py: 1,
@@ -315,7 +315,7 @@ const PlanlamaYap = memo(({
                 }
               }}
             >
-              {yukleme ? 'Yerleştirme Algoritması Çalışıyor...' : 'Yerleştirme Başlat'}
+              Yerleştirme Başlat
               </Button>
           }
       />

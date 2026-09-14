@@ -1,4 +1,4 @@
-﻿import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -47,10 +47,10 @@ const InterSalonTransfer = ({
 
   // Cinsiyet bazlı renk fonksiyonu
   const getGenderColor = (ogrenci) => {
-    if (!ogrenci || !ogrenci.cinsiyet) return 'primary';
+    if (!ogrenci || !ogrenci.cinsiyet) return 'male';
     
     const cinsiyet = ogrenci.cinsiyet.toString().toLowerCase().trim();
-    return cinsiyet === 'kız' || cinsiyet === 'kadin' || cinsiyet === 'k' ? 'secondary' : 'primary';
+    return ['kız', 'kadin', 'k', 'kadın', 'f', 'bayan', 'female'].includes(cinsiyet) ? 'female' : 'male';
   };
 
   // Hedef salonları filtrele (mevcut salon hariç)
@@ -171,20 +171,14 @@ const InterSalonTransfer = ({
           sx={{
             mb: 2,
             p: 1.5,
-            bgcolor:
-              getGenderColor(student) === 'secondary'
-                ? alpha(theme.palette.secondary.main, 0.06)
-                : alpha(theme.palette.primary.main, 0.06),
-            borderColor:
-              getGenderColor(student) === 'secondary'
-                ? alpha(theme.palette.secondary.main, 0.6)
-                : alpha(theme.palette.primary.main, 0.6)
+            bgcolor: alpha(theme.palette[getGenderColor(student)].main, 0.06),
+            borderColor: alpha(theme.palette[getGenderColor(student)].main, 0.6)
           }}
         >
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
             <Avatar
               sx={{
-                bgcolor: getGenderColor(student) === 'secondary' ? 'secondary.main' : 'primary.main',
+                bgcolor: `${getGenderColor(student)}.main`,
                 width: 34,
                 height: 34
               }}
@@ -197,7 +191,7 @@ const InterSalonTransfer = ({
                 variant="subtitle1"
                 noWrap
                 sx={{
-                  color: getGenderColor(student) === 'secondary' ? 'secondary.dark' : 'primary.dark',
+                  color: `${getGenderColor(student)}.dark`,
                   fontWeight: 800,
                   fontSize: '0.95rem'
                 }}
@@ -233,7 +227,7 @@ const InterSalonTransfer = ({
               const isFull = capacity.available <= 0;
 
               return (
-                <Grid item xs={12} sm={6} key={salon.id}>
+                <Grid item xs={6} sm={4} key={salon.id}>
                   <Paper
                     variant="outlined"
                     onClick={() => !isFull && setSelectedTargetSalon(salon)}
@@ -283,14 +277,11 @@ const InterSalonTransfer = ({
             sx={{
               mt: 2,
               p: 1,
-              bgcolor:
-                getGenderColor(student) === 'secondary'
-                  ? alpha(theme.palette.secondary.main, 0.04)
-                  : alpha(theme.palette.primary.main, 0.04)
+              bgcolor: alpha(theme.palette[getGenderColor(student)].main, 0.04)
             }}
           >
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <ArrowIcon sx={{ color: getGenderColor(student) === 'secondary' ? 'secondary.main' : 'primary.main' }} />
+              <ArrowIcon sx={{ color: `${getGenderColor(student)}.main` }} />
               <Typography variant="body2" sx={{ fontWeight: 700 }}>
                 {student.ad} {student.soyad} → {selectedTargetSalon.salonAdi}
               </Typography>

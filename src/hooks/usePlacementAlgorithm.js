@@ -128,12 +128,6 @@ export const usePlacementAlgorithm = (
         }
 
         try {
-            if (typeof yukleme === 'function') {
-                yukleme(true);
-            }
-            // Tarayıcının arayüzü çizmesine izin ver (non-blocking yield)
-            await new Promise(resolve => setTimeout(resolve, 25));
-
             planManager.invalidateCurrentPlan('yerlestirme_yap');
             setActivePlanMeta(null);
 
@@ -235,10 +229,6 @@ export const usePlacementAlgorithm = (
         } catch (error) {
             console.error('Yerleştirme hatası:', error);
             hataAyarla(`Yerleştirme sırasında bir hata oluştu: ${error.message}`);
-        } finally {
-            if (typeof yukleme === 'function') {
-                yukleme(false);
-            }
         }
     }, [
         readOnly,
