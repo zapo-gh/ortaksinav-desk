@@ -15,6 +15,7 @@ const PrintHeader = ({
         flexDirection: 'column', 
         alignItems: 'center', 
         justifyContent: 'center', 
+        pt: '10mm',
         mb: 2,
         width: '100%'
       } 

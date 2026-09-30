@@ -117,9 +117,9 @@ const SalonPlani = memo(({ sinif, ogrenciler, seciliOgrenciId, kalanOgrenciler =
     }
     setConfirmationOpen(false);
     setModalAcik(false);
-    setSeciliOgrenci(null);
-    setSeciliMasa(null);
-  }, [seciliMasa, seciliOgrenci, onOgrenciSec, showConfirm]);
+    // Modal kapanma animasyonu sürerken içeriğin değişmemesi için state'leri hemen sıfırlamıyoruz.
+    // Zaten yeni bir masaya tıklandığında bu değerler handleMasaClick içinde güncelleniyor.
+  }, [seciliMasa, seciliOgrenci, onOgrenciSec, showSuccess]);
 
   const handleCancelRemove = useCallback(() => {
     setConfirmationOpen(false);
@@ -372,7 +372,6 @@ const SalonPlani = memo(({ sinif, ogrenciler, seciliOgrenciId, kalanOgrenciler =
 
   const handleUnplacedModalClose = useCallback(() => {
     setUnplacedModalOpen(false);
-    setSeciliMasa(null);
   }, []);
 
 
@@ -380,8 +379,6 @@ const SalonPlani = memo(({ sinif, ogrenciler, seciliOgrenciId, kalanOgrenciler =
 
   const handleModalKapat = useCallback(() => {
     setModalAcik(false);
-    setSeciliOgrenci(null);
-    setSeciliMasa(null);
   }, []);
 
   // Transfer işlemleri
@@ -400,9 +397,6 @@ const SalonPlani = memo(({ sinif, ogrenciler, seciliOgrenciId, kalanOgrenciler =
 
     // Transfer akışından sonra geride kalan/yanlışlıkla açık kalan modal durumunu temizle
     setModalAcik(false);
-    setSeciliOgrenci(null);
-    setSeciliMasa(null);
-
     setUnplacedModalOpen(false);
   }, []);
 
