@@ -3,13 +3,13 @@ import { createTheme } from '@mui/material/styles';
 import SalonFormu from '../../components/SalonFormu';
 
 // Mock logger
-jest.mock('../../utils/logger', () => ({
+vi.mock('../../utils/logger', () => ({
   __esModule: true,
   default: {
-    info: jest.fn(),
-    error: jest.fn(),
-    warn: jest.fn(),
-    debug: jest.fn()
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn()
   }
 }));
 
@@ -33,14 +33,14 @@ const mockSalonlar = [
 
 describe('SalonFormu Component', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should render salon form with existing salons', () => {
     render(
       <SalonFormu
         salonlar={mockSalonlar}
-        onSalonlarDegistir={jest.fn()}
+        onSalonlarDegistir={vi.fn()}
       />
     );
 
@@ -52,7 +52,7 @@ describe('SalonFormu Component', () => {
     render(
       <SalonFormu
         salonlar={[]}
-        onSalonlarDegistir={jest.fn()}
+        onSalonlarDegistir={vi.fn()}
       />
     );
 
@@ -60,7 +60,7 @@ describe('SalonFormu Component', () => {
   });
 
   it('should add new salon when add button is clicked', async () => {
-    const mockOnSalonlarDegistir = jest.fn();
+    const mockOnSalonlarDegistir = vi.fn();
 
     render(
       <SalonFormu
@@ -80,7 +80,7 @@ describe('SalonFormu Component', () => {
     render(
       <SalonFormu
         salonlar={mockSalonlar}
-        onSalonlarDegistir={jest.fn()}
+        onSalonlarDegistir={vi.fn()}
       />
     );
 
@@ -91,7 +91,7 @@ describe('SalonFormu Component', () => {
     render(
       <SalonFormu
         salonlar={mockSalonlar}
-        onSalonlarDegistir={jest.fn()}
+        onSalonlarDegistir={vi.fn()}
       />
     );
 
@@ -100,7 +100,7 @@ describe('SalonFormu Component', () => {
   });
 
   it('should handle salon deletion', async () => {
-    const mockOnSalonlarDegistir = jest.fn();
+    const mockOnSalonlarDegistir = vi.fn();
 
     render(
       <SalonFormu
@@ -120,7 +120,7 @@ describe('SalonFormu Component', () => {
     render(
       <SalonFormu
         salonlar={mockSalonlar}
-        onSalonlarDegistir={jest.fn()}
+        onSalonlarDegistir={vi.fn()}
       />
     );
 
@@ -133,7 +133,7 @@ describe('SalonFormu Component', () => {
     render(
       <SalonFormu
         salonlar={mockSalonlar}
-        onSalonlarDegistir={jest.fn()}
+        onSalonlarDegistir={vi.fn()}
       />
     );
 

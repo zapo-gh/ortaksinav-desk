@@ -2,7 +2,7 @@ import { createColumnMapping, detectColumnPatterns, getColumnIndex } from '../..
 
 describe('Excel Column Patterns Utility', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('createColumnMapping', () => {

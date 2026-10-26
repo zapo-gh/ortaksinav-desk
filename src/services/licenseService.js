@@ -52,6 +52,16 @@ export async function getMachineId() {
   }
 }
 
+/** Eski sürümlerde üretilmiş, makineye bağlı lisansların geçerli kalması için. */
+async function getLegacyMachineId() {
+  try {
+    const { invoke } = await import('@tauri-apps/api/core');
+    return await invoke('get_legacy_machine_id');
+  } catch {
+    return '';
+  }
+}
+
 // ─── Lisans Doğrulama ────────────────────────────────────────────────────────
 
 /**
@@ -65,10 +75,12 @@ export async function validateLicenseKey(rawKey) {
     
     // Rust tarafına göndermeden önce mevcut makine ID'sini alıyoruz (opsiyonel)
     const current_machine_id = await getMachineId();
+    const legacy_machine_id = await getLegacyMachineId();
 
     const result = await invoke('verify_license', { 
       key: rawKey,
-      currentMachineId: current_machine_id ? current_machine_id.toUpperCase() : null
+      currentMachineId: current_machine_id ? current_machine_id.toUpperCase() : null,
+      legacyMachineId: legacy_machine_id ? legacy_machine_id.toUpperCase() : null
     });
 
     if (result.valid) {

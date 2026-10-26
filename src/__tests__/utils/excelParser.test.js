@@ -2,9 +2,9 @@ import { parseExcelFile } from '../../utils/excelParser';
 import { logger } from '../../utils/logger';
 
 // Mock xlsx module so dynamic import('xlsx') returns the mock
-const mockRead = jest.fn();
-const mockSheetToJson = jest.fn();
-jest.mock('xlsx', () => ({
+const mockRead = vi.fn();
+const mockSheetToJson = vi.fn();
+vi.mock('xlsx', () => ({
   __esModule: true,
   default: {
     read: (...args) => mockRead(...args),
@@ -15,27 +15,27 @@ jest.mock('xlsx', () => ({
 }));
 
 // Mock logger to avoid console output during tests
-jest.mock('../../utils/logger', () => ({
+vi.mock('../../utils/logger', () => ({
   __esModule: true,
   logger: {
-    info: jest.fn(),
-    error: jest.fn(),
-    warn: jest.fn(),
-    debug: jest.fn(),
-    log: jest.fn()
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn(),
+    log: vi.fn()
   },
   default: {
-    info: jest.fn(),
-    error: jest.fn(),
-    warn: jest.fn(),
-    debug: jest.fn(),
-    log: jest.fn()
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn(),
+    log: vi.fn()
   }
 }));
 
 describe('Excel Parser', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('parseExcelFile', () => {
@@ -138,10 +138,10 @@ describe('Excel Parser', () => {
     it('should handle file read errors', async () => {
       // Mock FileReader to throw error
       const originalFileReader = global.FileReader;
-      global.FileReader = jest.fn().mockImplementation(function() {
+      global.FileReader = vi.fn().mockImplementation(function() {
         this.onerror = null;
         this.onload = null;
-        this.readAsArrayBuffer = jest.fn(() => {
+        this.readAsArrayBuffer = vi.fn(() => {
           // Simulate error
           setTimeout(() => {
             if (this.onerror) {

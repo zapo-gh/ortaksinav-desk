@@ -1,20 +1,20 @@
 import { gelismisYerlestirme, getSinifSeviyesi, seedShuffle } from '../../algorithms/gelismisYerlestirmeAlgoritmasi';
 
 // Mock logger - must be before imports that use logger
-jest.mock('../../utils/logger', () => ({
+vi.mock('../../utils/logger', () => ({
   __esModule: true,
   default: {
-    info: jest.fn(() => {}),
-    error: jest.fn(() => {}),
-    warn: jest.fn(() => {}),
-    debug: jest.fn(() => {}),
-    log: jest.fn(() => {})
+    info: vi.fn(() => {}),
+    error: vi.fn(() => {}),
+    warn: vi.fn(() => {}),
+    debug: vi.fn(() => {}),
+    log: vi.fn(() => {})
   }
 }));
 
 describe('Gelişmiş Yerleştirme Algoritması', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('getSinifSeviyesi', () => {

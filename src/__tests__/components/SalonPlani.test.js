@@ -3,13 +3,13 @@ import { createTheme } from '@mui/material/styles';
 import SalonPlani from '../../components/SalonPlani';
 
 // Mock logger
-jest.mock('../../utils/logger', () => ({
+vi.mock('../../utils/logger', () => ({
   __esModule: true,
   default: {
-    info: jest.fn(),
-    error: jest.fn(),
-    warn: jest.fn(),
-    debug: jest.fn()
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn()
   }
 }));
 
@@ -39,7 +39,7 @@ const mockOgrenciler = [
 
 describe('SalonPlani Component', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should render salon plan with correct title', () => {
@@ -47,9 +47,9 @@ describe('SalonPlani Component', () => {
       <SalonPlani
         sinif={mockSinif}
         ogrenciler={mockOgrenciler}
-        onOgrenciSec={jest.fn()}
+        onOgrenciSec={vi.fn()}
         tumSalonlar={[]}
-        onSalonDegistir={jest.fn()}
+        onSalonDegistir={vi.fn()}
       />
     );
 
@@ -61,9 +61,9 @@ describe('SalonPlani Component', () => {
       <SalonPlani
         sinif={mockSinif}
         ogrenciler={mockOgrenciler}
-        onOgrenciSec={jest.fn()}
+        onOgrenciSec={vi.fn()}
         tumSalonlar={[]}
-        onSalonDegistir={jest.fn()}
+        onSalonDegistir={vi.fn()}
       />
     );
 
@@ -77,9 +77,9 @@ describe('SalonPlani Component', () => {
       <SalonPlani
         sinif={mockSinif}
         ogrenciler={mockOgrenciler}
-        onOgrenciSec={jest.fn()}
+        onOgrenciSec={vi.fn()}
         tumSalonlar={[]}
-        onSalonDegistir={jest.fn()}
+        onSalonDegistir={vi.fn()}
       />
     );
 
@@ -88,7 +88,7 @@ describe('SalonPlani Component', () => {
   });
 
   it('should handle seat click for student details', async () => {
-    const mockOnOgrenciSec = jest.fn();
+    const mockOnOgrenciSec = vi.fn();
 
     render(
       <SalonPlani
@@ -96,7 +96,7 @@ describe('SalonPlani Component', () => {
         ogrenciler={mockOgrenciler}
         onOgrenciSec={mockOnOgrenciSec}
         tumSalonlar={[]}
-        onSalonDegistir={jest.fn()}
+        onSalonDegistir={vi.fn()}
       />
     );
 
@@ -112,9 +112,9 @@ describe('SalonPlani Component', () => {
       <SalonPlani
         sinif={mockSinif}
         ogrenciler={mockOgrenciler}
-        onOgrenciSec={jest.fn()}
+        onOgrenciSec={vi.fn()}
         tumSalonlar={[]}
-        onSalonDegistir={jest.fn()}
+        onSalonDegistir={vi.fn()}
       />
     );
 
@@ -124,7 +124,7 @@ describe('SalonPlani Component', () => {
   });
 
   it('should handle drag and drop functionality', async () => {
-    const mockOnOgrenciSec = jest.fn();
+    const mockOnOgrenciSec = vi.fn();
 
     render(
       <SalonPlani
@@ -132,7 +132,7 @@ describe('SalonPlani Component', () => {
         ogrenciler={mockOgrenciler}
         onOgrenciSec={mockOnOgrenciSec}
         tumSalonlar={[]}
-        onSalonDegistir={jest.fn()}
+        onSalonDegistir={vi.fn()}
       />
     );
 
@@ -150,9 +150,9 @@ describe('SalonPlani Component', () => {
       <SalonPlani
         sinif={mockSinif}
         ogrenciler={mockOgrenciler}
-        onOgrenciSec={jest.fn()}
+        onOgrenciSec={vi.fn()}
         tumSalonlar={multipleSalons}
-        onSalonDegistir={jest.fn()}
+        onSalonDegistir={vi.fn()}
       />
     );
 
@@ -166,9 +166,9 @@ describe('SalonPlani Component', () => {
       <SalonPlani
         sinif={null}
         ogrenciler={[]}
-        onOgrenciSec={jest.fn()}
+        onOgrenciSec={vi.fn()}
         tumSalonlar={[]}
-        onSalonDegistir={jest.fn()}
+        onSalonDegistir={vi.fn()}
       />
     );
 
@@ -180,9 +180,9 @@ describe('SalonPlani Component', () => {
       <SalonPlani
         sinif={mockSinif}
         ogrenciler={mockOgrenciler}
-        onOgrenciSec={jest.fn()}
+        onOgrenciSec={vi.fn()}
         tumSalonlar={[]}
-        onSalonDegistir={jest.fn()}
+        onSalonDegistir={vi.fn()}
       />
     );
 

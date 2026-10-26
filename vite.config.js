@@ -14,6 +14,13 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: ['./src/setupTests.js'],
+    include: ['src/**/*.test.js'],
+    css: false,
+  },
   server: {
     port: 3000,
     strictPort: true,
@@ -43,7 +50,8 @@ export default defineConfig({
   clearScreen: false,
   envPrefix: ['VITE_', 'REACT_APP_'],
   // CRA uyumluluğu: process.env.REACT_APP_* → import.meta.env.REACT_APP_*
-  define: {
+  // Vitest bu değerleri global olarak eval ettiği için 'import.meta' orada hata verir.
+  define: process.env.VITEST ? {} : {
     'process.env.REACT_APP_DEBUG': 'import.meta.env.REACT_APP_DEBUG',
     'process.env.REACT_APP_API_URL': 'import.meta.env.REACT_APP_API_URL',
     'process.env.REACT_APP_WS_URL': 'import.meta.env.REACT_APP_WS_URL',

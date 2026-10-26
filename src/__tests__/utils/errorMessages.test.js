@@ -2,7 +2,7 @@ import { formatError, getErrorMessage } from '../../utils/errorMessages';
 
 describe('Error Messages Utility', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('formatError', () => {

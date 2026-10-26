@@ -19,30 +19,30 @@ const Wrapper = ({ children }) => (
 );
 
 // Mock logger
-jest.mock('../../utils/logger', () => ({
+vi.mock('../../utils/logger', () => ({
   __esModule: true,
   default: {
-    info: jest.fn(() => { }),
-    error: jest.fn(() => { }),
-    warn: jest.fn(() => { }),
-    debug: jest.fn(() => { }),
-    log: jest.fn(() => { })
+    info: vi.fn(() => { }),
+    error: vi.fn(() => { }),
+    warn: vi.fn(() => { }),
+    debug: vi.fn(() => { }),
+    log: vi.fn(() => { })
   }
 }));
 
 // Mock database
-jest.mock('../../database', () => ({
+vi.mock('../../database', () => ({
   __esModule: true,
   default: {
-    getAllStudents: jest.fn(() => Promise.resolve([])),
-    getSettings: jest.fn(() => Promise.resolve(null)),
-    getAllSalons: jest.fn(() => Promise.resolve([])),
-    getLatestPlan: jest.fn(() => Promise.resolve(null)),
-    saveStudents: jest.fn(() => Promise.resolve()),
-    saveSettings: jest.fn(() => Promise.resolve()),
-    saveSalons: jest.fn(() => Promise.resolve()),
-    savePlan: jest.fn(() => Promise.resolve()),
-    setDatabaseType: jest.fn(() => { })
+    getAllStudents: vi.fn(() => Promise.resolve([])),
+    getSettings: vi.fn(() => Promise.resolve(null)),
+    getAllSalons: vi.fn(() => Promise.resolve([])),
+    getLatestPlan: vi.fn(() => Promise.resolve(null)),
+    saveStudents: vi.fn(() => Promise.resolve()),
+    saveSettings: vi.fn(() => Promise.resolve()),
+    saveSalons: vi.fn(() => Promise.resolve()),
+    savePlan: vi.fn(() => Promise.resolve()),
+    setDatabaseType: vi.fn(() => { })
   }
 }));
 
@@ -51,7 +51,7 @@ import * as useExamData from '../../hooks/queries/useExamData';
 // ...
 
 // Mock React Query hooks
-jest.mock('../../hooks/queries/useExamData');
+vi.mock('../../hooks/queries/useExamData');
 
 // Test component to access context
 const TestComponent = ({ onContextReady }) => {
@@ -114,7 +114,7 @@ describe('ExamContext', () => {
   beforeEach(() => {
     // Clear localStorage before each test
     localStorage.clear();
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 
     // Reset Zustand store
     act(() => {
@@ -662,7 +662,7 @@ describe('ExamContext', () => {
     it('should handle localStorage errors gracefully', async () => {
       // Mock localStorage to throw an error
       const originalGetItem = localStorage.getItem;
-      localStorage.getItem = jest.fn(() => {
+      localStorage.getItem = vi.fn(() => {
         throw new Error('LocalStorage error');
       });
 

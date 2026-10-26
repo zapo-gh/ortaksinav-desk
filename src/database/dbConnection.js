@@ -1,53 +1,28 @@
-import Database from '@tauri-apps/plugin-sql';
-
-const DB_URL = 'sqlite:kelebek.db';
-let _dbInstance = null;
-let _connectionPromise = null;
+import { invoke } from '@tauri-apps/api/core';
 
 /**
- * Singleton Database Manager
- * Uygulama genelinde tek bir SQLite bağlantısı sağlar.
+ * SQLite erişim katmanı.
+ * Tüm sorgular Rust tarafındaki TEK bağlantı üzerinden (sql_select / sql_execute) çalışır;
+ * böylece plan/öğrenci komutlarıyla aynı dosyaya ikinci bir bağlantı açılmaz.
+ * Dönen nesne eski plugin API'siyle (select/execute/close) uyumludur.
  */
+const sharedDb = {
+  select: (sql, params = []) => invoke('sql_select', { sql, params }),
+  execute: (sql, params = []) => invoke('sql_execute', { sql, params }),
+  // Bağlantı Rust tarafında yönetilir; JS'den kapatılacak bir şey yok.
+  close: async () => true,
+};
+
 export async function getSharedDb() {
-  if (_dbInstance) return _dbInstance;
-  
-  if (_connectionPromise) return _connectionPromise;
-
-  _connectionPromise = (async () => {
-    try {
-      console.time('⏱ Database.load');
-      _dbInstance = await Database.load(DB_URL);
-      console.timeEnd('⏱ Database.load');
-      console.log('✅ Merkezi SQLite bağlantısı kuruldu');
-      return _dbInstance;
-    } catch (error) {
-      _connectionPromise = null;
-      console.error('❌ SQLite bağlantı hatası:', error);
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('app-error', { detail: 'Veritabanı bağlantısı kurulamadı: ' + error.message }));
-      }
-      throw error;
-    }
-  })();
-
-  return _connectionPromise;
+  return sharedDb;
 }
 
 export async function closeSharedDb() {
-  if (_dbInstance) {
-    await _dbInstance.close();
-    _dbInstance = null;
-    _connectionPromise = null;
-  }
+  return true;
 }
 
 /**
- * SQLite bağlantısını (cache) resetler.
- * DB dosyası değiştiğinde çağrılmalıdır.
+ * Geri yüklemeden sonra çağrılır. Bağlantıyı Rust (import_db_backup) yeniden açtığı için
+ * JS tarafında sıfırlanacak önbellek yoktur; eski çağrılarla uyumluluk için korunur.
  */
-export function resetDbConnection() {
-  // Singleton instance'ı sıfırla
-  _dbInstance = null;
-  _connectionPromise = null;
-  console.log('🔄 Database bağlantısı sıfırlandı');
-}
+export function resetDbConnection() {}

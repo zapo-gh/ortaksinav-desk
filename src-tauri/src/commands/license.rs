@@ -37,7 +37,11 @@ fn hex_to_bytes(hex: &str) -> Result<Vec<u8>, String> {
 }
 
 #[tauri::command]
-pub fn verify_license(key: String, current_machine_id: Option<String>) -> VerifyResult {
+pub fn verify_license(
+    key: String,
+    current_machine_id: Option<String>,
+    legacy_machine_id: Option<String>,
+) -> VerifyResult {
     // 1. Remove dashes
     let raw = key.replace("-", "").to_uppercase();
 
@@ -197,9 +201,12 @@ pub fn verify_license(key: String, current_machine_id: Option<String>) -> Verify
             };
         }
 
-        let m = payload.m.unwrap();
+        let m = payload.m.unwrap().to_uppercase();
         if let Some(ref current) = current_machine_id {
-            if m.to_uppercase() != current.to_uppercase() {
+            let matches_legacy = legacy_machine_id
+                .as_ref()
+                .map_or(false, |legacy| legacy.to_uppercase() == m);
+            if m != current.to_uppercase() && !matches_legacy {
                 return VerifyResult {
                     valid: false,
                     expired_info: None,

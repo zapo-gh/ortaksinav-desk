@@ -19,7 +19,9 @@ pub fn get_db_path(app: &tauri::AppHandle) -> PathBuf {
 
 pub fn init_db(path: &PathBuf) -> Result<Connection> {
     let conn = Connection::open(path)?;
-    conn.execute_batch("PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;")?;
+    conn.execute_batch(
+        "PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; PRAGMA busy_timeout=5000;",
+    )?;
     create_schema(&conn)?;
 
     // Güvenli migration kontrolleri (var olan tablolara eksik kolon eklemesi)
@@ -103,6 +105,23 @@ CREATE TABLE IF NOT EXISTS temp_data (
     value TEXT,
     type TEXT DEFAULT 'json',
     expiresAt TEXT
+);
+
+CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT UNIQUE NOT NULL,
+    display_name TEXT,
+    password_hash TEXT NOT NULL,
+    salt TEXT NOT NULL,
+    created_at TEXT DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS sessions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    username TEXT NOT NULL,
+    display_name TEXT,
+    permanent INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE INDEX IF NOT EXISTS idx_students_userId ON students(userId);

@@ -1,18 +1,18 @@
 import planManager from '../../utils/planManager';
-import db from '../../database/database';
+import db from '../../database/index';
 
 // Mock database
 const mockPlansStorage = [];
 let mockPlanIdCounter = 1;
 
-jest.mock('../../database/database', () => {
+vi.mock('../../database/index', () => {
   return {
     __esModule: true,
     default: {
-      savePlan: jest.fn(),
-      getPlan: jest.fn(),
-      getAllPlans: jest.fn(),
-      deletePlan: jest.fn(),
+      savePlan: vi.fn(),
+      getPlan: vi.fn(),
+      getAllPlans: vi.fn(),
+      deletePlan: vi.fn(),
       // Expose storage for testing
       _getStorage: () => mockPlansStorage,
       _resetStorage: () => {

@@ -6,38 +6,50 @@ import '@testing-library/jest-dom';
 
 
 
-jest.mock('@dnd-kit/core', () => ({
+vi.mock('@dnd-kit/core', async (importOriginal) => ({
+  ...(await importOriginal()),
   DndContext: ({ children }) => children,
   useDraggable: () => ({
     attributes: {},
     listeners: {},
-    setNodeRef: jest.fn(),
+    setNodeRef: vi.fn(),
   }),
   useDroppable: () => ({
-    setNodeRef: jest.fn(),
+    setNodeRef: vi.fn(),
   }),
 }));
 
-jest.mock('@dnd-kit/sortable', () => ({
+vi.mock('@dnd-kit/sortable', async (importOriginal) => ({
+  ...(await importOriginal()),
   SortableContext: ({ children }) => children,
   useSortable: () => ({
     attributes: {},
     listeners: {},
-    setNodeRef: jest.fn(),
+    setNodeRef: vi.fn(),
   }),
 }));
 
+// Tauri IPC testlerde yok; her komut boş sonuç döndürür.
+vi.mock('@tauri-apps/api/core', () => ({
+  invoke: vi.fn(async () => null),
+}));
+
+// jsdom scrollIntoView'u uygulamaz.
+if (!window.HTMLElement.prototype.scrollIntoView) {
+  window.HTMLElement.prototype.scrollIntoView = () => {};
+}
+
 
 beforeEach(() => {
-  const matchMediaMock = jest.fn(query => ({
+  const matchMediaMock = vi.fn(query => ({
     matches: false,
     media: query,
     onchange: null,
-    addListener: jest.fn(), // deprecated
-    removeListener: jest.fn(), // deprecated
-    addEventListener: jest.fn(),
-    removeEventListener: jest.fn(),
-    dispatchEvent: jest.fn(),
+    addListener: vi.fn(), // deprecated
+    removeListener: vi.fn(), // deprecated
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
   }));
 
   Object.defineProperty(window, 'matchMedia', {

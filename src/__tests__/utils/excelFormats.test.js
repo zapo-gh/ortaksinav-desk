@@ -2,7 +2,7 @@ import { detectExcelFormat, getFormatPatterns } from '../../utils/excelFormats';
 
 describe('Excel Formats Utility', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('detectExcelFormat', () => {

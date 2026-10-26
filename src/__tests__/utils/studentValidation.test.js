@@ -1,17 +1,14 @@
 import { validateStudentList, validateStudent } from '../../utils/studentValidation';
 
 // Mock logger to avoid undefined errors
-jest.mock('../../utils/logger', () => ({
-  error: jest.fn(),
-  warn: jest.fn(),
-  info: jest.fn(),
-  debug: jest.fn(),
-  log: jest.fn()
-}));
+vi.mock('../../utils/logger', () => {
+  const logger = { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn(), log: vi.fn() };
+  return { ...logger, default: logger };
+});
 
 describe('Student Validation Utility', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   const validStudent = {
