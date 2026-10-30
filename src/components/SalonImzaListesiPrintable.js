@@ -9,9 +9,11 @@ import {
   TableHead,
   TableRow,
   Paper,
-  useTheme
+  useTheme,
+  GlobalStyles
 } from '@mui/material';
 import EmptyState from './common/EmptyState';
+import PrintHeader from './common/PrintHeader';
 import { BorderColor as BorderColorIcon } from '@mui/icons-material';
 
 import { calculateDeskNumberForMasa } from '../utils/placementHelper';
@@ -21,7 +23,7 @@ import { calculateDeskNumberForMasa } from '../utils/placementHelper';
  * Her salon için masa numarasına göre sıralanmış öğrenci listesi
  * Sınıf, ders ve imza bölümleri içerir
  */
-const SalonImzaListesiPrintable = forwardRef(({ yerlestirmeSonucu, ayarlar = {}, tumOgrenciler = [] }, ref) => {
+const SalonImzaListesiPrintable = React.memo(forwardRef(({ yerlestirmeSonucu, ayarlar = {}, tumOgrenciler = [] }, ref) => {
   const theme = useTheme();
   // calculateDeskNumberForMasa artık dışarıdan alınıyor (import edildi)
   // Wrapper fonksiyon: Sadece salon parametresini kolaylaştırmak için
@@ -117,127 +119,142 @@ const SalonImzaListesiPrintable = forwardRef(({ yerlestirmeSonucu, ayarlar = {},
   };
 
   return (
-    <Box
-      ref={ref}
-      sx={{
-        p: 2,
-        minHeight: '100vh',
-        width: '210mm',
-        margin: '0 auto',
-        backgroundColor: 'white',
-        '@media print': {
-          p: 0,
-          m: 0,
-          fontSize: '12px',
-          backgroundColor: 'white'
-        }
-      }}
-    >
-      {/* Tüm salonlar için ayrı sayfalar */}
-      {
-        tumSalonlar.map((salon, salonIndex) => {
-          const sortedStudents = getSortedStudents(salon);
+    <>
+      <GlobalStyles
+        styles={{
+          '@media print': {
+            html: { background: '#ffffff !important' },
+            body: { background: '#ffffff !important', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' },
+            thead: { display: 'table-header-group !important' },
+            tr: { pageBreakInside: 'avoid !important', breakInside: 'avoid !important' }
+          },
+        }}
+      />
+      <Box
+        ref={ref}
+        sx={{
+          p: { xs: 2, sm: 3 },
+          minHeight: '100vh',
+          width: '100%',
+          maxWidth: '100%',
+          margin: '0 auto',
+          backgroundColor: 'white',
+          boxSizing: 'border-box',
+          '@media print': {
+            p: 0,
+            m: '0 auto',
+            width: '100%',
+            maxWidth: '100%',
+            backgroundColor: 'white',
+            boxSizing: 'border-box'
+          }
+        }}
+      >
+        {/* Tüm salonlar için ayrı sayfalar */}
+        {
+          tumSalonlar.map((salon, salonIndex) => {
+            const sortedStudents = getSortedStudents(salon);
+            const salonDersi = (ayarlar.dersler && ayarlar.dersler.length > 0)
+              ? ayarlar.dersler[0].ad || 'Ortak Sınav'
+              : 'Ortak Sınav';
+            const salonAdi = salon.salonAdi || salon.ad || `Salon ${salonIndex + 1}`;
+            const sinavBasligi = `${salonAdi} - Sınav Yoklama ve İmza Listesi (${salonDersi} - ${ayarlar.donem || '1'}. Dönem ${ayarlar.sinavDonemi || '1'}. Ortak Sınavı)`;
 
-          return (
-            <Box
-              key={salon.salonId || salonIndex}
-              sx={{
-                pageBreakBefore: salonIndex > 0 ? 'always' : 'auto',
-                backgroundColor: 'white',
-                '@media print': {
+            return (
+              <Box
+                key={salon.salonId || salonIndex}
+                sx={{
+                  mb: 1.5,
                   pageBreakBefore: salonIndex > 0 ? 'always' : 'auto',
-                  breakBefore: salonIndex > 0 ? 'page' : 'auto',
-                  pt: 0,
-                  mt: 0,
-                  backgroundColor: 'white'
-                }
-              }}
-            >
-              {/* Üst Boşluk */}
-              <Box sx={{
-                height: '10px',
-                '@media print': {
-                  height: '15px'
-                }
-              }} />
-
-              {/* Salon Başlığı */}
-              <Box sx={{
-                textAlign: 'center',
-                mb: 2,
-                '@media print': {
-                  mt: 0,
-                  mb: 1,
-                  pt: 0,
-                  pb: 0
-                }
-              }}>
-                <Typography variant="body1" component="h2" sx={{ fontWeight: 700, mb: 0.2, lineHeight: 1.3, fontSize: '1.1rem' }}>
-                  {ayarlar.okulAdi}
-                </Typography>
-                <Typography variant="body2" sx={{ mb: 0.2, lineHeight: 1.3, fontSize: '1.0rem' }}>
-                  {(() => {
-                    const yil = ayarlar.egitimYili ? `${ayarlar.egitimYili} Eğitim Öğretim Yılı` : '';
-                    const dersAdi = ayarlar.dersler && ayarlar.dersler.length > 0
-                      ? ayarlar.dersler[0].ad || 'Ders Adı'
-                      : 'Ders Adı';
-                    const sinav = `${dersAdi} ${ayarlar.donem || '1'}. Dönem ${ayarlar.sinavDonemi || '1'}. Ortak Sınavı`;
-                    return yil ? `${yil} - ${sinav}` : sinav;
-                  })()}
-                </Typography>
-                <Typography variant="body1" component="h3" sx={{ fontWeight: 700, color: 'primary.main', lineHeight: 1.3, fontSize: '1.1rem' }}>
-                  {salon.salonAdi || salon.ad || `Salon ${salonIndex + 1}`} - İmza Listesi
-                </Typography>
-                <Typography variant="body2" sx={{ mb: 0.2, lineHeight: 1.3, fontSize: '0.9rem', color: 'text.secondary' }}>
-                  Sınav Tarihi: {ayarlar.sinavTarihi ? new Date(ayarlar.sinavTarihi).toLocaleDateString('tr-TR') : new Date().toLocaleDateString('tr-TR')} • Sınav Saati: {ayarlar.sinavSaati || '09:00'}
-                </Typography>
-              </Box>
-
-              {/* Salon İmza Listesi Tablosu */}
-              <TableContainer component={Paper} sx={{
-                mb: 1,
-                width: '100%',
-                maxWidth: '100%',
-                margin: '0 auto',
-                backgroundColor: 'white',
-                '@media print': {
-                  width: '98%', // 100% yerine %98 yaparak sağ çizgiyi kurtar
-                  maxWidth: '98%',
-                  margin: '0 auto',
-                  backgroundColor: 'white'
-                }
-              }}>
-                <Table size="small" sx={(theme) => ({
-                  border: `1px solid ${theme.palette.divider}`,
-                  '& .MuiTableCell-root': {
-                    padding: '1px 4px',
-                    fontSize: '0.8rem',
-                    lineHeight: 1.2,
-                    border: `1px solid ${theme.palette.divider}`,
-                    textAlign: 'center'
-                  },
-                  '& .MuiTableHead-root .MuiTableCell-root': {
-                    fontSize: '0.7rem',
-                  },
-                  '& .MuiTableRow-root': {
-                    height: '26px'
-                  },
-                  '& .MuiTableCell-root:nth-of-type(2)': {
-                    textAlign: 'left !important'
+                  backgroundColor: 'white',
+                  boxSizing: 'border-box',
+                  '@media print': {
+                    pageBreakBefore: salonIndex > 0 ? 'always' : 'auto',
+                    breakBefore: salonIndex > 0 ? 'page' : 'auto',
+                    boxSizing: 'border-box !important',
+                    width: '100% !important',
+                    maxWidth: '100% !important',
+                    padding: '10mm 14mm 10mm 14mm !important',
+                    backgroundColor: 'white'
                   }
-                })}>
-                  <TableHead>
-                    <TableRow sx={{ backgroundColor: 'grey.300' }}>
-                      <TableCell sx={{ backgroundColor: 'grey.300', color: 'black', fontWeight: 700, width: '8%', textAlign: 'center' }}><strong>Masa No</strong></TableCell>
-                      <TableCell sx={{ backgroundColor: 'grey.300', color: 'black', fontWeight: 700, width: '25%', textAlign: 'center' }}><strong>Ad Soyad</strong></TableCell>
-                      <TableCell sx={{ backgroundColor: 'grey.300', color: 'black', fontWeight: 700, width: '7%', textAlign: 'center' }}><strong>Sınıf</strong></TableCell>
-                      <TableCell sx={{ backgroundColor: 'grey.300', color: 'black', fontWeight: 700, width: '12%', textAlign: 'center' }}><strong>Dal</strong></TableCell>
-                      <TableCell sx={{ backgroundColor: 'grey.300', color: 'black', fontWeight: 700, width: '30%', textAlign: 'center' }}><strong>Ders</strong></TableCell>
-                      <TableCell sx={{ backgroundColor: 'grey.300', color: 'black', fontWeight: 700, width: '18%', textAlign: 'center' }}><strong>Öğrenci Durumu</strong></TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {sortedStudents.map((ogrenci, index) => {
+                }}
+              >
+                {/* Salon Başlığı */}
+                <PrintHeader 
+                  compact={true}
+                  schoolName={ayarlar.okulAdi || 'T.C. MİLLİ EĞİTİM BAKANLIĞI'}
+                  subTitle={`${ayarlar.egitimYili || '2025-2026'} Eğitim Öğretim Yılı`}
+                  documentTitle={sinavBasligi}
+                  date={`${ayarlar.sinavTarihi ? new Date(ayarlar.sinavTarihi).toLocaleDateString('tr-TR') : new Date().toLocaleDateString('tr-TR')} ${ayarlar.sinavSaati ? `- ${ayarlar.sinavSaati}` : ''}`}
+                />
+
+                {/* Salon İmza Listesi Tablosu */}
+                <TableContainer component={Paper} elevation={0} sx={{
+                  mb: 1.5,
+                  width: '100%',
+                  maxWidth: '100%',
+                  margin: '0 auto',
+                  backgroundColor: 'white',
+                  boxShadow: 'none',
+                  borderRadius: '2px',
+                  border: '1.5px solid #000',
+                  '@media print': {
+                    mb: 1,
+                    width: '100%',
+                    maxWidth: '100%',
+                    margin: '0 auto',
+                    backgroundColor: 'white',
+                    boxShadow: 'none',
+                    borderRadius: '2px',
+                    border: '1.5px solid #000'
+                  }
+                }}>
+                  <Table size="small" sx={{
+                    width: '100%',
+                    borderCollapse: 'collapse',
+                    '& .MuiTableCell-root': {
+                      padding: '2px 6px',
+                      fontSize: '8.5pt',
+                      lineHeight: 1.2,
+                      border: '1px solid #cbd5e1',
+                      textAlign: 'center',
+                      color: '#000',
+                      fontFamily: '"Times New Roman", Times, serif'
+                    },
+                    '& .MuiTableHead-root': {
+                      display: 'table-header-group !important'
+                    },
+                    '& .MuiTableHead-root .MuiTableCell-root': {
+                      fontSize: '8.5pt',
+                      fontWeight: 800,
+                      backgroundColor: '#e2e8f0 !important',
+                      color: '#000 !important',
+                      border: '1.5px solid #000',
+                      py: 0.4,
+                      letterSpacing: '0.4px',
+                      textTransform: 'uppercase'
+                    },
+                    '& .MuiTableRow-root': {
+                      height: '22px',
+                      pageBreakInside: 'avoid !important',
+                      breakInside: 'avoid !important'
+                    },
+                    '& .MuiTableRow-root:nth-of-type(even)': {
+                      backgroundColor: '#f8fafc'
+                    }
+                  }}>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell sx={{ width: '8%', textAlign: 'center' }}><strong>Masa No</strong></TableCell>
+                        <TableCell sx={{ width: '26%', textAlign: 'left', pl: 1.5 }}><strong>Ad Soyad</strong></TableCell>
+                        <TableCell sx={{ width: '9%', textAlign: 'center' }}><strong>Sınıf</strong></TableCell>
+                        <TableCell sx={{ width: '13%', textAlign: 'center' }}><strong>Dal</strong></TableCell>
+                        <TableCell sx={{ width: '24%', textAlign: 'center' }}><strong>Ders</strong></TableCell>
+                        <TableCell sx={{ width: '20%', textAlign: 'center' }}><strong>Öğrenci Durumu</strong></TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody sx={{ display: 'table-row-group' }}>
+                      {sortedStudents.map((ogrenci, index) => {
                       // Öğrencinin sınava gireceği dersi bul
                       let dersBilgisi = '';
                       if (ogrenci.dersler && ogrenci.dersler.length > 0) {
@@ -325,89 +342,91 @@ const SalonImzaListesiPrintable = forwardRef(({ yerlestirmeSonucu, ayarlar = {},
               </TableContainer>
 
               {/* Salon Özeti ve Öğretmen İmza Bloğu */}
-              <Box sx={{ mt: 2 }}>
+              <Box sx={{ 
+                mt: 1, 
+                mb: 0.5, 
+                p: 1,
+                border: '1.5px solid #000',
+                borderRadius: '2px',
+                backgroundColor: '#ffffff',
+                pageBreakInside: 'avoid !important', 
+                breakInside: 'avoid !important',
+                fontFamily: '"Times New Roman", Times, serif'
+              }}>
                 <Box sx={{
-                  width: '100%',
-                  maxWidth: '600px',
-                  mx: 'auto',
-                  '@media print': { width: '80%', maxWidth: '600px', mx: 'auto' }
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'flex-start',
+                  gap: 2
                 }}>
-                  <Box sx={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'flex-start',
-                    gap: 2
-                  }}>
-                    {/* Sol: Özet - tablo ile aynı genişlikte sola hizalı */}
-                    <Box sx={{ textAlign: 'left', flex: 1 }}>
-                      <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 700, mb: 1 }}>
-                        Toplam Öğrenci: {sortedStudents.length}
-                      </Typography>
-                      {(() => {
-                        // Sınıf seviyesi dağılımını hesapla
-                        const sinifSeviyeleri = {};
-                        sortedStudents.forEach(ogrenci => {
-                          const sinifBilgisi = ogrenci.sinif || ogrenci.sube;
-                          if (sinifBilgisi) {
-                            const seviye = sinifBilgisi.match(/\d+/)?.[0];
-                            if (seviye && ['9', '10', '11', '12'].includes(seviye)) {
-                              sinifSeviyeleri[seviye] = (sinifSeviyeleri[seviye] || 0) + 1;
-                            }
+                  {/* Sol: Özet - Sınıf ve Dal Dağılımı */}
+                  <Box sx={{ textAlign: 'left', flex: 1 }}>
+                    <Typography variant="body2" sx={{ fontSize: '8.5pt', fontWeight: 800, mb: 0.5, fontFamily: '"Times New Roman", Times, serif', color: '#000' }}>
+                      Toplam Öğrenci: {sortedStudents.length}
+                    </Typography>
+                    {(() => {
+                      // Sınıf seviyesi dağılımını hesapla
+                      const sinifSeviyeleri = {};
+                      sortedStudents.forEach(ogrenci => {
+                        const sinifBilgisi = ogrenci.sinif || ogrenci.sube;
+                        if (sinifBilgisi) {
+                          const seviye = sinifBilgisi.match(/\d+/)?.[0];
+                          if (seviye && ['9', '10', '11', '12'].includes(seviye)) {
+                            sinifSeviyeleri[seviye] = (sinifSeviyeleri[seviye] || 0) + 1;
                           }
-                        });
-                        const sinifDagilimi = Object.entries(sinifSeviyeleri)
-                          .sort(([a], [b]) => parseInt(a) - parseInt(b));
-                        return sinifDagilimi.map(([seviye, sayi]) => (
-                          <Typography key={seviye} variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 700 }}>
-                            {seviye}. sınıf: {sayi} öğrenci
-                          </Typography>
-                        ));
-                      })()}
-
-                      {/* Dal Dağılımı */}
-                      {(() => {
-                        const dalSayilari = {};
-                        sortedStudents.forEach(ogrenci => {
-                          let dalBilgisi = ogrenci.dal;
-                          if (!dalBilgisi && tumOgrenciler && tumOgrenciler.length > 0) {
-                            const guncelOgrenci = tumOgrenciler.find(o => o.id === ogrenci.id || o.numara === ogrenci.numara);
-                            if (guncelOgrenci) {
-                              dalBilgisi = guncelOgrenci.dal;
-                            }
-                          }
-                          const kisaDal = getShortBranchName(dalBilgisi);
-                          if (kisaDal && kisaDal !== '-') {
-                            dalSayilari[kisaDal] = (dalSayilari[kisaDal] || 0) + 1;
-                          }
-                        });
-
-                        const dalDagilimi = Object.entries(dalSayilari);
-                        if (dalDagilimi.length > 0) {
-                          return (
-                            <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 700, mt: 1 }}>
-                              Dal Dağılımı: {dalDagilimi.map(([dal, sayi]) => `${dal}: ${sayi}`).join(', ')}
-                            </Typography>
-                          );
                         }
-                        return null;
-                      })()}
-                    </Box>
+                      });
+                      const sinifDagilimi = Object.entries(sinifSeviyeleri)
+                        .sort(([a], [b]) => parseInt(a) - parseInt(b));
+                      return sinifDagilimi.map(([seviye, sayi]) => (
+                        <Typography key={seviye} variant="body2" sx={{ fontSize: '8pt', fontWeight: 600, fontFamily: '"Times New Roman", Times, serif', color: '#111' }}>
+                          {seviye}. sınıf: {sayi} öğrenci
+                        </Typography>
+                      ));
+                    })()}
 
-                    {/* Sağ: Öğretmen Adı Soyadı / İmza - tabloya hizalı */}
-                    <Box sx={{ textAlign: 'right', minWidth: { xs: '220px', sm: '260px' } }}>
-                      <Typography variant="body2" sx={{ fontSize: '0.85rem', fontWeight: 700, mb: 1, pr: 0.5 }}>
-                        Öğretmen
-                      </Typography>
-                      {/* Alt alta, aynı soldan hizalı satırlar */}
-                      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 0.75 }}>
-                        <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5, width: { xs: 260, sm: 300 }, justifyContent: 'flex-start' }}>
-                          <Typography variant="body2" sx={{ fontSize: '0.8rem', color: 'text.secondary', minWidth: 80, textAlign: 'left' }}>Adı Soyadı:</Typography>
-                          <Box sx={{ flex: 1, height: 0, borderBottom: '1px solid #999', position: 'relative', top: '0.25em' }} />
-                        </Box>
-                        <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5, width: { xs: 260, sm: 300 }, justifyContent: 'flex-start' }}>
-                          <Typography variant="body2" sx={{ fontSize: '0.8rem', color: 'text.secondary', minWidth: 80, textAlign: 'left' }}>İmza:</Typography>
-                          <Box sx={{ flex: 1, height: 0, borderBottom: '1px solid #999', position: 'relative', top: '0.25em' }} />
-                        </Box>
+                    {/* Dal Dağılımı */}
+                    {(() => {
+                      const dalSayilari = {};
+                      sortedStudents.forEach(ogrenci => {
+                        let dalBilgisi = ogrenci.dal;
+                        if (!dalBilgisi && tumOgrenciler && tumOgrenciler.length > 0) {
+                          const guncelOgrenci = tumOgrenciler.find(o => o.id === ogrenci.id || o.numara === ogrenci.numara);
+                          if (guncelOgrenci) {
+                            dalBilgisi = guncelOgrenci.dal;
+                          }
+                        }
+                        const kisaDal = getShortBranchName(dalBilgisi);
+                        if (kisaDal && kisaDal !== '-') {
+                          dalSayilari[kisaDal] = (dalSayilari[kisaDal] || 0) + 1;
+                        }
+                      });
+
+                      const dalDagilimi = Object.entries(dalSayilari);
+                      if (dalDagilimi.length > 0) {
+                        return (
+                          <Typography variant="body2" sx={{ fontSize: '8pt', fontWeight: 600, mt: 0.5, fontFamily: '"Times New Roman", Times, serif', color: '#111' }}>
+                            Dal Dağılımı: {dalDagilimi.map(([dal, sayi]) => `${dal}: ${sayi}`).join(', ')}
+                          </Typography>
+                        );
+                      }
+                      return null;
+                    })()}
+                  </Box>
+
+                  {/* Sağ: Öğretmen Adı Soyadı / İmza */}
+                  <Box sx={{ textAlign: 'right', minWidth: { xs: '220px', sm: '270px' } }}>
+                    <Typography variant="body2" sx={{ fontSize: '8.5pt', fontWeight: 800, mb: 1, pr: 0.5, fontFamily: '"Times New Roman", Times, serif', textTransform: 'uppercase', color: '#000' }}>
+                      Salon Gözetmen Öğretmeni
+                    </Typography>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5, width: { xs: 240, sm: 270 }, justifyContent: 'flex-start' }}>
+                        <Typography variant="body2" sx={{ fontSize: '8pt', fontWeight: 600, minWidth: 70, textAlign: 'left', fontFamily: '"Times New Roman", Times, serif', color: '#000' }}>Adı Soyadı:</Typography>
+                        <Box sx={{ flex: 1, height: 0, borderBottom: '1px solid #000', position: 'relative', top: '0.25em' }} />
+                      </Box>
+                      <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5, width: { xs: 240, sm: 270 }, justifyContent: 'flex-start' }}>
+                        <Typography variant="body2" sx={{ fontSize: '8pt', fontWeight: 600, minWidth: 70, textAlign: 'left', fontFamily: '"Times New Roman", Times, serif', color: '#000' }}>İmza:</Typography>
+                        <Box sx={{ flex: 1, height: 0, borderBottom: '1px solid #000', position: 'relative', top: '0.25em' }} />
                       </Box>
                     </Box>
                   </Box>
@@ -557,9 +576,10 @@ const SalonImzaListesiPrintable = forwardRef(({ yerlestirmeSonucu, ayarlar = {},
           );
         })()
       }
-    </Box >
-  );
-});
+    </Box>
+  </>
+);
+}));
 
 SalonImzaListesiPrintable.displayName = 'SalonImzaListesiPrintable';
 

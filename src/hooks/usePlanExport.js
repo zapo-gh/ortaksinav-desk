@@ -25,15 +25,23 @@ export const usePlanExport = (
 
     const handleSalonPlaniPrint = useReactToPrint({
         contentRef: salonPlaniPrintRef,
-        documentTitle: `Salon Planı ${getFileSuffix()}`,
+        documentTitle: `Salon Oturma Planı ${getFileSuffix()}`.trim(),
         pageStyle: `
             @page {
                 size: A4 landscape;
-                margin: 10mm;
+                margin: 0;
             }
             @media print {
-                body {
-                    -webkit-print-color-adjust: exact;
+                html, body {
+                    margin: 0 !important;
+                    padding: 0 !important;
+                    background: #ffffff !important;
+                    -webkit-print-color-adjust: exact !important;
+                    print-color-adjust: exact !important;
+                    box-sizing: border-box !important;
+                }
+                * {
+                    box-sizing: border-box !important;
                 }
             }
         `
@@ -41,15 +49,30 @@ export const usePlanExport = (
 
     const handleSinifListesiPrint = useReactToPrint({
         contentRef: sinifListesiPrintRef,
-        documentTitle: `Sınıf Listesi ${getFileSuffix()}`,
+        documentTitle: `Öğrenci Listesi ${getFileSuffix()}`.trim(),
         pageStyle: `
             @page {
                 size: A4 portrait;
-                margin: 10mm;
+                margin: 0;
             }
             @media print {
-                body {
-                    -webkit-print-color-adjust: exact;
+                html, body {
+                    margin: 0 !important;
+                    padding: 0 !important;
+                    background: #ffffff !important;
+                    -webkit-print-color-adjust: exact !important;
+                    print-color-adjust: exact !important;
+                    box-sizing: border-box !important;
+                }
+                * {
+                    box-sizing: border-box !important;
+                }
+                thead {
+                    display: table-header-group !important;
+                }
+                tr {
+                    page-break-inside: avoid !important;
+                    break-inside: avoid !important;
                 }
             }
         `
@@ -57,15 +80,30 @@ export const usePlanExport = (
 
     const handleSalonImzaListesiPrint = useReactToPrint({
         contentRef: salonImzaListesiPrintRef,
-        documentTitle: `Salon Öğrenci Listesi ${getFileSuffix()}`,
+        documentTitle: `Sınav Yoklama ve İmza Listesi ${getFileSuffix()}`.trim(),
         pageStyle: `
             @page {
                 size: A4 portrait;
-                margin: 10mm;
+                margin: 0;
             }
             @media print {
-                body {
-                    -webkit-print-color-adjust: exact;
+                html, body {
+                    margin: 0 !important;
+                    padding: 0 !important;
+                    background: #ffffff !important;
+                    -webkit-print-color-adjust: exact !important;
+                    print-color-adjust: exact !important;
+                    box-sizing: border-box !important;
+                }
+                * {
+                    box-sizing: border-box !important;
+                }
+                thead {
+                    display: table-header-group !important;
+                }
+                tr {
+                    page-break-inside: avoid !important;
+                    break-inside: avoid !important;
                 }
             }
         `

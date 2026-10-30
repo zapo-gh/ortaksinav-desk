@@ -307,4 +307,4 @@ const InterSalonTransfer = ({
   );
 };
 
-export default InterSalonTransfer;
+export default React.memo(InterSalonTransfer);

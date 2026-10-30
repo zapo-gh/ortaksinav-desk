@@ -32,7 +32,8 @@ import {
   TextField,
   Zoom,
   useMediaQuery,
-  useTheme
+  useTheme,
+  ButtonGroup
 } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import {
@@ -45,12 +46,17 @@ import {
   Grade as GradeIcon,
   Book as BookIcon,
   Delete as DeleteIcon,
+  DeleteOutline as DeleteOutlineIcon,
+  RestartAlt as RestartAltIcon,
+  BookmarkBorder as BookmarkBorderIcon,
   MeetingRoom as MeetingRoomIcon,
   AutoStories as AutoStoriesIcon,
+  Undo as UndoIcon,
+  Redo as RedoIcon
 } from '@mui/icons-material';
 import TransferButton from './TransferButton';
 import InterSalonTransfer from './InterSalonTransfer';
-import { useExam } from '../context/ExamContext';
+import { useExamStore } from '../store/useExamStore';
 import {
   ITEM_TYPES,
   getSalonYerlesenSayisi,
@@ -65,10 +71,62 @@ import SalonTabs from './SalonPlani/SalonTabs';
 import StudentDetailModal from './SalonPlani/StudentDetailModal';
 import RemoveStudentDialog from './SalonPlani/RemoveStudentDialog';
 
-const SalonPlani = memo(({ sinif, ogrenciler, seciliOgrenciId, kalanOgrenciler = [], onOgrenciSec, tumSalonlar, onSalonDegistir, ayarlar = {}, salonlar = [], seciliSalonId, onSeciliSalonDegistir, onStudentTransfer, yerlestirmeSonucu, tumOgrenciSayisi, aktifPlanAdi = '', readOnly = false, dndJustEnded = false }) => {
+const trNumericCollator = new Intl.Collator('tr', { numeric: true, sensitivity: 'base' });
+
+const SalonPlani = memo(({
+  sinif,
+  ogrenciler,
+  seciliOgrenciId,
+  kalanOgrenciler = [],
+  onOgrenciSec,
+  tumSalonlar,
+  onSalonDegistir,
+  ayarlar = {},
+  salonlar = [],
+  seciliSalonId,
+  onSeciliSalonDegistir,
+  onStudentTransfer,
+  onUndo,
+  onRedo,
+  canUndo = false,
+  canRedo = false,
+  yerlestirmeSonucu,
+  tumOgrenciSayisi,
+  aktifPlanAdi = '',
+  readOnly = false,
+  dndJustEnded = false
+}) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { showConfirm, showSuccess, showError } = useNotifications();
+
+  // Ctrl+Z (Geri Al) ve Ctrl+Y (İleri Al) klavye kısayolları
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (readOnly) return;
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+        if (e.shiftKey) {
+          if (canRedo && onRedo) {
+            e.preventDefault();
+            onRedo();
+          }
+        } else {
+          if (canUndo && onUndo) {
+            e.preventDefault();
+            onUndo();
+          }
+        }
+      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') {
+        if (canRedo && onRedo) {
+          e.preventDefault();
+          onRedo();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [readOnly, canUndo, canRedo, onUndo, onRedo]);
 
   const [modalAcik, setModalAcik] = useState(false);
   const [seciliOgrenci, setSeciliOgrenci] = useState(null);
@@ -78,7 +136,8 @@ const SalonPlani = memo(({ sinif, ogrenciler, seciliOgrenciId, kalanOgrenciler =
   const [transferOgrenci, setTransferOgrenci] = useState(null);
   const [confirmationOpen, setConfirmationOpen] = useState(false); // Onay dialog state
   const [unplacedModalOpen, setUnplacedModalOpen] = useState(false);
-  const { ogrenciler: globalOgrenciler, placementIndex } = useExam();
+  const globalOgrenciler = useExamStore(s => s.ogrenciler);
+  const placementIndex = useExamStore(s => s.placementIndex);
 
   // Yerleşmeyen öğrencileri hesapla
   const unplacedStudents = useMemo(() => {
@@ -477,6 +536,34 @@ const SalonPlani = memo(({ sinif, ogrenciler, seciliOgrenciId, kalanOgrenciler =
     return p2d;
   }, [sinifDuzeni]);
 
+  // Tüm masalar için kısıt ihlallerini bir kez önceden hesapla (her render'da veya drag'de tekrar hesaplanmasın)
+  const conflictsMap = useMemo(() => {
+    if (!sinifDuzeni?.masalar || !plan2D) return new Map();
+    const map = new Map();
+    const satirSayisi = sinifDuzeni.satirSayisi || 0;
+    const sutunSayisi = sinifDuzeni.sutunSayisi || 0;
+
+    sinifDuzeni.masalar.forEach(masa => {
+      if (masa?.ogrenci) {
+        const komsular = getNeighbors(
+          masa.satir,
+          masa.sutun,
+          satirSayisi,
+          sutunSayisi
+        );
+        const genderOK = isGenderValid(masa.ogrenci, komsular, plan2D, masa.grup);
+        const classSideBySideOK = isClassLevelValid(masa.ogrenci, komsular, plan2D, masa.grup);
+        const classBackToBackOK = isBackToBackClassLevelValid(masa.ogrenci, masa, plan2D, masa.grup);
+        map.set(masa.id, {
+          gender: !genderOK,
+          classSideBySide: !classSideBySideOK,
+          classBackToBack: !classBackToBackOK
+        });
+      }
+    });
+    return map;
+  }, [sinifDuzeni, plan2D]);
+
 
 
 
@@ -485,8 +572,8 @@ const SalonPlani = memo(({ sinif, ogrenciler, seciliOgrenciId, kalanOgrenciler =
   const sortedTumSalonlar = useMemo(() => {
     if (!tumSalonlar || tumSalonlar.length === 0) return [];
     const unique = new Map();
-    tumSalonlar.forEach((salon) => {
-      const key = salon?.salonId ?? salon?.id ?? JSON.stringify(salon);
+    tumSalonlar.forEach((salon, idx) => {
+      const key = salon?.salonId ?? salon?.id ?? idx;
       if (!unique.has(key)) {
         unique.set(key, salon);
       }
@@ -494,15 +581,15 @@ const SalonPlani = memo(({ sinif, ogrenciler, seciliOgrenciId, kalanOgrenciler =
     return Array.from(unique.values()).sort((a, b) => {
       const nameA = a?.salonAdi || a?.ad || '';
       const nameB = b?.salonAdi || b?.ad || '';
-      return nameA.localeCompare(nameB, 'tr', { numeric: true });
+      return trNumericCollator.compare(nameA, nameB);
     });
   }, [tumSalonlar]);
 
   const sortedSalonlar = useMemo(() => {
     if (!salonlar || salonlar.length === 0) return [];
     const unique = new Map();
-    salonlar.forEach((salon) => {
-      const key = salon?.id ?? salon?.salonId ?? JSON.stringify(salon);
+    salonlar.forEach((salon, idx) => {
+      const key = salon?.id ?? salon?.salonId ?? idx;
       if (!unique.has(key)) {
         unique.set(key, salon);
       }
@@ -510,9 +597,138 @@ const SalonPlani = memo(({ sinif, ogrenciler, seciliOgrenciId, kalanOgrenciler =
     return Array.from(unique.values()).sort((a, b) => {
       const nameA = a?.ad || a?.salonAdi || '';
       const nameB = b?.ad || b?.salonAdi || '';
-      return nameA.localeCompare(nameB, 'tr', { numeric: true });
+      return trNumericCollator.compare(nameA, nameB);
     });
   }, [salonlar]);
+
+  // Salon istatistik çipleri verisi - Üst seviyede memoize edildi
+  const salonStatsChipsProps = useMemo(() => {
+    if (yerlestirmeSonucu && Array.isArray(yerlestirmeSonucu.tumSalonlar)) {
+      const countFilled = (salonKaydi) => {
+        if (!salonKaydi) return 0;
+        const uniqueStudentIds = new Set();
+
+        const addStudent = (ogrenci) => {
+          if (!ogrenci) return;
+          const id = ogrenci.id !== undefined && ogrenci.id !== null ? String(ogrenci.id).trim() : null;
+          if (id) {
+            uniqueStudentIds.add(id);
+          }
+        };
+
+        const addFromSeatArray = (seatArray) => {
+          if (!Array.isArray(seatArray)) return;
+          seatArray.forEach(seat => {
+            if (seat?.ogrenci) {
+              addStudent(seat.ogrenci);
+            }
+          });
+        };
+
+        addFromSeatArray(salonKaydi.masalar);
+
+        if (!salonKaydi.masalar || salonKaydi.masalar.length === 0) {
+          if (salonKaydi.gruplar) {
+            const grupValues = Array.isArray(salonKaydi.gruplar)
+              ? salonKaydi.gruplar
+              : Object.values(salonKaydi.gruplar);
+            grupValues.forEach(grup => addFromSeatArray(grup));
+          }
+          addFromSeatArray(salonKaydi.plan);
+          addFromSeatArray(salonKaydi?.koltukMatrisi?.masalar);
+          addFromSeatArray(salonKaydi?.salon?.masalar);
+
+          if (Array.isArray(salonKaydi.ogrenciler)) {
+            salonKaydi.ogrenciler.forEach(addStudent);
+          }
+        }
+
+        return uniqueStudentIds.size;
+      };
+
+      const toplamYerlesen = yerlestirmeSonucu.tumSalonlar.reduce((toplam, s) => toplam + countFilled(s), 0);
+      const filteredYerlesilemeyen = (yerlestirmeSonucu.yerlesilemeyenOgrenciler || [])
+        .filter(uOgr => globalOgrenciler.some(gOgr => gOgr.id === uOgr.id));
+
+      const toplamYerlesilemeyen = filteredYerlesilemeyen.length;
+      const toplamOgrenci = yerlestirmeSonucu.istatistikler?.toplamOgrenci || (toplamYerlesen + toplamYerlesilemeyen);
+
+      return {
+        mode: 'plan',
+        toplam: toplamOgrenci,
+        yerlesen: toplamYerlesen,
+        yerlesmeyen: toplamYerlesilemeyen
+      };
+    }
+
+    if (Array.isArray(ogrenciler) && ogrenciler.length > 0) {
+      const seenIds = new Set();
+      let yerlesenSayisi = 0;
+      let yerlesmeyenSayisi = 0;
+      ogrenciler.forEach(o => {
+        if (o && o.id && !seenIds.has(o.id)) {
+          seenIds.add(o.id);
+          if (o.salonId) {
+            yerlesenSayisi += 1;
+          } else {
+            yerlesmeyenSayisi += 1;
+          }
+        }
+      });
+      return {
+        mode: 'list',
+        toplam: seenIds.size,
+        yerlesen: yerlesenSayisi,
+        yerlesmeyen: yerlesmeyenSayisi
+      };
+    }
+    return { mode: null };
+  }, [yerlestirmeSonucu, ogrenciler, globalOgrenciler]);
+
+  // Alt çubuk istatistikleri - Tek geçişte ve memoize edildi
+  const bottomStats = useMemo(() => {
+    let kapasite = 0;
+    if (sinif?.kapasite && typeof sinif.kapasite === 'number' && sinif.kapasite > 0) {
+      kapasite = sinif.kapasite;
+    } else if (sinif?.masalar && Array.isArray(sinif.masalar) && sinif.masalar.length > 0) {
+      kapasite = sinif.masalar.length;
+    } else if (sinif?.koltukMatrisi?.masalar && Array.isArray(sinif.koltukMatrisi.masalar) && sinif.koltukMatrisi.masalar.length > 0) {
+      kapasite = sinif.koltukMatrisi.masalar.length;
+    } else if (sinif?.siraDizilimi) {
+      kapasite = (sinif.siraDizilimi.satir || 0) * (sinif.siraDizilimi.sutun || 0);
+    }
+
+    const sinifSeviyeleri = {};
+    const seenIds = new Set();
+    let yerlesenSayisi = 0;
+
+    if (Array.isArray(ogrenciler)) {
+      ogrenciler.forEach(ogrenci => {
+        if (ogrenci && ogrenci.id && !seenIds.has(ogrenci.id)) {
+          seenIds.add(ogrenci.id);
+          yerlesenSayisi++;
+          const sinifBilgisi = ogrenci.sinif || ogrenci.sube;
+          if (sinifBilgisi) {
+            const seviye = getSinifSeviyesi(sinifBilgisi);
+            if (seviye) {
+              sinifSeviyeleri[seviye] = (sinifSeviyeleri[seviye] || 0) + 1;
+            }
+          }
+        }
+      });
+    }
+
+    const gecerliSeviyeler = ['9', '10', '11', '12'];
+    const seviyeDagilimi = Object.entries(sinifSeviyeleri)
+      .filter(([seviye]) => gecerliSeviyeler.includes(seviye))
+      .sort(([a], [b]) => parseInt(a, 10) - parseInt(b, 10));
+
+    return {
+      kapasite,
+      yerlesenSayisi,
+      seviyeDagilimi
+    };
+  }, [sinif, ogrenciler]);
 
 
 
@@ -639,171 +855,124 @@ const SalonPlani = memo(({ sinif, ogrenciler, seciliOgrenciId, kalanOgrenciler =
       <PageHeader
         icon={<ChairIcon sx={{ color: '#4F46E5', fontSize: 24 }} />}
         title={(sinif?.ad || sinif?.salonAdi) ? `${sinif.ad || sinif.salonAdi} Salon Planı` : 'Salon Planları'}
-          titleExtra={
-            <SalonStatsChips {...useMemo(() => {
-              if (yerlestirmeSonucu && Array.isArray(yerlestirmeSonucu.tumSalonlar)) {
-                const countFilled = (salonKaydi) => {
-                  if (!salonKaydi) return 0;
-                  const uniqueStudentIds = new Set();
-
-                  const normalizeId = (value) => {
-                    if (value === null || value === undefined) return null;
-                    const str = String(value).trim();
-                    return str.length > 0 ? str : null;
-                  };
-
-                  const addStudent = (ogrenci) => {
-                    if (!ogrenci) return;
-                    const normalizedId = normalizeId(ogrenci.id);
-                    if (normalizedId) {
-                      uniqueStudentIds.add(normalizedId);
-                    }
-                  };
-
-                  const addFromSeatArray = (seatArray) => {
-                    if (!Array.isArray(seatArray)) return;
-                    seatArray.forEach(seat => {
-                      if (!seat) return;
-                      if (seat.ogrenci) {
-                        addStudent(seat.ogrenci);
-                      }
-                    });
-                  };
-
-                  // KRİTİK DÜZELTME: Sadece masalar array'inden say
-                  // masalar array'i zaten gerçek yerleşimi gösteriyor
-                  // ogrenciler array'i duplicate saymaya neden olabilir
-                  addFromSeatArray(salonKaydi.masalar);
-
-                  // Fallback: Eğer masalar yoksa diğer kaynaklardan say
-                  if (!salonKaydi.masalar || salonKaydi.masalar.length === 0) {
-                    // gruplar hem obje hem dizi olabiliyor
-                    if (salonKaydi.gruplar) {
-                      const grupValues = Array.isArray(salonKaydi.gruplar)
-                        ? salonKaydi.gruplar
-                        : Object.values(salonKaydi.gruplar);
-                      grupValues.forEach(grup => addFromSeatArray(grup));
-                    }
-                    addFromSeatArray(salonKaydi.plan);
-                    addFromSeatArray(salonKaydi?.koltukMatrisi?.masalar);
-                    addFromSeatArray(salonKaydi?.salon?.masalar);
-
-                    // Son çare: ogrenciler array'inden say (ama sadece masalar yoksa)
-                    if (Array.isArray(salonKaydi.ogrenciler)) {
-                      salonKaydi.ogrenciler.forEach(addStudent);
-                    }
-                  }
-
-                  return uniqueStudentIds.size;
-                };
-                const toplamYerlesen = yerlestirmeSonucu.tumSalonlar.reduce((toplam, s) => toplam + countFilled(s), 0);
-                const filteredYerlesilemeyen = (yerlestirmeSonucu.yerlesilemeyenOgrenciler || [])
-                  .filter(uOgr => globalOgrenciler.some(gOgr => gOgr.id === uOgr.id));
-
-                const toplamYerlesilemeyen = filteredYerlesilemeyen.length;
-
-                // KRİTİK DÜZELTME: Toplam öğrenci sayısını istatistiklerden al
-                // Transfer işlemi sonrasında toplam öğrenci sayısı değişmemeli
-                const toplamOgrenci = yerlestirmeSonucu.istatistikler?.toplamOgrenci || (toplamYerlesen + toplamYerlesilemeyen);
-
-                return {
-                  mode: 'plan',
-                  toplam: toplamOgrenci, // İstatistiklerden al
-                  yerlesen: toplamYerlesen,
-                  yerlesmeyen: toplamYerlesilemeyen
-                };
-              }
-
-              if (Array.isArray(ogrenciler) && ogrenciler.length > 0) {
-                const seenIds = new Set();
-                let yerlesenSayisi = 0;
-                let yerlesmeyenSayisi = 0;
-                ogrenciler.forEach(o => {
-                  if (o && o.id && !seenIds.has(o.id)) {
-                    seenIds.add(o.id);
-                    if (o.salonId) {
-                      yerlesenSayisi += 1;
-                    } else {
-                      yerlesmeyenSayisi += 1;
-                    }
-                  }
-                });
-                return {
-                  mode: 'list',
-                  toplam: seenIds.size,
-                  yerlesen: yerlesenSayisi,
-                  yerlesmeyen: yerlesmeyenSayisi
-                };
-              }
-              return { mode: null };
-            }, [yerlestirmeSonucu, ogrenciler])} />
-          }
-          actions={
+        titleExtra={<SalonStatsChips {...salonStatsChipsProps} />}
+        actions={
             <Box sx={{
               display: 'flex',
-              gap: { xs: 0.5, sm: 1 },
-              flexDirection: { xs: 'column', sm: 'row' },
-              alignItems: { xs: 'center', sm: 'flex-start' }
+              gap: 1.25,
+              alignItems: 'center',
+              flexWrap: 'wrap'
             }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: { xs: '100%', sm: 'auto' }, maxWidth: '100%' }}>
-                {aktifPlanAdi ? (
-                  <Chip
-                    label={`Plan: ${aktifPlanAdi}`}
-                    color="primary"
-                    variant="outlined"
-                    size="small"
-                    sx={{
-                      fontSize: { xs: '0.65rem', sm: '0.75rem' },
-                      fontWeight: 500,
-                      maxWidth: { xs: '200px', sm: 'none' }, minWidth: 0,
-                      textTransform: 'none',
-                      '& .MuiChip-label': {
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                        display: 'block'
-                      }
-                    }}
-                    title={`Plan: ${aktifPlanAdi}`}
-                  />
-                ) : null}
-                <Tooltip title="Yerleşimi Temizle">
-                  <Button
-                    variant="outlined"
-                    color="error"
-                    startIcon={<DeleteIcon sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }} />}
-                    onClick={async () => {
-                      const confirmed = await showConfirm('Tüm yerleştirme sonuçlarını temizlemek istediğinizden emin misiniz?');
-                      if (confirmed) {
-                        if (typeof onOgrenciSec === 'function') {
-                          onOgrenciSec('clear');
-                        }
-                      }
-                    }}
-                    sx={{
-                      flexShrink: 0,
+              {aktifPlanAdi ? (
+                <Chip
+                  icon={<BookmarkBorderIcon sx={{ fontSize: '1.05rem !important' }} />}
+                  label={`Plan: ${aktifPlanAdi}`}
+                  color="primary"
+                  variant="outlined"
+                  size="small"
+                  sx={{
+                    height: 34,
+                    fontSize: '0.8125rem',
+                    fontWeight: 600,
+                    borderRadius: '8px',
+                    maxWidth: { xs: '200px', sm: '260px' },
+                    textTransform: 'none',
+                    bgcolor: (theme) => theme.palette.mode === 'light' ? 'rgba(79, 70, 229, 0.05)' : 'rgba(99, 102, 241, 0.1)',
+                    borderColor: (theme) => theme.palette.mode === 'light' ? 'rgba(79, 70, 229, 0.25)' : 'rgba(99, 102, 241, 0.35)',
+                    '& .MuiChip-label': {
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }
+                  }}
+                  title={`Aktif Plan: ${aktifPlanAdi}`}
+                />
+              ) : null}
 
-                      bgcolor: 'error.50',
-                      borderColor: 'error.200',
-                      color: 'error.main',
-                      fontSize: { xs: '0.65rem', sm: '0.75rem' },
-                      px: { xs: 1, sm: 1.5 },
-                      py: { xs: 0, sm: 0.75 },
-                      height: { xs: 24, sm: 'auto' },
-                      minWidth: { xs: 'auto', sm: 'auto' },
-                      '& .MuiButton-startIcon': {
-                        mr: { xs: 0.5, sm: 1 }
-                      },
-                      '&:hover': {
-                        bgcolor: 'error.100',
-                        borderColor: 'error.300'
+              {/* Geri Al / İleri Al Segmented Control */}
+              {(onUndo || onRedo) && (
+                <ButtonGroup
+                  variant="outlined"
+                  size="small"
+                  aria-label="Geçmiş işlemleri geri ve ileri al"
+                  sx={{
+                    height: 34,
+                    borderRadius: '10px',
+                    bgcolor: (theme) => theme.palette.mode === 'light' ? 'rgba(255, 255, 255, 0.7)' : 'rgba(30, 41, 59, 0.5)',
+                    boxShadow: 'none',
+                    '& .MuiButton-root': {
+                      height: 34,
+                      px: 1.5,
+                      fontWeight: 600,
+                      fontSize: '0.8125rem',
+                      borderColor: (theme) => theme.palette.mode === 'light' ? 'rgba(203, 213, 225, 0.9)' : 'rgba(71, 85, 105, 0.8)',
+                    }
+                  }}
+                >
+                  {onUndo && (
+                    <Tooltip title="Son Yerleşim Değişikliğini Geri Al (Ctrl+Z)" arrow>
+                      <span>
+                        <Button
+                          disabled={!canUndo || readOnly}
+                          startIcon={<UndoIcon sx={{ fontSize: '1.1rem' }} />}
+                          onClick={onUndo}
+                          color="inherit"
+                        >
+                          Geri Al
+                        </Button>
+                      </span>
+                    </Tooltip>
+                  )}
+                  {onRedo && (
+                    <Tooltip title="Geri Alınan Değişikliği Tekrar Uygula (Ctrl+Y)" arrow>
+                      <span>
+                        <Button
+                          disabled={!canRedo || readOnly}
+                          startIcon={<RedoIcon sx={{ fontSize: '1.1rem' }} />}
+                          onClick={onRedo}
+                          color="inherit"
+                        >
+                          İleri Al
+                        </Button>
+                      </span>
+                    </Tooltip>
+                  )}
+                </ButtonGroup>
+              )}
+
+              <Divider orientation="vertical" flexItem sx={{ mx: 0.25, height: 22, alignSelf: 'center', borderColor: 'divider' }} />
+
+              {/* Yerleşimi Temizle (Güvenli Buton) */}
+              <Tooltip title="Tüm yerleştirme düzenini sıfırla" arrow>
+                <Button
+                  variant="outlined"
+                  color="error"
+                  size="small"
+                  startIcon={<RestartAltIcon sx={{ fontSize: '1.15rem' }} />}
+                  onClick={async () => {
+                    const confirmed = await showConfirm('Tüm yerleştirme sonuçlarını temizlemek istediğinizden emin misiniz? Bu işlem geri alınamaz.', 'Yerleşimi Sıfırla');
+                    if (confirmed) {
+                      if (typeof onOgrenciSec === 'function') {
+                        onOgrenciSec('clear');
                       }
-                    }}
-                  >
-                    <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>Yerleşimi </Box>Temizle
-                  </Button>
-                </Tooltip>
-              </Box>
+                    }
+                  }}
+                  sx={{
+                    height: 34,
+                    px: 1.5,
+                    fontSize: '0.8125rem',
+                    fontWeight: 600,
+                    borderRadius: '10px',
+                    borderColor: 'error.main',
+                    opacity: 0.9,
+                    '&:hover': {
+                      opacity: 1,
+                    }
+                  }}
+                >
+                  <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>Yerleşimi </Box>Temizle
+                </Button>
+              </Tooltip>
             </Box>
           }
         />
@@ -841,6 +1010,7 @@ const SalonPlani = memo(({ sinif, ogrenciler, seciliOgrenciId, kalanOgrenciler =
           calculateDeskNumberForMasa={calculateDeskNumberForMasa}
           plan2D={plan2D}
           hasConstraintConflict={hasConstraintConflict}
+          conflictsMap={conflictsMap}
           dndJustEnded={dndJustEnded}
         />
 
@@ -849,83 +1019,23 @@ const SalonPlani = memo(({ sinif, ogrenciler, seciliOgrenciId, kalanOgrenciler =
         <Divider sx={{ my: 2 }} />
         <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', justifyContent: 'center' }}>
           <Chip
-            label={`Toplam Kapasite: ${(() => {
-              // Önce kapasite property'sini kontrol et (en güvenilir)
-              if (sinif?.kapasite && typeof sinif.kapasite === 'number' && sinif.kapasite > 0) {
-                return sinif.kapasite;
-              }
-              // Sonra masalar array'inin uzunluğunu kontrol et
-              if (sinif?.masalar && Array.isArray(sinif.masalar) && sinif.masalar.length > 0) {
-                return sinif.masalar.length;
-              }
-              // Sonra koltukMatrisi.masalar array'inin uzunluğunu kontrol et
-              if (sinif?.koltukMatrisi?.masalar && Array.isArray(sinif.koltukMatrisi.masalar) && sinif.koltukMatrisi.masalar.length > 0) {
-                return sinif.koltukMatrisi.masalar.length;
-              }
-              // Son olarak siraDizilimi'nden hesapla
-              if (sinif?.siraDizilimi) {
-                return (sinif.siraDizilimi.satir || 0) * (sinif.siraDizilimi.sutun || 0);
-              }
-              return 0;
-            })()} koltuk`}
+            label={`Toplam Kapasite: ${bottomStats.kapasite} koltuk`}
             color="primary"
             variant="outlined"
           />
           <Chip
-            label={`Yerleşen: ${(() => {
-              if (!Array.isArray(ogrenciler)) return 0;
-              const uniqueIds = new Set(ogrenciler.map(o => o.id));
-              return uniqueIds.size;
-            })()} öğrenci`}
+            label={`Yerleşen: ${bottomStats.yerlesenSayisi} öğrenci`}
             color="success"
             variant="outlined"
           />
-          {(() => {
-            // Tüm öğrencilerden sınıf seviyelerini hesapla (yerleşen + yerleşmeyen)
-            const sinifSeviyeleri = {};
-
-            // GÜVENLİK: Önce duplicate öğrencileri temizle
-            const uniqueOgrenciler = [];
-            const seenIds = new Set();
-
-            if (Array.isArray(ogrenciler)) {
-              ogrenciler.forEach(ogrenci => {
-                if (!seenIds.has(ogrenci.id)) {
-                  uniqueOgrenciler.push(ogrenci);
-                  seenIds.add(ogrenci.id);
-                }
-              });
-
-              // Benzersiz öğrencilerden sınıf seviyelerini hesapla
-              uniqueOgrenciler.forEach(ogrenci => {
-                // Sınıf bilgisini sinif veya sube'den al
-                const sinifBilgisi = ogrenci.sinif || ogrenci.sube;
-                if (sinifBilgisi) {
-                  const seviye = getSinifSeviyesi(sinifBilgisi); // 9, 10, 11, 12
-                  if (seviye) {
-                    sinifSeviyeleri[seviye] = (sinifSeviyeleri[seviye] || 0) + 1;
-                  }
-                }
-              });
-            }
-
-
-
-            // Sadece 9, 10, 11, 12. sınıfları göster (1. sınıf gibi hatalı değerleri filtrele)
-            const gecerliSeviyeler = ['9', '10', '11', '12'];
-
-            return Object.entries(sinifSeviyeleri)
-              .filter(([seviye]) => gecerliSeviyeler.includes(seviye))
-              .sort(([a], [b]) => parseInt(a) - parseInt(b)) // Sırala: 9, 10, 11, 12
-              .map(([seviye, sayi]) => (
-                <Chip
-                  key={seviye}
-                  label={`${seviye}. Sınıf: ${sayi} öğrenci`}
-                  color={seviye === '9' ? 'primary' : seviye === '10' ? 'secondary' : seviye === '11' ? 'success' : 'warning'}
-                  variant="outlined"
-                />
-              ));
-          })()}
+          {bottomStats.seviyeDagilimi.map(([seviye, sayi]) => (
+            <Chip
+              key={seviye}
+              label={`${seviye}. Sınıf: ${sayi} öğrenci`}
+              color={seviye === '9' ? 'primary' : seviye === '10' ? 'secondary' : seviye === '11' ? 'success' : 'warning'}
+              variant="outlined"
+            />
+          ))}
         </Box>
 
 

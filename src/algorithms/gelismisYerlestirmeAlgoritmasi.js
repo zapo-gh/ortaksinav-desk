@@ -11,6 +11,7 @@
 import logger from '../utils/logger.js';
 import { getNeighbors } from './utils/helpers.js';
 import { isBackToBackClassLevelValid } from './validation/constraints.js';
+import { normalizeGender } from '../utils/turkishUtils.js';
 
 // Re-export getNeighbors for other files that import from this module
 export { getNeighbors };
@@ -578,14 +579,12 @@ export const seedShuffle = (array, seed) => {
  * İYİLEŞTİRİLMİŞ: Daha iyi cinsiyet bilgisi kontrolü
  */
 export const isGenderValid = (ogrenci, komsular, plan, currentGroup = null, currentRow = null) => {
-  // İYİLEŞTİRİLMİŞ: Cinsiyet bilgisi eksikse uyarı ver ama geç
-  if (!ogrenci.cinsiyet) {
-    logger.warn(`⚠️ Cinsiyet bilgisi eksik: ${ogrenci.ad} - Kısıt kontrolü atlanıyor`);
+  if (!ogrenci?.cinsiyet) {
     return true; // Cinsiyet bilgisi yoksa geç
   }
 
-  // Cinsiyet değeri geçerli mi kontrol et
-  if (!['E', 'K', 'Erkek', 'Kız'].includes(ogrenci.cinsiyet)) {
+  const ogrenciCinsiyet = normalizeGender(ogrenci.cinsiyet);
+  if (!ogrenciCinsiyet) {
     logger.warn(`⚠️ Geçersiz cinsiyet değeri: ${ogrenci.ad} (${ogrenci.cinsiyet}) - Kısıt kontrolü atlanıyor`);
     return true;
   }
@@ -599,10 +598,9 @@ export const isGenderValid = (ogrenci, komsular, plan, currentGroup = null, curr
       continue;
     }
     if (komsuOgrenci && komsuOgrenci.cinsiyet) {
-      const ogrenciCinsiyet = normalizeGender(ogrenci.cinsiyet);
       const komsuCinsiyet = normalizeGender(komsuOgrenci.cinsiyet);
       // KURAL: Aynı satır ve aynı grupta FARKLI cinsiyet yan yana olmasın
-      if (ogrenciCinsiyet !== komsuCinsiyet) {
+      if (komsuCinsiyet && ogrenciCinsiyet !== komsuCinsiyet) {
         logger.debug(`❌ Cinsiyet kısıt ihlali: ${ogrenci.ad} (${ogrenciCinsiyet}) yanında ${komsuOgrenci.ad} (${komsuCinsiyet}) - FARKLI CİNSİYET YASAK`);
         return false;
       }
@@ -611,26 +609,7 @@ export const isGenderValid = (ogrenci, komsular, plan, currentGroup = null, curr
   return true;
 };
 
-/**
- * Cinsiyet değerini normalize eder
- */
-const normalizeGender = (cinsiyet) => {
-  if (!cinsiyet) return null;
-
-  const normalized = cinsiyet.toString().trim().toUpperCase();
-
-  // Erkek pattern'leri
-  if (['E', 'ERKEK', 'MALE', 'M', 'BAY'].includes(normalized)) {
-    return 'E';
-  }
-
-  // Kadın pattern'leri  
-  if (['K', 'KIZ', 'KADIN', 'FEMALE', 'F', 'BAYAN'].includes(normalized)) {
-    return 'K';
-  }
-
-  return normalized; // Bilinmeyen değerleri olduğu gibi döndür
-};
+// normalizeGender artık '../utils/turkishUtils.js' üzerinden merkezi olarak yönetiliyor.
 
 /**
  * Sınıf seviyesi kontrolü - aynı seviye yan yana oturamaz

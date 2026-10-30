@@ -4,16 +4,62 @@ import { alpha } from '@mui/material/styles';
 import { Chair as ChairIcon, Person as PersonIcon, Info as InfoIcon } from '@mui/icons-material';
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 import TransferButton from '../TransferButton';
+import { isStudentFemale } from '../../utils/turkishUtils';
 
 export const getStudentGenderColor = (ogrenci) => {
-  if (!ogrenci || !ogrenci.cinsiyet) return 'male';
-  const cinsiyet = ogrenci.cinsiyet.toString().toLowerCase().trim();
-  return ['kız', 'kadin', 'k', 'kadın', 'f', 'bayan', 'female'].includes(cinsiyet) ? 'female' : 'male';
+  return isStudentFemale(ogrenci) ? 'female' : 'male';
 };
 
 export const isStudentGirl = (ogrenci) => {
-  return getStudentGenderColor(ogrenci) === 'female';
+  return isStudentFemale(ogrenci);
 };
+
+export const StudentCardPreview = memo(({ ogrenci }) => {
+  if (!ogrenci) return null;
+  const isGirl = isStudentGirl(ogrenci);
+  const genderColor = isGirl ? '#ec4899' : '#3b82f6';
+  const bgColor = isGirl ? '#fdf2f8' : '#eff6ff';
+
+  return (
+    <Paper
+      elevation={12}
+      sx={{
+        backdropFilter: 'none',
+        p: { xs: 0.5, sm: 1 },
+        borderRadius: '8px',
+        minHeight: { xs: 68, sm: 84 },
+        maxHeight: { xs: 68, sm: 84 },
+        width: { xs: 100, sm: 120 },
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        bgcolor: bgColor,
+        border: '2px solid',
+        borderColor: genderColor,
+        boxShadow: '0 12px 28px rgba(0,0,0,0.3)',
+        transform: 'scale(1.05)',
+        cursor: 'grabbing',
+        pointerEvents: 'none',
+        willChange: 'transform'
+      }}
+    >
+      <Avatar sx={{ width: { xs: 16, sm: 20 }, height: { xs: 16, sm: 20 }, mx: 'auto', mb: 0.5, bgcolor: genderColor }}>
+        <PersonIcon sx={{ fontSize: { xs: 10, sm: 12 } }} />
+      </Avatar>
+      <Typography variant="caption" sx={{ display: 'block', fontWeight: 800, fontSize: { xs: '0.6rem', sm: '0.7rem' }, lineHeight: 1.1, textAlign: 'center', color: '#0f172a' }}>
+        {ogrenci.ad} {ogrenci.soyad}
+      </Typography>
+      <Typography variant="caption" sx={{ display: 'block', fontSize: { xs: '0.5rem', sm: '0.6rem' }, color: '#475569' }}>
+        {ogrenci.numara}
+      </Typography>
+      <Typography variant="caption" sx={{ display: 'block', fontSize: { xs: '0.5rem', sm: '0.6rem' }, color: '#0f172a', fontWeight: 700 }}>
+        {ogrenci.sinif || ogrenci.sube}
+      </Typography>
+    </Paper>
+  );
+});
+StudentCardPreview.displayName = 'StudentCardPreview';
 
 export const DroppableSeat = memo(({ masa, onStudentMove, children, readOnly = false }) => {
   const theme = useTheme();
@@ -22,16 +68,18 @@ export const DroppableSeat = memo(({ masa, onStudentMove, children, readOnly = f
     disabled: readOnly,
   });
 
+  const isOccupied = Boolean(masa?.ogrenci);
+  const activeColor = isOccupied ? theme.palette.warning.main : theme.palette.success.main;
+
   return (
     <Box
       ref={setNodeRef}
       sx={{
         width: '100%',
-        opacity: isOver ? 0.8 : 1,
-        backgroundColor: isOver ? alpha(theme.palette.success.main, 0.1) : 'transparent',
-        border: isOver ? `2px dashed ${theme.palette.success.main}` : '2px solid transparent',
-        borderRadius: 1,
-        transition: 'opacity 0.1s ease, background-color 0.1s ease'
+        opacity: isOver ? 0.85 : 1,
+        backgroundColor: isOver ? alpha(activeColor, 0.15) : 'transparent',
+        border: isOver ? `2px dashed ${activeColor}` : '2px solid transparent',
+        borderRadius: 1
       }}
     >
       {children}
@@ -61,7 +109,7 @@ export const DraggableStudent = memo(({
 }) => {
   const theme = useTheme();
 
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `student-${masa.id}`,
     data: {
       masaId: masa.id,
@@ -69,26 +117,6 @@ export const DraggableStudent = memo(({
     },
     disabled: !masa.ogrenci || readOnly,
   });
-
-  const [dragArming, setDragArming] = useState(false);
-  const dragDisabled = !dragArming || !masa?.ogrenci || readOnly;
-
-  const dragArmingTimerRef = React.useRef(null);
-
-  const armDrag = useCallback(() => {
-    if (!masa?.ogrenci || readOnly) return;
-    if (dragArmingTimerRef.current) clearTimeout(dragArmingTimerRef.current);
-    setDragArming(false);
-    dragArmingTimerRef.current = setTimeout(() => {
-      setDragArming(true);
-    }, 180);
-  }, [masa?.ogrenci, readOnly]);
-
-  const cancelArmDrag = useCallback(() => {
-    if (dragArmingTimerRef.current) clearTimeout(dragArmingTimerRef.current);
-    dragArmingTimerRef.current = null;
-    setDragArming(false);
-  }, []);
 
   const conflictStyle = useMemo(() => {
     if (!conflict) return null;
@@ -105,24 +133,40 @@ export const DraggableStudent = memo(({
     return null;
   }, [conflict, theme]);
 
+  const conflictInfo = useMemo(() => {
+    if (conflict && (conflict.gender || conflict.classSideBySide || conflict.classBackToBack) && getConstraintConflictInfo && plan2D) {
+      const res = getConstraintConflictInfo(masa, plan2D);
+      return res?.hasConflict ? res : null;
+    }
+    return null;
+  }, [conflict, getConstraintConflictInfo, masa, plan2D]);
+
   return (
     <Box
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
       sx={{
-        cursor: masa.ogrenci ? 'default' : 'default',
+        cursor: masa.ogrenci && !readOnly ? 'grab' : 'default',
         width: '100%',
-        opacity: isDragging ? 0.5 : 1,
-        transform: transform ? `translate(${transform.x}px, ${transform.y}px)` : 'none',
-        transition: 'opacity 0.1s ease, background-color 0.1s ease',
-        position: 'relative'
+        opacity: isDragging ? 0.3 : 1,
+        position: 'relative',
+        touchAction: 'none',
+        userSelect: 'none',
+        WebkitUserSelect: 'none',
+        MozUserSelect: 'none'
       }}
     >
       <Paper
-        ref={setNodeRef}
-        {...listeners}
-        {...attributes}
         elevation={masa.ogrenci ? (isSecili ? 6 : 3) : 1}
-        onMouseEnter={() => masa.ogrenci && onStudentHover(masa.ogrenci)}
-        onMouseLeave={onStudentLeave}
+        onMouseEnter={(e) => {
+          if (e.buttons > 0) return; // Fare tuşuna basılıyken (sürükleme esnasında) hover tetikleme
+          if (masa.ogrenci) onStudentHover(masa.ogrenci);
+        }}
+        onMouseLeave={(e) => {
+          if (e.buttons > 0) return;
+          onStudentLeave();
+        }}
         onClick={() => {
           if (readOnly) return;
           if (dndJustEnded) return;
@@ -131,17 +175,17 @@ export const DraggableStudent = memo(({
           onMasaClick(masa, masa.ogrenci);
         }}
         sx={{
+          userSelect: 'none',
+          WebkitUserSelect: 'none',
+          MozUserSelect: 'none',
           WebkitFontSmoothing: 'antialiased',
           MozOsxFontSmoothing: 'grayscale',
           textRendering: 'geometricPrecision',
-          fontFamily: `'Noto Sans', sans-serif !important`,
-          '& *': {
-            fontFamily: `'Noto Sans', sans-serif !important`,
-          },
+          backdropFilter: 'none',
           p: { xs: 0.5, sm: 1 },
-          borderRadius: '6px',
-          minHeight: { xs: 60, sm: 80 },
-          maxHeight: { xs: 60, sm: 80 },
+          borderRadius: '8px',
+          minHeight: { xs: 68, sm: 84 },
+          maxHeight: { xs: 68, sm: 84 },
           width: '100%',
           display: 'flex',
           flexDirection: 'column',
@@ -149,33 +193,28 @@ export const DraggableStudent = memo(({
           justifyContent: 'center',
           bgcolor: masa.ogrenci
             ? (conflictStyle ? conflictStyle.bgcolor : `${getGenderColor(masa.ogrenci)}.50`)
-            : 'grey.100',
-          border: masa.ogrenci ? (conflictStyle ? '2px solid' : '2px solid') : '1px solid',
+            : (theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.04)' : '#f8fafc'),
+          border: masa.ogrenci ? '2px solid' : '1px solid',
           borderColor: masa.ogrenci
             ? (conflictStyle ? conflictStyle.borderColor : `${getGenderColor(masa.ogrenci)}.main`)
-            : 'grey.300',
+            : (theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.12)' : 'grey.300'),
           position: 'relative',
-          cursor: 'pointer',
-          transition: 'transform 0.1s ease, box-shadow 0.1s ease',
-          transform: isSecili ? 'scale(1.05)' : 'scale(1)',
+          cursor: masa.ogrenci && !readOnly ? 'grab' : 'pointer',
+          transition: 'box-shadow 0.15s ease, transform 0.15s ease',
+          transform: isSecili ? 'scale(1.04)' : 'scale(1)',
           boxShadow: isSecili
             ? 6
-            : (conflictStyle ? `0 0 8px ${conflictStyle.glowColor}80` : (masa.ogrenci ? 3 : 1)),
+            : (conflictStyle ? `0 0 6px ${conflictStyle.glowColor}60` : (masa.ogrenci ? 2 : 1)),
           zIndex: isSecili ? 10 : 1,
-          ...(conflictStyle && {
-            animation: 'pulse-border 2s infinite',
-            '@keyframes pulse-border': {
-              '0%': { boxShadow: `0 0 0 0 ${conflictStyle.glowColor}40` },
-              '70%': { boxShadow: `0 0 0 4px rgba(0,0,0,0)` },
-              '100%': { boxShadow: `0 0 0 0 rgba(0,0,0,0)` }
-            }
-          }),
           '&:hover': {
-            transform: isSecili ? 'scale(1.05)' : 'scale(1.02)',
-            boxShadow: isSecili ? 8 : (conflictStyle ? `0 0 12px ${conflictStyle.glowColor}` : 4),
+            transform: isSecili ? 'scale(1.04)' : 'scale(1.02)',
+            boxShadow: isSecili ? 8 : (conflictStyle ? `0 0 10px ${conflictStyle.glowColor}` : 3),
             bgcolor: masa.ogrenci
               ? (conflictStyle ? conflictStyle.bgcolor : `${getGenderColor(masa.ogrenci)}.100`)
-              : 'grey.200',
+              : (theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'grey.200'),
+            borderColor: !masa.ogrenci
+              ? (theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.3)' : 'grey.400')
+              : undefined,
             zIndex: 10
           },
           ...(isSecili && {
@@ -196,65 +235,60 @@ export const DraggableStudent = memo(({
           })
         }}
       >
-        {conflict && (conflict.gender || conflict.classSideBySide || conflict.classBackToBack) && getConstraintConflictInfo && plan2D && (() => {
-          const info = getConstraintConflictInfo(masa, plan2D);
-          if (!info.hasConflict) return null;
-
-          return (
-            <Tooltip title={info.message} placement="top" arrow>
-              <Box
-                sx={{
-                  position: 'absolute',
-                  top: -8,
-                  right: -8,
-                  display: 'flex',
-                  gap: 0.5,
-                  zIndex: 20,
-                  flexDirection: 'row-reverse'
-                }}
-              >
-                {(conflict.classSideBySide || conflict.classBackToBack) && (
-                  <Box
-                    sx={{
-                      width: 20,
-                      height: 20,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      bgcolor: 'error.main',
-                      borderRadius: '50%',
-                      boxShadow: 2,
-                      border: '2px solid white'
-                    }}
-                  >
-                    <Typography variant="caption" sx={{ color: 'white', fontWeight: 700, fontSize: '12px', lineHeight: 1 }}>
-                      !
-                    </Typography>
-                  </Box>
-                )}
-                {conflict.gender && (
-                  <Box
-                    sx={{
-                      width: 20,
-                      height: 20,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      bgcolor: 'warning.main',
-                      borderRadius: '50%',
-                      boxShadow: 2,
-                      border: '2px solid white'
-                    }}
-                  >
-                    <Typography variant="caption" sx={{ color: 'white', fontWeight: 700, fontSize: '11px', lineHeight: 1 }}>
-                      C
-                    </Typography>
-                  </Box>
-                )}
-              </Box>
-            </Tooltip>
-          );
-        })()}
+        {conflictInfo && (
+          <Tooltip title={conflictInfo.message} placement="top" arrow>
+            <Box
+              sx={{
+                position: 'absolute',
+                top: -8,
+                right: -8,
+                display: 'flex',
+                gap: 0.5,
+                zIndex: 20,
+                flexDirection: 'row-reverse'
+              }}
+            >
+              {(conflict.classSideBySide || conflict.classBackToBack) && (
+                <Box
+                  sx={{
+                    width: 20,
+                    height: 20,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    bgcolor: 'error.main',
+                    borderRadius: '50%',
+                    boxShadow: 2,
+                    border: '2px solid white'
+                  }}
+                >
+                  <Typography variant="caption" sx={{ color: 'white', fontWeight: 700, fontSize: '12px', lineHeight: 1 }}>
+                    !
+                  </Typography>
+                </Box>
+              )}
+              {conflict.gender && (
+                <Box
+                  sx={{
+                    width: 20,
+                    height: 20,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    bgcolor: 'warning.main',
+                    borderRadius: '50%',
+                    boxShadow: 2,
+                    border: '2px solid white'
+                  }}
+                >
+                  <Typography variant="caption" sx={{ color: 'white', fontWeight: 700, fontSize: '11px', lineHeight: 1 }}>
+                    C
+                  </Typography>
+                </Box>
+              )}
+            </Box>
+          </Tooltip>
+        )}
 
         <Typography
           variant="caption"
@@ -350,10 +384,12 @@ export const DraggableStudent = memo(({
             )}
           </Box>
         ) : (
-          <Box sx={{ textAlign: 'center', color: 'text.disabled' }}>
-            <ChairIcon sx={{ fontSize: { xs: 12, sm: 16 }, mb: 0.5 }} />
-            <Typography variant="caption" sx={{ fontSize: { xs: '0.5rem', sm: '0.6rem' } }}>Boş</Typography>
-          </Box>
+          <Tooltip title={!readOnly ? "Boş Masa: Öğrenci yerleştirmek için tıklayın" : "Boş Masa"} arrow enterDelay={400}>
+            <Box sx={{ textAlign: 'center', color: 'text.disabled', width: '100%', py: 0.5 }}>
+              <ChairIcon sx={{ fontSize: { xs: 12, sm: 16 }, mb: 0.5 }} />
+              <Typography variant="caption" sx={{ fontSize: { xs: '0.5rem', sm: '0.6rem' }, display: 'block' }}>Boş</Typography>
+            </Box>
+          </Tooltip>
         )}
       </Paper>
     </Box>

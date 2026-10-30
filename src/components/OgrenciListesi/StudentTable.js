@@ -31,15 +31,16 @@ const StudentTable = ({
   handleOgrenciDuzenle,
   yerlesimPlaniVarMi,
   readOnly,
-  dallarEffective
+  dallarEffective,
+  onManuelEkle
 }) => {
   return (
     <>
-      {/* Öğrenci Tablosu - Dialog açıkken render etme (performans optimizasyonu) */}
-      {!manualEklemeAcik && (
+      {/* Öğrenci Tablosu - Öğrenciler varsa ve Dialog açık değilken göster */}
+      {!manualEklemeAcik && ogrenciler.length > 0 && (
         <TableContainer component={Paper} sx={{ maxHeight: 600 }}>
           <Table stickyHeader>
-            <TableHead sx={{ '& th': { bgcolor: '#F8FAFC', zIndex: 3, borderBottom: '2px solid', borderColor: 'grey.200' } }}>
+            <TableHead sx={{ '& th': { bgcolor: (theme) => theme.palette.mode === 'light' ? '#F8FAFC' : '#1e293b', zIndex: 3, borderBottom: '2px solid', borderColor: 'divider' } }}>
               <TableRow>
                 <TableCell>Sıra</TableCell>
                 <TableCell>Öğrenci No</TableCell>
@@ -98,7 +99,9 @@ const StudentTable = ({
         <EmptyState
           icon={PeopleIcon}
           title="Henüz öğrenci bulunmuyor"
-          description="CSV veya Excel dosyası yükleyerek veya manuel olarak öğrenci listesini içe aktarın."
+          description="Yukarıdaki 'Excel Yükle' butonuyla e-Okul listesini aktarabilir veya manuel öğrenci ekleyebilirsiniz."
+          actionLabel={!readOnly ? "Manuel Öğrenci Ekle" : undefined}
+          onAction={!readOnly ? onManuelEkle : undefined}
         />
       )}
     </>

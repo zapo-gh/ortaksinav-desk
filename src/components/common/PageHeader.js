@@ -35,7 +35,8 @@ const PageHeader = ({ icon, title, titleExtra, subtitle, actions, sx }) => {
         py: 1.5,
         px: 2.5,
         mb: 3,
-        border: '1px solid #e2e8f0',
+        border: '1px solid',
+        borderColor: 'divider',
         boxShadow: (theme) => theme.palette.mode === 'light' ? '0 2px 4px rgba(0, 0, 0, 0.02)' : 'none',
         flexWrap: 'wrap',
         gap: 1.5,
@@ -45,7 +46,7 @@ const PageHeader = ({ icon, title, titleExtra, subtitle, actions, sx }) => {
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap', flex: 1 }}>
         {icon && (
           <Box sx={{ 
-            bgcolor: '#2563eb',
+            bgcolor: 'primary.main',
             color: 'white',
             borderRadius: '10px',
             width: 44,
@@ -67,7 +68,7 @@ const PageHeader = ({ icon, title, titleExtra, subtitle, actions, sx }) => {
               sx={{
                 fontSize: { xs: '1.25rem', sm: '1.35rem' },
                 fontWeight: 700, 
-                color: (theme) => theme.palette.mode === 'light' ? '#0f172a' : '#f8fafc', 
+                color: 'text.primary', 
                 letterSpacing: '-0.01em', 
                 m: 0
               }}

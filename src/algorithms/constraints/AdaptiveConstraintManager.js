@@ -1,4 +1,5 @@
 import { isGenderValid, isClassLevelValid } from './constraints.js';
+import { normalizeGender as normalizeTurkishGender } from '../../utils/turkishUtils.js';
 
 /**
  * Adaptif kısıt seviyesi yöneticisi
@@ -66,20 +67,7 @@ class AdaptiveConstraintManager {
      */
     normalizeGender(cinsiyet) {
         if (!cinsiyet) return null;
-
-        const normalized = cinsiyet.toString().trim().toUpperCase();
-
-        // Erkek pattern'leri
-        if (['E', 'ERKEK', 'MALE', 'M', 'BAY'].includes(normalized)) {
-            return 'E';
-        }
-
-        // Kadın pattern'leri  
-        if (['K', 'KIZ', 'KADIN', 'FEMALE', 'F', 'BAYAN'].includes(normalized)) {
-            return 'K';
-        }
-
-        return normalized; // Bilinmeyen değerleri olduğu gibi döndür
+        return normalizeTurkishGender(cinsiyet) || cinsiyet;
     }
 }
 

@@ -38,4 +38,4 @@ const RemoveStudentDialog = ({
   );
 };
 
-export default RemoveStudentDialog;
+export default React.memo(RemoveStudentDialog);

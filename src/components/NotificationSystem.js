@@ -1,4 +1,4 @@
-﻿import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -20,6 +20,7 @@ import {
 import { toast, Toaster as SonnerToaster } from 'sonner';
 import DialogHeader from './common/DialogHeader';
 import { useThemeMode } from '../context/ThemeContext';
+import { useExamStore } from '../store/useExamStore';
 
 // Notification Context
 const NotificationContext = createContext();
@@ -30,28 +31,43 @@ export const NotificationProvider = ({ children }) => {
   const [promptDialog, setPromptDialog] = useState(null);
 
   // Toast notification (general)
-  const showToast = useCallback((message, type = 'info', duration = 4000) => {
-    toast(message, { duration });
+  const showToast = useCallback((message, type = 'info', optionsOrDuration = 4000) => {
+    const options = typeof optionsOrDuration === 'number'
+      ? { duration: optionsOrDuration }
+      : { duration: 4000, ...optionsOrDuration };
+    return toast(message, options);
   }, []);
 
   // Success notification
-  const showSuccess = useCallback((message, duration = 4000) => {
-    toast.success(message, { duration });
+  const showSuccess = useCallback((message, optionsOrDuration = 4000) => {
+    const options = typeof optionsOrDuration === 'number'
+      ? { duration: optionsOrDuration }
+      : { duration: 4000, ...optionsOrDuration };
+    return toast.success(message, options);
   }, []);
 
   // Error notification
-  const showError = useCallback((message, duration = 6000) => {
-    toast.error(message, { duration });
+  const showError = useCallback((message, optionsOrDuration = 6000) => {
+    const options = typeof optionsOrDuration === 'number'
+      ? { duration: optionsOrDuration }
+      : { duration: 6000, ...optionsOrDuration };
+    return toast.error(message, options);
   }, []);
 
   // Warning notification
-  const showWarning = useCallback((message, duration = 5000) => {
-    toast.warning(message, { duration });
+  const showWarning = useCallback((message, optionsOrDuration = 5000) => {
+    const options = typeof optionsOrDuration === 'number'
+      ? { duration: optionsOrDuration }
+      : { duration: 5000, ...optionsOrDuration };
+    return toast.warning(message, options);
   }, []);
 
   // Info notification
-  const showInfo = useCallback((message, duration = 4000) => {
-    toast.info(message, { duration });
+  const showInfo = useCallback((message, optionsOrDuration = 4000) => {
+    const options = typeof optionsOrDuration === 'number'
+      ? { duration: optionsOrDuration }
+      : { duration: 4000, ...optionsOrDuration };
+    return toast.info(message, options);
   }, []);
 
   // Confirm dialog
@@ -221,20 +237,39 @@ export const useNotifications = () => {
   return context;
 };
 
-// Custom Toaster that respects ThemeContext
+// Custom Toaster that respects ThemeContext and Desktop UX
 export const AppToaster = () => {
   const { mode } = useThemeMode();
+
+  let hasFloatingDock = false;
+  try {
+    const yerlestirmeSonucu = useExamStore((s) => s.yerlestirmeSonucu);
+    const aktifTab = useExamStore((s) => s.aktifTab);
+    hasFloatingDock = Boolean(yerlestirmeSonucu) || aktifTab === 'salon-plani';
+  } catch (_) {
+    hasFloatingDock = false;
+  }
+
+  const offset = hasFloatingDock ? { bottom: 84, right: 28 } : { bottom: 24, right: 28 };
+  const mobileOffset = hasFloatingDock ? { bottom: 80, right: 16 } : { bottom: 16, right: 16 };
+
   return (
     <SonnerToaster 
-      position="top-right" 
+      position="bottom-right"
+      offset={offset}
+      mobileOffset={mobileOffset}
       richColors 
       closeButton 
       theme={mode}
+      gap={8}
+      visibleToasts={4}
       toastOptions={{
         style: {
-          backdropFilter: 'blur(12px)',
-          background: mode === 'light' ? 'rgba(255,255,255,0.85)' : 'rgba(15,23,42,0.85)',
-          border: `1px solid ${mode === 'light' ? 'rgba(226,232,240,0.8)' : 'rgba(51,65,85,0.8)'}`,
+          background: mode === 'light' ? '#FFFFFF' : '#1E293B',
+          border: `1px solid ${mode === 'light' ? 'rgba(226,232,240,0.9)' : 'rgba(51,65,85,0.9)'}`,
+          boxShadow: mode === 'light' 
+            ? '0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04)' 
+            : '0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.3)',
         }
       }}
     />

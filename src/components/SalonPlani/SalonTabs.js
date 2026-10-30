@@ -17,7 +17,7 @@ const SalonTabs = ({
   }
 
   return (
-    <Paper elevation={1} sx={{ p: { xs: 1, sm: 2 }, mb: 3, bgcolor: 'grey.50' }}>
+    <Paper elevation={0} sx={{ p: { xs: 1, sm: 2 }, mb: 3, border: '1px solid', borderColor: 'divider', bgcolor: (theme) => theme.palette.mode === 'dark' ? 'background.default' : 'grey.50', borderRadius: '12px' }}>
       <Box
         sx={{
           display: 'flex',
@@ -46,12 +46,16 @@ const SalonTabs = ({
                 borderRadius: '8px',
                 cursor: 'pointer',
                 border: '1px solid',
-                borderColor: isActive ? 'primary.main' : '#e2e8f0',
-                bgcolor: isActive ? '#eff6ff' : '#ffffff',
+                borderColor: isActive ? 'primary.main' : 'divider',
+                bgcolor: isActive
+                  ? (theme) => theme.palette.mode === 'dark' ? 'rgba(79, 70, 229, 0.2)' : '#eff6ff'
+                  : 'background.paper',
                 transition: 'all 0.15s ease',
                 '&:hover': {
                   borderColor: 'primary.main',
-                  bgcolor: isActive ? '#eff6ff' : '#f8fafc'
+                  bgcolor: isActive
+                    ? (theme) => theme.palette.mode === 'dark' ? 'rgba(79, 70, 229, 0.25)' : '#eff6ff'
+                    : 'action.hover'
                 }
               }}
             >
@@ -64,8 +68,8 @@ const SalonTabs = ({
                   px: 0.75,
                   py: 0.25,
                   borderRadius: '4px',
-                  bgcolor: isActive ? 'primary.main' : '#f1f5f9',
-                  color: isActive ? 'white' : '#64748b',
+                  bgcolor: isActive ? 'primary.main' : (theme) => theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : '#f1f5f9',
+                  color: isActive ? 'white' : 'text.secondary',
                   fontSize: '0.7rem',
                   fontWeight: 700
                 }}
@@ -92,31 +96,35 @@ const SalonTabs = ({
                 borderRadius: '8px',
                 cursor: 'pointer',
                 border: '1px solid',
-                borderColor: isActive ? 'primary.main' : '#e2e8f0',
-                bgcolor: isActive ? '#eff6ff' : '#ffffff',
+                borderColor: isActive ? 'primary.main' : 'divider',
+                bgcolor: isActive
+                  ? (theme) => theme.palette.mode === 'dark' ? 'rgba(79, 70, 229, 0.2)' : '#eff6ff'
+                  : 'background.paper',
                 transition: 'all 0.15s ease',
                 '&:hover': {
                   borderColor: 'primary.main',
-                  bgcolor: isActive ? '#eff6ff' : '#f8fafc'
+                  bgcolor: isActive
+                    ? (theme) => theme.palette.mode === 'dark' ? 'rgba(79, 70, 229, 0.25)' : '#eff6ff'
+                    : 'action.hover'
                 }
               }}
             >
               <Typography sx={{ fontWeight: 700, fontSize: '0.85rem', color: isActive ? 'primary.main' : 'text.primary' }}>
-                {salon.ad || salon.salonAdi || `Salon ${salon.id}`}
+                {salon.salonAdi}
               </Typography>
               <Box
-                title="Bu salonda yerleşen öğrenci sayısı"
+                title="Salon kapasitesi"
                 sx={{
                   px: 0.75,
                   py: 0.25,
                   borderRadius: '4px',
-                  bgcolor: isActive ? 'primary.main' : '#f1f5f9',
-                  color: isActive ? 'white' : '#64748b',
+                  bgcolor: isActive ? 'primary.main' : (theme) => theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : '#f1f5f9',
+                  color: isActive ? 'white' : 'text.secondary',
                   fontSize: '0.7rem',
                   fontWeight: 700
                 }}
               >
-                {getSalonYerlesenSayisi(salon)}
+                {salon.kapasite || 0}
               </Box>
             </Box>
           );
@@ -126,4 +134,4 @@ const SalonTabs = ({
   );
 };
 
-export default SalonTabs;
+export default React.memo(SalonTabs);

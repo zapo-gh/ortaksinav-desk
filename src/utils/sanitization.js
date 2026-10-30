@@ -111,15 +111,15 @@ export const sanitizeClassName = (input) => {
     input = String(input || '');
   }
 
-  // Boşlukları kaldır
-  let sanitized = input.trim().toUpperCase();
+  // Boşlukları kaldır ve Türkçe kurallarına uygun büyük harfe çevir
+  let sanitized = input.trim().toLocaleUpperCase('tr-TR');
 
-  // Sınıf formatını kontrol et: 5-12 arası rakam + tire + A-Z harf
-  const classPattern = /^(\d{1,2})[-/]?([A-Z])$/;
+  // Sınıf formatını kontrol et: 5-12 arası rakam + tire/bölü + Türkçe harfler
+  const classPattern = /^(\d{1,2})[-/]?([A-ZÇĞİÖŞÜ0-9]+)$/;
   const match = sanitized.match(classPattern);
 
   if (match) {
-    const level = parseInt(match[1]);
+    const level = parseInt(match[1], 10);
     const section = match[2];
 
     // Sınıf seviyesi kontrolü (5-12 arası)

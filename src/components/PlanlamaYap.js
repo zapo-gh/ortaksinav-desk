@@ -16,7 +16,8 @@ import {
   ListItemIcon,
   ListItemText,
   Chip,
-  LinearProgress
+  LinearProgress,
+  Tooltip
 } from '@mui/material';
 import {
   Assessment as AssessmentIcon,
@@ -175,23 +176,11 @@ const PlanlamaYap = memo(({
 
 
       if (seciliSinifOgrencileri.length > toplamKapasite) {
-        // Kapasite aşımında kırmızı hata mesajı
-        hatalar.push({
-          mesaj: `Seçili sınıf öğrenci sayısı (${seciliSinifOgrencileri.length}) toplam salon kapasitesini (${toplamKapasite}) aşıyor`,
-          tip: 'hata' // Kırmızı renk için
-        });
-      } else if (seciliSinifOgrencileri.length < toplamKapasite * 0.8) {
-        // %80'den az olduğunda yeşil bilgi mesajı olarak işaretle
-        uyarilar.push({
-          mesaj: `Seçili sınıf öğrenci sayısı (${seciliSinifOgrencileri.length}) salon kapasitesinin %80'inden az`,
-          tip: 'bilgi' // Yeşil renk için
-        });
-      } else if (seciliSinifOgrencileri.length >= toplamKapasite * 0.9) {
-        // %90 ve üzeri olduğunda turuncu uyarı
-        uyarilar.push({
-          mesaj: `Seçili sınıf öğrenci sayısı (${seciliSinifOgrencileri.length}) salon kapasitesinin %90'ına yaklaşıyor`,
-          tip: 'uyari' // Turuncu renk için
-        });
+        hatalar.push(`Seçili sınıf öğrenci sayısı (${seciliSinifOgrencileri.length}) toplam salon kapasitesini (${toplamKapasite}) aşıyor`);
+      } else if (toplamKapasite > 0 && seciliSinifOgrencileri.length < toplamKapasite * 0.8) {
+        uyarilar.push(`Seçili sınıf öğrenci sayısı (${seciliSinifOgrencileri.length}) salon kapasitesinin %80'inden az`);
+      } else if (toplamKapasite > 0 && seciliSinifOgrencileri.length >= toplamKapasite * 0.9) {
+        uyarilar.push(`Seçili sınıf öğrenci sayısı (${seciliSinifOgrencileri.length}) salon kapasitesinin %90'ına yaklaşıyor`);
       }
 
       // Cinsiyet bilgisi kontrolü - sadece seçili sınıf öğrencileri için
@@ -268,58 +257,52 @@ const PlanlamaYap = memo(({
     minWidth: 0,
     width: { xs: '100%', sm: 'auto' },
     borderRadius: '16px',
-    border: '1px solid #e2e8f0',
-    background: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)',
-    boxShadow: '0 4px 12px rgba(15, 23, 42, 0.05)',
+    border: '1px solid',
+    borderColor: 'divider',
+    bgcolor: 'background.paper',
+    boxShadow: (theme) => theme.palette.mode === 'dark' ? 'none' : '0 4px 12px rgba(15, 23, 42, 0.05)',
     transition: 'all 0.25s ease',
     '&:hover': {
       transform: 'translateY(-3px)',
-      boxShadow: '0 12px 24px -6px rgba(15, 23, 42, 0.12)',
-      borderColor: '#cbd5e1'
+      boxShadow: (theme) => theme.palette.mode === 'dark' ? '0 8px 24px rgba(0, 0, 0, 0.4)' : '0 12px 24px -6px rgba(15, 23, 42, 0.12)',
+      borderColor: 'primary.main'
     }
   };
 
-  const yerlestirmeDisabled = !kontroller?.yerleştirmeYapilabilir && process.env.NODE_ENV !== 'test';
+  const yerlestirmeDisabled = (!kontroller?.yerleştirmeYapilabilir || yukleme) && process.env.NODE_ENV !== 'test';
 
   return (
     <Box sx={{ width: '100%', mt: 0, mb: 4 }}>
       <PageHeader
-        icon={<AssessmentIcon sx={{ color: '#4F46E5', fontSize: 24 }} />}
+        icon={<AssessmentIcon sx={{ color: 'primary.main', fontSize: 24 }} />}
         title="Sınav Yerleştirme Planlaması"
           actions={
-            <Button
-              variant="contained"
-              startIcon={<AutoAwesomeIcon sx={{ fontSize: 18 }} />}
-              onClick={process.env.NODE_ENV === 'test' ? onYerlestirmeYap : handleYerlestirmeBaslat}
-              disabled={process.env.NODE_ENV === 'test' ? false : !kontroller?.yerleştirmeYapilabilir}
-              sx={{
-                px: { xs: 2.5, sm: 3 },
-                py: 1,
-                borderRadius: '10px',
-                textTransform: 'none',
-                fontWeight: 600,
-                fontSize: { xs: '0.9rem', sm: '0.95rem' },
-                background: yerlestirmeDisabled ? 'rgba(0, 0, 0, 0.12)' : '#2563eb',
-                color: '#ffffff',
-                boxShadow: yerlestirmeDisabled ? 'none' : '0 1px 2px rgba(15, 23, 42, 0.08)',
-                border: yerlestirmeDisabled ? '1px solid rgba(234, 179, 8, 0.4)' : 'none',
-                transition: 'background-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease',
-                '&:hover': {
-                  transform: yerlestirmeDisabled ? 'none' : 'translateY(-1px)',
-                  background: yerlestirmeDisabled ? 'rgba(0, 0, 0, 0.12)' : '#1d4ed8',
-                  boxShadow: yerlestirmeDisabled ? 'none' : '0 4px 10px rgba(37, 99, 235, 0.25)',
-                },
-                '&.Mui-disabled': {
-                  color: 'rgba(0, 0, 0, 0.4)',
-                  borderColor: 'rgba(0, 0, 0, 0.12)',
-                }
-              }}
+            <Tooltip
+              title={yerlestirmeDisabled ? "Yerleştirme başlatabilmek için önce hataları giderin" : "Algoritmayı çalıştır ve öğrencileri salonlara otomatik yerleştir"}
+              arrow
             >
-              Yerleştirme Başlat
-              </Button>
+              <span>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  startIcon={yukleme ? <CircularProgress size={18} color="inherit" /> : <AutoAwesomeIcon sx={{ fontSize: 18 }} />}
+                  onClick={process.env.NODE_ENV === 'test' ? onYerlestirmeYap : handleYerlestirmeBaslat}
+                  disabled={yerlestirmeDisabled}
+                  sx={{
+                    px: { xs: 2.5, sm: 3 },
+                    height: 38,
+                    borderRadius: '10px',
+                    fontWeight: 700,
+                    fontSize: { xs: '0.85rem', sm: '0.9rem' },
+                  }}
+                >
+                  {yukleme ? 'Yerleştiriliyor...' : 'Yerleştirmeyi Başlat'}
+                </Button>
+              </span>
+            </Tooltip>
           }
       />
-      <Card>
+      <Card elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: '16px', bgcolor: 'background.paper' }}>
         <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
 
         {/* Genel Durum */}
@@ -332,9 +315,7 @@ const PlanlamaYap = memo(({
               fontWeight: 600,
               borderRadius: '12px',
               border: '1px solid',
-              borderColor: kontroller.tumHatalar.length === 0 ? 'rgba(16, 185, 129, 0.4)' : 'rgba(239, 68, 68, 0.4)',
-              background: kontroller.tumHatalar.length === 0 ? 'rgba(16, 185, 129, 0.08)' : 'rgba(239, 68, 68, 0.08)',
-              boxShadow: kontroller.tumHatalar.length === 0 ? '0 4px 12px rgba(16, 185, 129, 0.12)' : '0 4px 12px rgba(239, 68, 68, 0.12)',
+              borderColor: kontroller.tumHatalar.length === 0 ? 'success.main' : 'error.main'
             }}
           >
             {kontroller.tumHatalar.length === 0
@@ -350,7 +331,7 @@ const PlanlamaYap = memo(({
             width: 34,
             height: 34,
             borderRadius: '10px',
-            bgcolor: 'rgba(16, 185, 129, 0.12)',
+            bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.12)',
             border: '1px solid rgba(16, 185, 129, 0.25)',
             display: 'flex',
             alignItems: 'center',
@@ -358,7 +339,7 @@ const PlanlamaYap = memo(({
           }}>
             <CheckCircleIcon sx={{ color: '#10b981', fontSize: 18 }} />
           </Box>
-          <Typography variant="h6" sx={{ color: '#0f172a', fontWeight: 800, fontSize: { xs: '1.05rem', sm: '1.2rem' }, letterSpacing: '-0.015em' }}>
+          <Typography variant="h6" sx={{ color: 'text.primary', fontWeight: 800, fontSize: { xs: '1.05rem', sm: '1.2rem' }, letterSpacing: '-0.015em' }}>
             Kontrol Sonuçları
           </Typography>
         </Box>
@@ -379,14 +360,14 @@ const PlanlamaYap = memo(({
                 width: 32,
                 height: 32,
                 borderRadius: '8px',
-                bgcolor: 'rgba(37, 99, 235, 0.1)',
+                bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(79, 70, 229, 0.2)' : 'rgba(79, 70, 229, 0.1)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center'
               }}>
-                <PeopleIcon sx={{ color: '#2563eb', fontSize: 18 }} />
+                <PeopleIcon sx={{ color: 'primary.main', fontSize: 18 }} />
               </Box>
-              <Typography variant="h6" sx={{ color: '#0f172a', fontWeight: 700, fontSize: '1.05rem', letterSpacing: '-0.01em' }}>
+              <Typography variant="h6" sx={{ color: 'text.primary', fontWeight: 700, fontSize: '1.05rem', letterSpacing: '-0.01em' }}>
                 Öğrenciler
               </Typography>
             </Box>
@@ -452,14 +433,14 @@ const PlanlamaYap = memo(({
                 width: 32,
                 height: 32,
                 borderRadius: '8px',
-                bgcolor: 'rgba(37, 99, 235, 0.1)',
+                bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(79, 70, 229, 0.2)' : 'rgba(79, 70, 229, 0.1)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center'
               }}>
-                <MeetingRoomIcon sx={{ color: '#2563eb', fontSize: 18 }} />
+                <MeetingRoomIcon sx={{ color: 'primary.main', fontSize: 18 }} />
               </Box>
-              <Typography variant="h6" sx={{ color: '#0f172a', fontWeight: 700, fontSize: '1.05rem', letterSpacing: '-0.01em' }}>
+              <Typography variant="h6" sx={{ color: 'text.primary', fontWeight: 700, fontSize: '1.05rem', letterSpacing: '-0.01em' }}>
                 Salonlar
               </Typography>
             </Box>
@@ -511,14 +492,14 @@ const PlanlamaYap = memo(({
                 width: 32,
                 height: 32,
                 borderRadius: '8px',
-                bgcolor: 'rgba(37, 99, 235, 0.1)',
+                bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(79, 70, 229, 0.2)' : 'rgba(79, 70, 229, 0.1)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center'
               }}>
-                <SettingsIcon sx={{ color: '#2563eb', fontSize: 18 }} />
+                <SettingsIcon sx={{ color: 'primary.main', fontSize: 18 }} />
               </Box>
-              <Typography variant="h6" sx={{ color: '#0f172a', fontWeight: 700, fontSize: '1.05rem', letterSpacing: '-0.01em' }}>
+              <Typography variant="h6" sx={{ color: 'text.primary', fontWeight: 700, fontSize: '1.05rem', letterSpacing: '-0.01em' }}>
                 Dersler
               </Typography>
             </Box>
@@ -554,21 +535,22 @@ const PlanlamaYap = memo(({
 
         {/* Ders Bilgileri */}
         {ayarlar?.dersler && ayarlar.dersler.length > 0 && (
-          <Paper elevation={0} sx={{ p: { xs: 2, sm: 3 }, mb: { xs: 2, sm: 3 }, borderRadius: '16px', border: '1px solid #e2e8f0', bgcolor: '#ffffff' }}>
+          <Paper elevation={0} sx={{ p: { xs: 2, sm: 3 }, mb: { xs: 2, sm: 3 }, borderRadius: '16px', border: '1px solid', borderColor: 'divider', bgcolor: 'background.paper' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, mb: 2.5 }}>
               <Box sx={{
                 width: 36,
                 height: 36,
                 borderRadius: '10px',
-                bgcolor: 'rgba(37, 99, 235, 0.12)',
-                border: '1px solid rgba(37, 99, 235, 0.2)',
+                bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(79, 70, 229, 0.2)' : 'rgba(79, 70, 229, 0.12)',
+                border: '1px solid',
+                borderColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(79, 70, 229, 0.4)' : 'rgba(79, 70, 229, 0.2)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center'
               }}>
-                <BookIcon sx={{ color: '#2563eb', fontSize: 20 }} />
+                <BookIcon sx={{ color: 'primary.main', fontSize: 20 }} />
               </Box>
-              <Typography variant="h6" sx={{ color: '#0f172a', fontWeight: 800, fontSize: { xs: '1.05rem', sm: '1.2rem' }, letterSpacing: '-0.015em' }}>
+              <Typography variant="h6" sx={{ color: 'text.primary', fontWeight: 800, fontSize: { xs: '1.05rem', sm: '1.2rem' }, letterSpacing: '-0.015em' }}>
                 Ders Bilgileri
               </Typography>
             </Box>
@@ -586,15 +568,15 @@ const PlanlamaYap = memo(({
                   minWidth: { xs: '100%', sm: 260 },
                   width: { xs: '100%', sm: 'auto' },
                   p: { xs: 2, sm: 2.5 },
-                  border: '1px solid #e2e8f0',
+                  border: '1px solid',
+                  borderColor: 'divider',
                   borderRadius: '16px',
-                  background: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)',
-                  boxShadow: '0 4px 12px rgba(15, 23, 42, 0.04)',
+                  bgcolor: (theme) => theme.palette.mode === 'dark' ? 'background.default' : '#f8fafc',
+                  boxShadow: (theme) => theme.palette.mode === 'dark' ? 'none' : '0 4px 12px rgba(15, 23, 42, 0.04)',
                   transition: 'all 0.2s ease',
                   '&:hover': {
                     transform: 'translateY(-2px)',
-                    boxShadow: '0 10px 20px -5px rgba(15, 23, 42, 0.1)',
-                    borderColor: '#cbd5e1'
+                    borderColor: 'primary.main'
                   }
                 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
@@ -602,14 +584,14 @@ const PlanlamaYap = memo(({
                       width: 28,
                       height: 28,
                       borderRadius: '6px',
-                      bgcolor: 'rgba(37, 99, 235, 0.1)',
+                      bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(79, 70, 229, 0.2)' : 'rgba(79, 70, 229, 0.1)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center'
                     }}>
-                      <ScheduleIcon sx={{ color: '#2563eb', fontSize: 16 }} />
+                      <ScheduleIcon sx={{ color: 'primary.main', fontSize: 16 }} />
                     </Box>
-                    <Typography variant="h6" sx={{ color: '#0f172a', fontWeight: 700, fontSize: '1rem', letterSpacing: '-0.01em' }}>
+                    <Typography variant="h6" sx={{ color: 'text.primary', fontWeight: 700, fontSize: '1rem', letterSpacing: '-0.01em' }}>
                       {ders.ad || `Ders ${index + 1}`}
                     </Typography>
                   </Box>
@@ -622,13 +604,11 @@ const PlanlamaYap = memo(({
                         key={sinif}
                         label={sinif}
                         size="small"
+                        color="primary"
+                        variant="outlined"
                         sx={{
-                          bgcolor: 'rgba(37, 99, 235, 0.1)',
-                          color: '#2563eb',
-                          border: '1px solid rgba(37, 99, 235, 0.25)',
                           fontWeight: 700,
-                          borderRadius: '8px',
-                          '&:hover': { bgcolor: 'rgba(37, 99, 235, 0.18)' }
+                          borderRadius: '8px'
                         }}
                       />
                     )) || <Typography variant="body2" color="text.secondary">Sınıf seçilmedi</Typography>}
@@ -650,21 +630,50 @@ const PlanlamaYap = memo(({
         </Alert>
 
         {/* Özet İstatistikler - Eski testlerle uyumlu başlıklar */}
-        <Box sx={{ mt: 3, display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-          <Chip label={`Toplam Öğrenci: ${ogrenciler?.length || 0}`} color="primary" variant="outlined" />
-          <Chip label={`Toplam Salon: ${salonlar?.length || 0}`} color="secondary" variant="outlined" />
-          <Chip label={`Toplam Kapasite: ${(salonlar || []).reduce((toplam, salon) => {
-            let kap = salon.kapasite;
-            if (!kap || isNaN(kap)) {
-              if (salon.gruplar && salon.gruplar.length > 0) {
-                kap = salon.gruplar.reduce((t, g) => t + (g.siraSayisi || 0) * (salon.siraTipi === 'tekli' ? 1 : 2), 0);
-              } else {
-                kap = 0;
+        <Box sx={{ mt: 3, display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
+            <Chip label={`Toplam Öğrenci: ${ogrenciler?.length || 0}`} color="primary" variant="outlined" sx={{ fontWeight: 600 }} />
+            <Chip label={`Toplam Salon: ${salonlar?.length || 0}`} color="secondary" variant="outlined" sx={{ fontWeight: 600 }} />
+            <Chip label={`Toplam Kapasite: ${(salonlar || []).reduce((toplam, salon) => {
+              let kap = salon.kapasite;
+              if (!kap || isNaN(kap)) {
+                if (salon.gruplar && salon.gruplar.length > 0) {
+                  kap = salon.gruplar.reduce((t, g) => t + (g.siraSayisi || 0) * (salon.siraTipi === 'tekli' ? 1 : 2), 0);
+                } else {
+                  kap = 0;
+                }
               }
-            }
-            return toplam + (kap || 0);
-          }, 0)
-            }`} color="success" variant="outlined" />
+              return toplam + (kap || 0);
+            }, 0)
+              }`} color="success" variant="outlined" sx={{ fontWeight: 600 }} />
+          </Box>
+
+          {/* Alt Hızlı Başlatma Butonu */}
+          <Tooltip
+            title={yerlestirmeDisabled ? "Yerleştirme başlatabilmek için önce kritik hataları giderin" : "Algoritmayı çalıştır ve öğrencileri salonlara otomatik yerleştir"}
+            arrow
+          >
+            <span>
+              <Button
+                variant="contained"
+                color="primary"
+                size="large"
+                startIcon={yukleme ? <CircularProgress size={20} color="inherit" /> : <AutoAwesomeIcon />}
+                onClick={process.env.NODE_ENV === 'test' ? onYerlestirmeYap : handleYerlestirmeBaslat}
+                disabled={yerlestirmeDisabled}
+                sx={{
+                  px: 4,
+                  height: 44,
+                  borderRadius: '12px',
+                  fontWeight: 700,
+                  fontSize: '0.95rem',
+                  letterSpacing: '-0.01em',
+                }}
+              >
+                {yukleme ? 'Yerleştiriliyor...' : 'Yerleştirmeyi Başlat'}
+              </Button>
+            </span>
+          </Tooltip>
         </Box>
         </CardContent>
       </Card>

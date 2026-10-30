@@ -3,6 +3,8 @@
  * Farklı e-Okul formatlarındaki sütun başlıklarını tanımlar
  */
 
+import { turkishNormalize } from './turkishUtils';
+
 export const COLUMN_PATTERNS = {
   numara: [
     'öğrenci no', 'numara', 'no', 'öğrenci numarası', 'ogrenci no',
@@ -43,21 +45,10 @@ export const COLUMN_PATTERNS = {
  * Sütun başlığını normalize eder
  */
 export const normalizeColumnHeader = (header) => {
-  if (!header || typeof header !== 'string') return '';
-
-  return header
-    .toString()
-    .trim()
-    .toLowerCase()
-    .replace(/ğ/g, 'g')
-    .replace(/ü/g, 'u')
-    .replace(/ş/g, 's')
-    .replace(/ı/g, 'i')
-    .replace(/ö/g, 'o')
-    .replace(/ç/g, 'c')
-    .replace(/İ/g, 'i') // Büyük İ'yi de dönüştür
-    .replace(/\s+/g, ' ') // çoklu boşlukları tek boşluğa çevir
-    .replace(/[:.]/g, ''); // nokta ve iki noktayı kaldır
+  if (!header) return '';
+  return turkishNormalize(String(header))
+    .replace(/\s+/g, ' ')
+    .replace(/[:.]/g, '');
 };
 
 /**
@@ -75,7 +66,7 @@ export const detectColumnType = (header) => {
 
   for (const [columnType, patterns] of sortedEntries) {
     for (const pattern of patterns) {
-      if (normalized === pattern) {
+      if (normalized === normalizeColumnHeader(pattern)) {
         return columnType;
       }
     }

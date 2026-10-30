@@ -1,18 +1,20 @@
 /* --- SaaS 2.0 Radical Design Variables --- */
 :root {
-  --app-bg: #FFFFFF;
+  --app-bg: #F4F7F9;
   --mesh-opacity: 0;
   --mesh-bg: none;
 }
 
 [data-theme="dark"] {
-  --app-bg: #09090B;
+  --app-bg: #0F172A;
   --mesh-opacity: 0.15;
   --mesh-bg: radial-gradient(at 0% 0%, hsla(253,16%,7%,var(--mesh-opacity)) 0, transparent 50%), radial-gradient(at 50% 0%, hsla(225,39%,30%,var(--mesh-opacity)) 0, transparent 50%), radial-gradient(at 100% 0%, hsla(339,49%,30%,var(--mesh-opacity)) 0, transparent 50%);
 }
 
-body {
+html, body {
   margin: 0;
+  padding: 0;
+  min-height: 100%;
   font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
@@ -29,6 +31,16 @@ body {
   background-size: cover;
   background-repeat: no-repeat;
   transition: background-color 0.4s ease;
+}
+
+[data-theme="dark"],
+[data-theme="dark"] html,
+[data-theme="dark"] body,
+[data-theme="dark"] #root,
+[data-theme="dark"] .App {
+  background-color: #0F172A !important;
+  color: #F8FAFC;
+  color-scheme: dark;
 }
 
 /* Custom Ultra-Slim Scrollbar */
@@ -101,10 +113,6 @@ code {
     font-feature-settings: normal;
   }
   
-  /* Hide browser headers and footers */
-  @page {
-    margin: 0;
-  }
   html, body {
     margin: 0;
     padding: 0;

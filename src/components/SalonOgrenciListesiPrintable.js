@@ -8,29 +8,31 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  TableFooter,
   Paper,
-  Chip
+  Chip,
+  GlobalStyles
 } from '@mui/material';
 import { getPlacementMap, resolveStudentPlacement } from '../utils/placementHelper';
 import PrintHeader from './common/PrintHeader';
 import EmptyState from './common/EmptyState';
 import { People as PeopleIcon } from '@mui/icons-material';
 
-const SalonOgrenciListesiPrintable = forwardRef(({ ogrenciler, yerlestirmeSonucu, ayarlar = {} }, ref) => {
+const SalonOgrenciListesiPrintable = React.memo(forwardRef(({ ogrenciler, yerlestirmeSonucu, ayarlar = {} }, ref) => {
   // Merkezi yerleşim haritasını oluştur (her render'da çalışır ama hızlıdır, useMemo eklenebilir ama şu an için yeterli)
   const placementMap = getPlacementMap(yerlestirmeSonucu?.tumSalonlar);
 
   // Yardımcılar: normalize ve parse (önce tanımla, sonra kullan)
   function normalizeClassName(s) {
     if (!s) return '';
-    const raw = String(s).trim().toUpperCase();
+    const raw = String(s).trim().toLocaleUpperCase('tr-TR');
     // Ayırıcıları tek tipe çevir ("-", " ", "_" -> "/")
     const unified = raw.replace(/[- _]+/g, '/');
     // "11A" gibi durumları "11/A" yap
-    const m = unified.match(/^(\d{1,2})\/?\s*([A-ZÇĞİÖŞÜ]+)?$/i);
+    const m = unified.match(/^(\d{1,2})\/?\s*([A-ZÇĞİÖŞÜ0-9]+)?$/i);
     if (!m) return unified;
     const level = m[1];
-    const section = (m[2] || '').toUpperCase();
+    const section = (m[2] || '').toLocaleUpperCase('tr-TR');
     return section ? `${level}/${section}` : `${level}`;
   }
 
@@ -243,22 +245,36 @@ const SalonOgrenciListesiPrintable = forwardRef(({ ogrenciler, yerlestirmeSonucu
   }
 
   return (
-    <Box
-      ref={ref}
-      sx={{
-        p: 2,
-        minHeight: '100vh',
-        width: '210mm',
-        margin: '0 auto',
-        backgroundColor: 'white',
-        '@media print': {
-          p: 0,
-          m: 0,
-          fontSize: '12px',
-          backgroundColor: 'white'
-        }
-      }}
-    >
+    <>
+      <GlobalStyles
+        styles={{
+          '@media print': {
+            html: { background: '#ffffff !important' },
+            body: { background: '#ffffff !important', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' },
+            thead: { display: 'table-header-group !important' },
+            tr: { pageBreakInside: 'avoid !important', breakInside: 'avoid !important' }
+          },
+        }}
+      />
+      <Box
+        ref={ref}
+        sx={{
+          p: { xs: 2, sm: 3 },
+          minHeight: '100vh',
+          width: '100%',
+          margin: '0 auto',
+          backgroundColor: 'white',
+          boxSizing: 'border-box',
+          '@media print': {
+            p: 0,
+            m: '0 auto',
+            width: '100%',
+            maxWidth: '100%',
+            backgroundColor: 'white',
+            boxSizing: 'border-box'
+          }
+        }}
+      >
 
 
 
@@ -266,87 +282,107 @@ const SalonOgrenciListesiPrintable = forwardRef(({ ogrenciler, yerlestirmeSonucu
       <Box sx={{ mb: 2 }}>
         {finalSinifList.map((sinif, index) => {
           const sinifOgrencileri = ogrencilerBySinif[sinif] || [];
+          const sinifNorm = normalizeClassName(sinif);
+          const sinifDersi = (ayarlar.dersler || []).find(ders =>
+            Array.isArray(ders.siniflar) && ders.siniflar.some(s => normalizeClassName(s) === sinifNorm)
+          );
+
+          let dersSinavBasligi = '';
+          if (sinifDersi) {
+            dersSinavBasligi = `${sinifDersi.ad} - ${ayarlar.donem || '1'}. Dönem ${ayarlar.sinavDonemi || '1'}. Ortak Sınavı`;
+          } else if (ayarlar.dersler && ayarlar.dersler.length > 0) {
+            dersSinavBasligi = `${ayarlar.dersler[0].ad || 'Ortak Sınav'} - ${ayarlar.donem || '1'}. Dönem ${ayarlar.sinavDonemi || '1'}. Ortak Sınavı`;
+          } else {
+            dersSinavBasligi = `${ayarlar.donem || '1'}. Dönem ${ayarlar.sinavDonemi || '1'}. Ortak Sınavı`;
+          }
+
           return (
             <Box key={sinif} sx={{
-              mb: 1,
-              pt: 2,
+              mb: 1.5,
+              pt: index > 0 ? 1 : 0,
               pageBreakBefore: index > 0 ? 'always' : 'auto',
               backgroundColor: 'white',
+              boxSizing: 'border-box',
               '@media print': {
                 pageBreakBefore: index > 0 ? 'always' : 'auto',
                 breakBefore: index > 0 ? 'page' : 'auto',
-                pt: 0,
-                mt: 0,
+                boxSizing: 'border-box !important',
+                width: '100% !important',
+                maxWidth: '100% !important',
+                padding: '10mm 14mm 10mm 14mm !important',
                 backgroundColor: 'white'
               }
             }}>
-              {/* Üst Boşluk - Her sınıf için */}
-              <Box sx={{
-                height: '20px',
-                '@media print': {
-                  height: '25px'
-                }
-              }} />
-
               {/* Sınıf Başlığı */}
               <PrintHeader 
+                compact={true}
                 schoolName={ayarlar.okulAdi || 'T.C. MİLLİ EĞİTİM BAKANLIĞI'}
                 subTitle={`${ayarlar.egitimYili || '2025-2026'} Eğitim Öğretim Yılı`}
-                documentTitle={`${sinif} Sınıfı Listesi - ${(() => {
-                    // Bu sınıfın dersini bul
-                    if (ayarlar.dersler && ayarlar.dersler.length > 0) {
-                      const sinifDersi = ayarlar.dersler.find(ders =>
-                        ders.siniflar && ders.siniflar.includes(sinif)
-                      );
-                      if (sinifDersi) {
-                        return `${sinifDersi.ad} ${ayarlar.donem || '1'}. Dönem ${ayarlar.sinavDonemi || '1'}. Ortak Sınavı`;
-                      }
-                    }
-                    // Fallback: İlk ders veya varsayılan
-                    const dersAdi = ayarlar.dersler && ayarlar.dersler.length > 0
-                      ? ayarlar.dersler[0].ad || 'Ders Adı'
-                      : 'Ders Adı';
-                    return `${dersAdi} ${ayarlar.donem || '1'}. Dönem ${ayarlar.sinavDonemi || '1'}. Ortak Sınavı`;
-                  })()}`}
+                documentTitle={`${sinif} Sınıfı Öğrenci Listesi - ${dersSinavBasligi}`}
                 date={`${ayarlar.sinavTarihi ? new Date(ayarlar.sinavTarihi).toLocaleDateString('tr-TR') : new Date().toLocaleDateString('tr-TR')} ${ayarlar.sinavSaati ? `- ${ayarlar.sinavSaati}` : ''}`}
               />
 
-              <TableContainer component={Paper} sx={{
-                mb: 1,
+              <TableContainer component={Paper} elevation={0} sx={{
+                mb: 1.5,
                 width: '100%',
-                maxWidth: '600px',
                 margin: '0 auto',
                 backgroundColor: 'white',
+                boxShadow: 'none',
+                borderRadius: '2px',
+                border: '1.5px solid #334155',
                 '@media print': {
-                  width: '80%',
-                  maxWidth: '100%',
+                  mb: 0,
+                  width: '100%',
                   margin: '0 auto',
-                  backgroundColor: 'white'
+                  backgroundColor: 'white',
+                  boxShadow: 'none',
+                  borderRadius: '2px',
+                  border: '1.5px solid #000'
                 }
               }}>
                 <Table size="small" sx={{
+                  width: '100%',
+                  borderCollapse: 'collapse',
                   '& .MuiTableCell-root': {
-                    padding: '1px 4px',
-                    fontSize: '0.85rem',
-                    lineHeight: 1.2
+                    padding: '2px 6px',
+                    fontSize: '8.5pt',
+                    lineHeight: 1.2,
+                    border: '1px solid #cbd5e1',
+                    color: '#000',
+                    fontFamily: '"Times New Roman", Times, serif'
+                  },
+                  '& .MuiTableHead-root': {
+                    display: 'table-header-group !important'
                   },
                   '& .MuiTableHead-root .MuiTableCell-root': {
-                    fontSize: '0.75rem',
+                    fontSize: '8.5pt',
+                    fontWeight: 800,
+                    backgroundColor: '#e2e8f0 !important',
+                    color: '#000 !important',
+                    border: '1.5px solid #000',
+                    py: 0.4,
+                    letterSpacing: '0.4px',
+                    textTransform: 'uppercase'
                   },
                   '& .MuiTableRow-root': {
-                    height: '27px'
+                    height: '22px',
+                    pageBreakInside: 'avoid !important',
+                    breakInside: 'avoid !important'
+                  },
+                  '& .MuiTableRow-root:nth-of-type(even)': {
+                    backgroundColor: '#f8fafc'
                   }
                 }}>
                   <TableHead>
-                    <TableRow sx={{ backgroundColor: 'grey.300' }}>
-                      <TableCell sx={{ backgroundColor: 'grey.300', color: 'black', fontWeight: 700, width: '8%' }}><strong>Sıra</strong></TableCell>
-                      <TableCell sx={{ backgroundColor: 'grey.300', color: 'black', fontWeight: 700, width: '15%' }}><strong>Öğrenci No</strong></TableCell>
-                      <TableCell sx={{ backgroundColor: 'grey.300', color: 'black', fontWeight: 700, width: '45%' }}><strong>Ad Soyad</strong></TableCell>
-                      <TableCell sx={{ backgroundColor: 'grey.300', color: 'black', fontWeight: 700, width: '16%' }}><strong>Salon</strong></TableCell>
-                      <TableCell sx={{ backgroundColor: 'grey.300', color: 'black', fontWeight: 700, width: '16%' }}><strong>Sıra No</strong></TableCell>
+                    <TableRow>
+                      <TableCell align="center" sx={{ width: '8%', fontWeight: 700 }}><strong>Sıra</strong></TableCell>
+                      <TableCell align="center" sx={{ width: '15%', fontWeight: 700 }}><strong>Öğrenci No</strong></TableCell>
+                      <TableCell align="left" sx={{ width: '45%', fontWeight: 700, pl: 1.5 }}><strong>Ad Soyad</strong></TableCell>
+                      <TableCell align="center" sx={{ width: '16%', fontWeight: 700 }}><strong>Salon</strong></TableCell>
+                      <TableCell align="center" sx={{ width: '16%', fontWeight: 700 }}><strong>Sıra No</strong></TableCell>
                     </TableRow>
                   </TableHead>
-                  <TableBody>
+                  <TableBody sx={{ display: 'table-row-group' }}>
                     {[...sinifOgrencileri]
                       .sort((a, b) => {
                         const numA = parseInt((a?.numara ?? a?.number ?? '').toString().replace(/[^0-9]/g, ''), 10);
@@ -362,43 +398,44 @@ const SalonOgrenciListesiPrintable = forwardRef(({ ogrenciler, yerlestirmeSonucu
                         return 0;
                       })
                       .map((ogrenci, index) => (
-                        <TableRow key={ogrenci.id}>
-                          <TableCell>{index + 1}</TableCell>
-                          <TableCell>{ogrenci.numara}</TableCell>
-                          <TableCell>{ogrenci.ad || ogrenci.adSoyad || 'Bilinmeyen'} {ogrenci.soyad || ''}</TableCell>
-                          <TableCell>
-                            <Chip
-                              label={ogrenci.salonBilgisi}
-                              size="small"
-                              color="default"
-                              sx={{
-                                backgroundColor: 'transparent',
-                                color: 'black',
-                                border: 'none',
-                                boxShadow: 'none',
-                                fontSize: '0.9rem',
-                                height: '20px'
-                              }}
-                            />
+                        <TableRow key={ogrenci.id || index}>
+                          <TableCell align="center">{index + 1}</TableCell>
+                          <TableCell align="center" sx={{ fontWeight: 700 }}>{ogrenci.numara}</TableCell>
+                          <TableCell align="left" sx={{ pl: 1.5 }}>{ogrenci.ad || ogrenci.adSoyad || 'Bilinmeyen'} {ogrenci.soyad || ''}</TableCell>
+                          <TableCell align="center" sx={{ fontWeight: 700 }}>
+                            {ogrenci.salonBilgisi || '-'}
                           </TableCell>
-                          <TableCell>
-                            <Chip
-                              label={ogrenci.koltukNo}
-                              size="small"
-                              color="default"
-                              sx={{
-                                backgroundColor: 'transparent',
-                                color: 'black',
-                                border: 'none',
-                                boxShadow: 'none',
-                                fontSize: '0.9rem',
-                                height: '20px'
-                              }}
-                            />
+                          <TableCell align="center" sx={{ fontWeight: 700 }}>
+                            {ogrenci.koltukNo || '-'}
                           </TableCell>
                         </TableRow>
                       ))}
                   </TableBody>
+                  <TableFooter sx={{ display: 'table-row-group !important' }}>
+                    <TableRow sx={{
+                      pageBreakInside: 'avoid !important',
+                      breakInside: 'avoid !important',
+                      pageBreakBefore: 'avoid !important',
+                      breakBefore: 'avoid !important',
+                      backgroundColor: '#f8fafc !important'
+                    }}>
+                      <TableCell
+                        colSpan={5}
+                        align="right"
+                        sx={{
+                          fontWeight: 800,
+                          fontSize: '8.5pt',
+                          py: 0.5,
+                          px: 1.5,
+                          border: '1.5px solid #000 !important',
+                          fontFamily: '"Times New Roman", Times, serif',
+                          color: '#000 !important'
+                        }}
+                      >
+                        {sinif} Sınıfı Toplam: {sinifOgrencileri.length} Öğrenci
+                      </TableCell>
+                    </TableRow>
+                  </TableFooter>
                 </Table>
               </TableContainer>
             </Box>
@@ -408,8 +445,9 @@ const SalonOgrenciListesiPrintable = forwardRef(({ ogrenciler, yerlestirmeSonucu
 
       {/* Alt bilgi */}
     </Box>
-  );
-});
+  </>
+);
+}));
 
 SalonOgrenciListesiPrintable.displayName = 'SalonOgrenciListesiPrintable';
 

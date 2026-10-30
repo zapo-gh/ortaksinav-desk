@@ -47,7 +47,7 @@ export const UnplacedStudentsDropZone = ({ children, onStudentMove }) => {
 
 // Draggable Unplaced Student Component
 export const DraggableUnplacedStudent = ({ ogrenci }) => {
-    const { attributes, listeners, setNodeRef, isDragging, transform } = useDraggable({
+    const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
         id: `unplaced-student-${ogrenci.id}`,
         data: {
             type: ITEM_TYPES.STUDENT,
@@ -56,22 +56,20 @@ export const DraggableUnplacedStudent = ({ ogrenci }) => {
         }
     });
 
-    const style = transform ? {
-        transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
-    } : undefined;
-
     return (
         <Chip
             ref={setNodeRef}
             {...listeners}
             {...attributes}
-            style={style}
             label={`${ogrenci.ad} (${ogrenci.sinif})`}
             variant="outlined"
             color="warning"
             sx={{
                 cursor: 'grab',
-                opacity: isDragging ? 0.5 : 1,
+                opacity: isDragging ? 0.35 : 1,
+                touchAction: 'none',
+                userSelect: 'none',
+                WebkitUserSelect: 'none',
                 '&:active': {
                     cursor: 'grabbing'
                 },

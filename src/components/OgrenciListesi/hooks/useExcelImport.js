@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import logger from '../../../utils/logger';
 import { useNotifications } from '../../NotificationSystem';
+import { turkishNormalize, normalizeGender } from '../../../utils/turkishUtils';
 
 export const useExcelImport = (
   ogrenciler,
@@ -24,9 +25,9 @@ export const useExcelImport = (
     }
 
     const mevcutOgrenciSayisi = Array.isArray(ogrenciler) ? ogrenciler.length : 0;
-    if (mevcutOgrenciSayisi > 0) {
-      logger.warn('⚠️ Mevcut öğrenci listesi tespit edildi:', mevcutOgrenciSayisi, 'öğrenci');
-      showError(`Mevcut bir öğrenci listesi bulunmaktadır (${mevcutOgrenciSayisi} öğrenci). Yeni liste yüklemek için önce mevcut listeyi temizlemeniz gerekmektedir.`);
+    if (mevcutOgrenciSayisi > 0 && yerlesimPlaniVarMi) {
+      logger.warn('⚠️ Mevcut yerleşim planı varken öğrenci ekleme engellendi');
+      showError(`Mevcut bir sınav yerleşim planı bulunmaktadır. Yeni öğrenci eklemek için önce planı temizlemeniz veya arşivlemeniz gerekmektedir.`);
       event.target.value = '';
       return;
     }
@@ -39,188 +40,257 @@ export const useExcelImport = (
         const data = new Uint8Array(e.target.result);
         const XLSX = await import('xlsx');
         const workbook = XLSX.read(data, { type: 'array' });
-        const sheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[sheetName];
-        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-
-        const ogrenciGruplari = [];
-        let mevcutSinif = '9-A';
-        let sonTCSatiri = -1;
-        let sutunBasliklari = {};
-
-        logger.debug('Excel dosyası analiz ediliyor...');
-        logger.debug('Toplam satır sayısı:', jsonData.length);
-
-        const sutunBasliklariniTespitEt = () => {
-          for (let satir = 1; satir < Math.min(5, jsonData.length); satir++) {
-            const row = jsonData[satir];
-            if (!row) continue;
-            for (let sutun = 0; sutun < row.length; sutun++) {
-              const cell = row[sutun];
-              if (cell && cell.toString().trim()) {
-                const cellValue = cell.toString().trim().toLowerCase();
-                if ((cellValue.includes('öğrenci no') || cellValue.includes('numara')) && !cellValue.includes('s.no')) {
-                  sutunBasliklari.numara = sutun;
-                } else if (cellValue.includes('adı') && !cellValue.includes('soyadı')) {
-                  sutunBasliklari.adi = sutun;
-                } else if (cellValue.includes('soyadı') || cellValue.includes('soyad')) {
-                  sutunBasliklari.soyadi = sutun;
-                } else if (cellValue.includes('cinsiyet')) {
-                  sutunBasliklari.cinsiyet = sutun;
-                }
-              }
-            }
-            if (sutunBasliklari.numara !== undefined && sutunBasliklari.adi !== undefined) {
-              break;
-            }
-          }
-          return sutunBasliklari;
-        };
-
-        sutunBasliklariniTespitEt();
-
-        for (let i = 0; i < jsonData.length; i++) {
-          const row = jsonData[i];
-          if (row && row[0] && row[0].toString().includes('T.C.')) {
-            const baslik = row[0].toString();
-            let sinifBilgisi = null;
-            let sinifMatch = baslik.match(/(\d+)\.\s*Sınıf\s*\/\s*(\w+)\s*Şubesi/);
-            if (sinifMatch) sinifBilgisi = `${sinifMatch[1]}-${sinifMatch[2]}`;
-            if (!sinifBilgisi) {
-              sinifMatch = baslik.match(/(\d+)\.\s*Sınıf\s+(\w+)\s+Şubesi/);
-              if (sinifMatch) sinifBilgisi = `${sinifMatch[1]}-${sinifMatch[2]}`;
-            }
-            if (!sinifBilgisi) {
-              sinifMatch = baslik.match(/(\d+)\/(\w+)\s*Şubesi/);
-              if (sinifMatch) sinifBilgisi = `${sinifMatch[1]}-${sinifMatch[2]}`;
-            }
-            if (!sinifBilgisi) {
-              sinifMatch = baslik.match(/(\d+)-(\w+)/);
-              if (sinifMatch) sinifBilgisi = `${sinifMatch[1]}-${sinifMatch[2]}`;
-            }
-            if (sinifBilgisi) {
-              if (sonTCSatiri >= 0) {
-                ogrenciGruplari.push({
-                  sinif: mevcutSinif,
-                  baslangicSatir: sonTCSatiri + 4,
-                  bitisSatir: i - 1
-                });
-              }
-              mevcutSinif = sinifBilgisi;
-              sonTCSatiri = i;
-            }
-          }
-        }
-
-        if (sonTCSatiri >= 0) {
-          ogrenciGruplari.push({
-            sinif: mevcutSinif,
-            baslangicSatir: sonTCSatiri + 4,
-            bitisSatir: jsonData.length - 1
-          });
-        }
 
         const yeniOgrenciler = [];
+        let cinsiyetSutunuBulundu = false;
+
         const mevcutMaksimumId = ogrenciler.reduce((max, o) => {
           const numericId = typeof o?.id === 'number' ? o.id : parseInt(o?.id, 10);
           return Number.isFinite(numericId) && numericId > max ? numericId : max;
         }, 0);
 
-        ogrenciGruplari.forEach((grup, grupIndex) => {
-          const grupVerileri = jsonData.slice(grup.baslangicSatir, grup.bitisSatir + 1);
-          let reddedilenSatirSayisi = 0;
-          const grupOgrencileri = grupVerileri.filter((row, rowIndex) => {
-            if (!row || row.length < 3) return false;
-            const numara = sutunBasliklari.numara !== undefined ? row[sutunBasliklari.numara] : row[1];
-            const ad = sutunBasliklari.adi !== undefined ? row[sutunBasliklari.adi] : row[2];
-            if (!numara || !ad) return false;
-            const numaraStr = numara.toString().trim();
-            const adStr = ad.toString().trim();
-            if (adStr.includes('Sınıf') || adStr.includes('Şubesi') || (adStr.includes('Öğrenci') && adStr.includes('No')) || adStr.includes('Numara') || adStr.includes('Adı') || adStr.includes('Soyadı') || adStr.includes('Toplam') || adStr.includes('Özet') || adStr.includes('S.No') || adStr.includes('Cinsiyet')) return false;
-            const numaraValid = !isNaN(numaraStr) && numaraStr.length >= 1 && numaraStr.length <= 10 && numaraStr.trim() !== '';
-            const adValid = adStr.match(/[a-zA-ZçğıöşüÇĞIİÖŞÜ]/) && adStr.length >= 2;
-            if (numaraValid && adValid) return true;
-            reddedilenSatirSayisi++;
-            return false;
-          });
+        // Sayfa adından sınıf çıkarma yardımcısı (Örn: "9-A", "9A", "10/B", "11-C Sınıfı")
+        const parseSinifAdi = (text) => {
+          if (!text) return null;
+          const str = text.toString().trim();
+          let m = str.match(/(\d+)\s*[-/._\s]?\s*([a-zA-ZğüşıöçĞÜŞİÖÇ]+)/);
+          if (m && parseInt(m[1], 10) >= 5 && parseInt(m[1], 10) <= 12) {
+            return `${m[1]}-${m[2].toLocaleUpperCase('tr-TR').trim()}`;
+          }
+          return null;
+        };
 
-          const islenmisOgrenciler = grupOgrencileri.map((row, index) => {
-            let ogrenciNo = '';
-            let adi = '';
-            let soyadi = '';
-            let cinsiyet = '';
+        // Tüm çalışma sayfalarını (sheets) sırayla tara
+        for (const sheetName of workbook.SheetNames) {
+          const worksheet = workbook.Sheets[sheetName];
+          if (!worksheet) continue;
 
-            if (sutunBasliklari.numara !== undefined && row[sutunBasliklari.numara]) ogrenciNo = row[sutunBasliklari.numara].toString().trim();
-            if (sutunBasliklari.adi !== undefined && row[sutunBasliklari.adi]) adi = row[sutunBasliklari.adi].toString().trim();
-            if (sutunBasliklari.soyadi !== undefined && row[sutunBasliklari.soyadi]) soyadi = row[sutunBasliklari.soyadi].toString().trim();
-            if (sutunBasliklari.cinsiyet !== undefined && row[sutunBasliklari.cinsiyet]) {
-              const cinsiyetValue = row[sutunBasliklari.cinsiyet].toString().trim().toLowerCase();
-              if (['k', 'kız', 'kadın', 'kadin', 'bayan'].includes(cinsiyetValue)) cinsiyet = 'K';
-              else if (['e', 'erkek', 'bay'].includes(cinsiyetValue)) cinsiyet = 'E';
+          const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+          if (!jsonData || jsonData.length === 0) continue;
+
+          logger.debug(`[Excel Import] Sayfa "${sheetName}" taranıyor, satır sayısı:`, jsonData.length);
+
+          const sheetDefaultSinif = parseSinifAdi(sheetName);
+
+          // Sütun başlıklarını tespit et
+          const sutunBasliklari = {};
+          let baslikSatirIndex = -1;
+
+          for (let satir = 0; satir < Math.min(15, jsonData.length); satir++) {
+            const row = jsonData[satir];
+            if (!row || !Array.isArray(row)) continue;
+
+            for (let sutun = 0; sutun < row.length; sutun++) {
+              const cell = row[sutun];
+              if (!cell) continue;
+              const cellNorm = turkishNormalize(cell.toString());
+
+              if (!sutunBasliklari.numara && ((cellNorm.includes('ogrenci no') || cellNorm.includes('okul no') || cellNorm.includes('numara') || cellNorm === 'no' || cellNorm === 'ogr no') && !cellNorm.includes('sno') && !cellNorm.includes('sira no'))) {
+                sutunBasliklari.numara = sutun;
+              } else if (!sutunBasliklari.adi && (cellNorm === 'adi' || cellNorm === 'ad' || cellNorm === 'isim' || cellNorm.includes('ogrenci adi') || cellNorm.includes('ogrencinin adi')) && !cellNorm.includes('soyad')) {
+                sutunBasliklari.adi = sutun;
+              } else if (!sutunBasliklari.tamAd && (cellNorm.includes('ad soyad') || cellNorm.includes('adi soyadi') || cellNorm === 'ogrenci' || cellNorm === 'ogrencinin ad soyadi')) {
+                sutunBasliklari.tamAd = sutun;
+              } else if (!sutunBasliklari.soyadi && (cellNorm === 'soyadi' || cellNorm === 'soyad' || cellNorm === 'soyisim' || cellNorm.includes('ogrenci soyadi'))) {
+                sutunBasliklari.soyadi = sutun;
+              } else if (!sutunBasliklari.cinsiyet && (cellNorm.includes('cinsiyet') || cellNorm === 'cins')) {
+                sutunBasliklari.cinsiyet = sutun;
+                cinsiyetSutunuBulundu = true;
+              } else if (!sutunBasliklari.sinif && (cellNorm.includes('sinif') || cellNorm.includes('sube'))) {
+                sutunBasliklari.sinif = sutun;
+              }
             }
 
-            if (!ogrenciNo || !adi) {
-              if (row.length > 11) {
-                if (!ogrenciNo && row[1] && !isNaN(row[1].toString().trim())) {
-                  const numaraStr = row[1].toString().trim();
-                  if (numaraStr.length >= 1 && numaraStr.length <= 10) ogrenciNo = numaraStr;
+            if ((sutunBasliklari.numara !== undefined || sutunBasliklari.adi !== undefined || sutunBasliklari.tamAd !== undefined)) {
+              baslikSatirIndex = satir;
+              if (sutunBasliklari.numara !== undefined && (sutunBasliklari.adi !== undefined || sutunBasliklari.tamAd !== undefined)) {
+                break;
+              }
+            }
+          }
+
+          // Format 1: e-Okul tarzı T.C. bloklu başlıklar
+          const eOkulGruplari = [];
+          let eOkulMevcutSinif = sheetDefaultSinif || '9-A';
+          let sonTCSatiri = -1;
+
+          for (let i = 0; i < jsonData.length; i++) {
+            const row = jsonData[i];
+            if (row && row[0] && row[0].toString().includes('T.C.')) {
+              const baslik = row[0].toString();
+              let sinifBilgisi = null;
+              let sinifMatch = baslik.match(/(\d+)\.\s*Sınıf\s*\/\s*(\w+)\s*Şubesi/);
+              if (sinifMatch) sinifBilgisi = `${sinifMatch[1]}-${sinifMatch[2]}`;
+              if (!sinifBilgisi) {
+                sinifMatch = baslik.match(/(\d+)\.\s*Sınıf\s+(\w+)\s+Şubesi/);
+                if (sinifMatch) sinifBilgisi = `${sinifMatch[1]}-${sinifMatch[2]}`;
+              }
+              if (!sinifBilgisi) {
+                sinifMatch = baslik.match(/(\d+)\/(\w+)\s*Şubesi/);
+                if (sinifMatch) sinifBilgisi = `${sinifMatch[1]}-${sinifMatch[2]}`;
+              }
+              if (!sinifBilgisi) {
+                sinifMatch = baslik.match(/(\d+)-(\w+)/);
+                if (sinifMatch) sinifBilgisi = `${sinifMatch[1]}-${sinifMatch[2]}`;
+              }
+              if (sinifBilgisi) {
+                if (sonTCSatiri >= 0) {
+                  eOkulGruplari.push({
+                    sinif: eOkulMevcutSinif,
+                    baslangicSatir: sonTCSatiri + 4,
+                    bitisSatir: i - 1
+                  });
                 }
-                if (!adi && row[3] && row[3].toString().trim()) adi = row[3].toString().trim();
-                if (!soyadi && row[7] && row[7].toString().trim()) soyadi = row[7].toString().trim();
-                if (!cinsiyet && row[11] && row[11].toString().trim()) {
-                  const cinsiyetValue = row[11].toString().trim().toLowerCase();
-                  if (['k', 'kız', 'kadın', 'kadin', 'bayan'].includes(cinsiyetValue)) cinsiyet = 'K';
-                  else if (['e', 'erkek', 'bay'].includes(cinsiyetValue)) cinsiyet = 'E';
+                eOkulMevcutSinif = sinifBilgisi;
+                sonTCSatiri = i;
+              }
+            }
+          }
+
+          if (sonTCSatiri >= 0) {
+            eOkulGruplari.push({
+              sinif: eOkulMevcutSinif,
+              baslangicSatir: sonTCSatiri + 4,
+              bitisSatir: jsonData.length - 1
+            });
+          }
+
+          // Eğer e-Okul blokları bulunduysa bu bloklardan oku
+          if (eOkulGruplari.length > 0) {
+            eOkulGruplari.forEach((grup) => {
+              const grupVerileri = jsonData.slice(grup.baslangicSatir, grup.bitisSatir + 1);
+              grupVerileri.forEach((row) => {
+                if (!row || row.length < 2) return;
+                const numaraRaw = sutunBasliklari.numara !== undefined ? row[sutunBasliklari.numara] : row[1];
+                let adRaw = sutunBasliklari.adi !== undefined ? row[sutunBasliklari.adi] : (sutunBasliklari.tamAd !== undefined ? row[sutunBasliklari.tamAd] : row[2]);
+                let soyadRaw = sutunBasliklari.soyadi !== undefined ? row[sutunBasliklari.soyadi] : '';
+
+                if (!numaraRaw || !adRaw) return;
+
+                const numaraStr = numaraRaw.toString().trim();
+                let adStr = adRaw.toString().trim();
+                let soyadStr = soyadRaw ? soyadRaw.toString().trim() : '';
+
+                if (adStr.includes('Sınıf') || adStr.includes('Şubesi') || adStr.includes('Toplam') || adStr.includes('Öğrenci')) return;
+                if (isNaN(numaraStr) || numaraStr.length < 1 || numaraStr.length > 10) return;
+                if (!adStr.match(/[a-zA-ZçğıöşüÇĞIİÖŞÜ]/) || adStr.length < 2) return;
+
+                let cinsiyet = '';
+                if (sutunBasliklari.cinsiyet !== undefined && row[sutunBasliklari.cinsiyet]) {
+                  const detected = normalizeGender(row[sutunBasliklari.cinsiyet]);
+                  if (detected) cinsiyet = detected;
                 }
+
+                // Sadece tamAd varsa ad ve soyadı ayır
+                if (!soyadStr && sutunBasliklari.tamAd !== undefined) {
+                  const parts = adStr.split(/\s+/);
+                  if (parts.length > 1) {
+                    soyadStr = parts.pop();
+                    adStr = parts.join(' ');
+                  }
+                }
+
+                yeniOgrenciler.push({
+                  id: mevcutMaksimumId + yeniOgrenciler.length + 1,
+                  ad: adStr,
+                  soyad: soyadStr,
+                  numara: numaraStr,
+                  sinif: grup.sinif,
+                  cinsiyet: cinsiyet || 'E',
+                  gecmisSkor: 75,
+                  ozelDurum: false
+                });
+              });
+            });
+          } else {
+            // Format 2: Standart tablo formatı (e-Okul T.C. başlığı olmayan düz listeler)
+            const baslangic = baslikSatirIndex >= 0 ? baslikSatirIndex + 1 : 0;
+            let currentSinif = sheetDefaultSinif || '9-A';
+
+            for (let i = baslangic; i < jsonData.length; i++) {
+              const row = jsonData[i];
+              if (!row || !Array.isArray(row) || row.length === 0) continue;
+
+              // Satır bir sınıf başlığı satırı mı kontrol et (Örn: "9-A Sınıfı")
+              const firstCell = row[0] ? row[0].toString().trim() : '';
+              const parsedInlineSinif = parseSinifAdi(firstCell);
+              if (parsedInlineSinif && row.filter(c => c !== undefined && c !== '').length <= 2) {
+                currentSinif = parsedInlineSinif;
+                continue;
               }
 
-              if (!ogrenciNo || !adi) {
-                for (let i = 0; i < row.length; i++) {
-                  const cell = row[i];
-                  if (cell && cell.toString().trim()) {
-                    const cellValue = cell.toString().trim();
-                    if (!ogrenciNo && !isNaN(cellValue) && cellValue.length >= 1 && cellValue.length <= 10) ogrenciNo = cellValue;
-                    else if (cellValue.match(/[a-zA-ZçğıöşüÇĞIİÖŞÜ]/) && cellValue.length >= 2 && cellValue.length <= 30) {
-                      if (cellValue.match(/^[a-zA-ZçğıöşüÇĞIİÖŞÜ\s]+$/)) {
-                        if (!adi) adi = cellValue;
-                        else if (!soyadi) soyadi = cellValue;
-                      }
-                    } else if (!cinsiyet && ['k', 'e', 'kız', 'erkek', 'kadın', 'kadin', 'bay', 'bayan'].includes(cellValue.toLowerCase())) {
-                      const cv = cellValue.toLowerCase();
-                      if (['k', 'kız', 'kadın', 'kadin', 'bayan'].includes(cv)) cinsiyet = 'K';
-                      else if (['e', 'erkek', 'bay'].includes(cv)) cinsiyet = 'E';
-                    }
+              // Sınıf sütunu varsa o satırdaki sınıfı al
+              let rowSinif = currentSinif;
+              if (sutunBasliklari.sinif !== undefined && row[sutunBasliklari.sinif]) {
+                const sVal = parseSinifAdi(row[sutunBasliklari.sinif].toString());
+                if (sVal) rowSinif = sVal;
+              }
+
+              // Numara ve Ad bul
+              let numaraRaw = sutunBasliklari.numara !== undefined ? row[sutunBasliklari.numara] : null;
+              let adRaw = sutunBasliklari.adi !== undefined ? row[sutunBasliklari.adi] : (sutunBasliklari.tamAd !== undefined ? row[sutunBasliklari.tamAd] : null);
+              let soyadRaw = sutunBasliklari.soyadi !== undefined ? row[sutunBasliklari.soyadi] : '';
+
+              // Başlık eşleşmediyse hücre tiplerine göre sezgisel tespit yap
+              if (!numaraRaw || !adRaw) {
+                for (let c = 0; c < row.length; c++) {
+                  const val = row[c] ? row[c].toString().trim() : '';
+                  if (!val) continue;
+
+                  if (!numaraRaw && !isNaN(val) && val.length >= 1 && val.length <= 10 && parseInt(val, 10) > 0) {
+                    numaraRaw = val;
+                  } else if (!adRaw && val.match(/^[a-zA-ZçğıöşüÇĞIİÖŞÜ\s]{2,40}$/) && !val.includes('Sınıf') && !val.includes('Şube')) {
+                    adRaw = val;
                   }
                 }
               }
+
+              if (!numaraRaw || !adRaw) continue;
+
+              const numaraStr = numaraRaw.toString().trim();
+              let adStr = adRaw.toString().trim();
+              let soyadStr = soyadRaw ? soyadRaw.toString().trim() : '';
+
+              if (adStr.toLowerCase().includes('toplam') || adStr.toLowerCase().includes('özet') || adStr.toLowerCase().includes('öğrenci no')) continue;
+              if (isNaN(numaraStr) || numaraStr.length < 1 || numaraStr.length > 10) continue;
+
+              // Ad Soyad tek sütundaysa ayır
+              if (!soyadStr && (sutunBasliklari.tamAd !== undefined || !sutunBasliklari.soyadi)) {
+                const parts = adStr.split(/\s+/);
+                if (parts.length > 1) {
+                  soyadStr = parts.pop();
+                  adStr = parts.join(' ');
+                }
+              }
+
+              let cinsiyet = '';
+              if (sutunBasliklari.cinsiyet !== undefined && row[sutunBasliklari.cinsiyet]) {
+                const detected = normalizeGender(row[sutunBasliklari.cinsiyet]);
+                if (detected) cinsiyet = detected;
+              }
+
+              yeniOgrenciler.push({
+                id: mevcutMaksimumId + yeniOgrenciler.length + 1,
+                ad: adStr,
+                soyad: soyadStr,
+                numara: numaraStr,
+                sinif: rowSinif,
+                cinsiyet: cinsiyet || 'E',
+                gecmisSkor: 75,
+                ozelDurum: false
+              });
             }
-
-            return {
-              id: mevcutMaksimumId + yeniOgrenciler.length + index + 1,
-              ad: adi,
-              soyad: soyadi || '',
-              numara: ogrenciNo,
-              sinif: grup.sinif,
-              cinsiyet: cinsiyet || 'E',
-              gecmisSkor: Math.floor(Math.random() * 40) + 60,
-              ozelDurum: false
-            };
-          });
-
-          const gecerliOgrenciler = islenmisOgrenciler.filter(ogrenci => ogrenci.ad && ogrenci.numara);
-          yeniOgrenciler.push(...gecerliOgrenciler);
-        });
+          }
+        }
 
         if (yeniOgrenciler.length === 0) {
           setYukleme(false);
-          const tespitEdilenSiniflar = ogrenciGruplari.map(g => g.sinif).join(', ');
-          showError(`❌ Excel dosyasında öğrenci verisi bulunamadı!
-🔍 Analiz Sonucu:
-• Tespit edilen sınıf sayısı: ${ogrenciGruplari.length}
-• Tespit edilen sınıflar: ${tespitEdilenSiniflar || 'Hiçbiri'}
-• Toplam Excel satır sayısı: ${jsonData.length}
-• Tespit edilen sütun başlıkları: ${Object.keys(sutunBasliklari).length > 0 ? Object.keys(sutunBasliklari).join(', ') : 'Hiçbiri'}`);
+          showError(`❌ Excel dosyasında öğrenci verisi bulunamadı! Lütfen dosyanızda 'Öğrenci No / Numara' ve 'Ad / Soyad' sütunlarının bulunduğundan emin olun.`);
           return;
+        }
+
+        if (!cinsiyetSutunuBulundu) {
+          logger.warn('⚠️ Excel dosyasında cinsiyet sütunu tespit edilemedi, varsayılan cinsiyet atandı.');
         }
 
         const onikinciSinifOgrenciler = yeniOgrenciler.filter(ogrenci => ogrenci.sinif.startsWith('12-'));
@@ -235,10 +305,19 @@ export const useExcelImport = (
             return;
           }
           try {
-            const updatedList = [...ogrenciler, ...yeniOgrenciler];
+            const mevcutNumaralar = new Set((ogrenciler || []).map(o => String(o.numara)));
+            const eklenenOgrenciler = yeniOgrenciler.filter(o => !mevcutNumaralar.has(String(o.numara)));
+            const atlananSayisi = yeniOgrenciler.length - eklenenOgrenciler.length;
+
+            const updatedList = [...(ogrenciler || []), ...eklenenOgrenciler];
             await ogrencilerYukle(updatedList);
             setYukleme(false);
-            showSuccess(`✅ ${yeniOgrenciler.length} öğrenci başarıyla yüklendi!`);
+
+            if (atlananSayisi > 0) {
+              showSuccess(`✅ ${eklenenOgrenciler.length} yeni öğrenci eklendi (${atlananSayisi} mükerrer numara atlandı). Toplam: ${updatedList.length} öğrenci.`);
+            } else {
+              showSuccess(`✅ ${eklenenOgrenciler.length} öğrenci başarıyla yüklendi! Toplam: ${updatedList.length} öğrenci.`);
+            }
           } catch (error) {
             setYukleme(false);
             showError(`Öğrenciler yüklenirken hata: ${error.message}`);

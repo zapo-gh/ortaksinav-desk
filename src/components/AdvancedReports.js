@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Advanced Reports Component
  * Provides detailed analytics and comprehensive reporting features
  */
@@ -115,7 +115,7 @@ const AdvancedReports = ({
       downloadFile(blob, `sinav-raporu-${Date.now()}.json`);
     } else if (format === 'csv') {
       const csv = generateCSV(data);
-      const blob = new Blob([csv], { type: 'text/csv' });
+      const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' });
       downloadFile(blob, `sinav-raporu-${Date.now()}.csv`);
     }
 

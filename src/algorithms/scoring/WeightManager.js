@@ -1,5 +1,6 @@
 import logger from '../../utils/logger.js';
 import { getSinifSeviyesi } from '../utils/helpers.js';
+import { normalizeGender as normalizeTurkishGender } from '../../utils/turkishUtils.js';
 import { DEFAULT_WEIGHTS, DEFAULT_LEARNING_RATE, PRIORITY_MULTIPLIERS, MIN_PRIORITY_SCORE, MIN_WEIGHT_BOUND, MAX_WEIGHT_BOUND } from '../../config/constants';
 
 /**
@@ -280,10 +281,7 @@ class DynamicWeightManager {
      */
     normalizeGender(cinsiyet) {
         if (!cinsiyet) return null;
-        const normalized = cinsiyet.toString().trim().toUpperCase();
-        if (['E', 'ERKEK', 'MALE', 'M', 'BAY'].includes(normalized)) return 'E';
-        if (['K', 'KIZ', 'KADIN', 'FEMALE', 'F', 'BAYAN'].includes(normalized)) return 'K';
-        return normalized;
+        return normalizeTurkishGender(cinsiyet) || cinsiyet;
     }
 
     /**

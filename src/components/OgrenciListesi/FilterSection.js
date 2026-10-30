@@ -45,9 +45,9 @@ const FilterSection = ({
           '& .MuiOutlinedInput-root': {
             height: 42,
             borderRadius: 2.5,
-            bgcolor: 'white',
+            bgcolor: 'background.paper',
             '& fieldset': {
-              borderColor: 'grey.300',
+              borderColor: 'divider',
             },
             '&:hover fieldset': {
               borderColor: 'primary.main',
@@ -85,8 +85,8 @@ const FilterSection = ({
       />
 
       {/* Sağ: Sınıf Filtresi (Tüm Öğrenciler) ve Toplam Öğrenci Chip'i */}
-      <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', ml: 'auto', flexWrap: 'wrap' }}>
-        <FormControl size="small" sx={{ minWidth: 180, bgcolor: 'white' }}>
+      <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', ml: { xs: 0, sm: 'auto' }, width: { xs: '100%', sm: 'auto' }, flexWrap: 'wrap' }}>
+        <FormControl size="small" sx={{ minWidth: 180, bgcolor: 'background.paper', flex: { xs: 1, sm: 'initial' } }}>
           <Select
             value={seciliSinifFiltre}
             onChange={(e) => setSeciliSinifFiltre(e.target.value)}
@@ -96,7 +96,7 @@ const FilterSection = ({
               height: 40,
               fontWeight: 500,
               '& .MuiOutlinedInput-notchedOutline': {
-                borderColor: 'grey.300',
+                borderColor: 'divider',
               },
               '&:hover .MuiOutlinedInput-notchedOutline': {
                 borderColor: 'primary.main',

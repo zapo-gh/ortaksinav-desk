@@ -33,16 +33,23 @@ import {
   ExitToApp,
   Login,
   VpnKey as KeyIcon,
-  SystemUpdateAlt as UpdateIcon
+  SystemUpdateAlt as UpdateIcon,
+  DarkMode as DarkModeIcon,
+  LightMode as LightModeIcon,
+  Fullscreen as FullscreenIcon,
+  FullscreenExit as FullscreenExitIcon,
+  Keyboard as KeyboardIcon
 } from '@mui/icons-material';
 import { useExamStore } from '../../store/useExamStore';
 import { useExam } from '../../context/ExamContext';
+import { useThemeMode } from '../../context/ThemeContext';
 import { isSuperAdmin, getCurrentSession } from '../../services/localAuth';
 import logger from '../../utils/logger';
 import QuickSearchModal from '../QuickSearchModal';
 import LoginDialog from '../auth/LoginDialog';
 import LicenseInfoDialog from '../LicenseInfoDialog';
 import ContactFormDialog from '../ContactFormDialog';
+import KeyboardShortcutsDialog from './KeyboardShortcutsDialog';
 import {
   Email as EmailIcon
 } from '@mui/icons-material';
@@ -75,6 +82,71 @@ const Sidebar = ({ isMobile, mobileOpen, setMobileOpen, collapsed, setCollapsed,
   const [licenseInfoOpen, setLicenseInfoOpen] = React.useState(false);
   const [showTestDashboard, setShowTestDashboard] = React.useState(false);
   const [contactDialogOpen, setContactDialogOpen] = React.useState(false);
+  const [isFullscreen, setIsFullscreen] = React.useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = React.useState(false);
+
+  // Store data for live badges
+  const ogrenciler = useExamStore(s => s.ogrenciler) || [];
+  const ayarlar = useExamStore(s => s.ayarlar) || {};
+  const salonlar = useExamStore(s => s.salonlar) || [];
+  const yerlestirmeSonucu = useExamStore(s => s.yerlestirmeSonucu);
+
+  const getBadgeInfo = (id) => {
+    switch (id) {
+      case 'ogrenciler':
+        return ogrenciler.length > 0 ? { count: ogrenciler.length, color: 'primary' } : null;
+      case 'ayarlar':
+        return ayarlar.dersler?.length > 0 ? { count: ayarlar.dersler.length, color: 'primary' } : null;
+      case 'salonlar': {
+        const activeSalons = salonlar.filter(s => s.aktif !== false);
+        return activeSalons.length > 0 ? { count: activeSalons.length, color: 'primary' } : null;
+      }
+      case 'sabit-atamalar': {
+        const pinned = ogrenciler.filter(o => o.pinned).length;
+        return pinned > 0 ? { count: pinned, color: 'warning' } : null;
+      }
+      case 'salon-plani':
+        return yerlestirmeSonucu ? { count: '✓', color: 'success' } : null;
+      default:
+        return null;
+    }
+  };
+
+  let themeModeContext = null;
+  try {
+    themeModeContext = useThemeMode();
+  } catch (_) {
+    themeModeContext = null;
+  }
+  const mode = themeModeContext?.mode || 'dark';
+  const toggleColorMode = themeModeContext?.toggleColorMode || (() => {});
+
+  const toggleFullscreen = async () => {
+    try {
+      if (typeof window !== 'undefined' && window.__TAURI__) {
+        const { getCurrentWindow } = await import('@tauri-apps/api/window');
+        const appWindow = await getCurrentWindow();
+        const currentFullscreen = await appWindow.isFullscreen();
+        if (currentFullscreen) {
+          await appWindow.setFullscreen(false);
+          setIsFullscreen(false);
+        } else {
+          await appWindow.setFullscreen(true);
+          setIsFullscreen(true);
+        }
+      } else {
+        if (!document.fullscreenElement) {
+          document.documentElement.requestFullscreen();
+          setIsFullscreen(true);
+        } else {
+          document.exitFullscreen();
+          setIsFullscreen(false);
+        }
+      }
+    } catch (error) {
+      logger.error('Tam ekran geçişi hatası:', error);
+    }
+  };
   
   const superAdmin = isSuperAdmin(getCurrentSession());
 
@@ -164,6 +236,26 @@ const Sidebar = ({ isMobile, mobileOpen, setMobileOpen, collapsed, setCollapsed,
         e.preventDefault();
         setOpenSearch(true);
         return;
+      }
+
+      // Alt+1 .. Alt+8 ile sekmeler arası hızlı geçiş
+      if (e.altKey && e.key >= '1' && e.key <= '8') {
+        const index = parseInt(e.key, 10) - 1;
+        if (NAV_ITEMS[index]) {
+          e.preventDefault();
+          handleNavClick(NAV_ITEMS[index].id);
+          return;
+        }
+      }
+
+      // F1 veya ? tuşu ile kısayol penceresi
+      if ((e.key === '?' || e.key === 'F1') && !e.ctrlKey && !e.altKey && !e.metaKey) {
+        const tag = (e.target?.tagName || '').toLowerCase();
+        if (tag !== 'input' && tag !== 'textarea' && !e.target?.isContentEditable) {
+          e.preventDefault();
+          setShortcutsOpen(prev => !prev);
+          return;
+        }
       }
 
       if ((e.ctrlKey || e.metaKey) && e.altKey && (e.key === 't' || e.key === '₺')) {
@@ -373,6 +465,7 @@ const Sidebar = ({ isMobile, mobileOpen, setMobileOpen, collapsed, setCollapsed,
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon;
             const active = aktifTab === item.id;
+            const badge = getBadgeInfo(item.id);
             
             return (
               <ListItem key={item.id} disablePadding>
@@ -411,6 +504,32 @@ const Sidebar = ({ isMobile, mobileOpen, setMobileOpen, collapsed, setCollapsed,
                       }} 
                     />
                   )}
+
+                  {!collapsed && badge && (
+                    <Box
+                      sx={{
+                        ml: 'auto',
+                        px: 0.85,
+                        py: 0.15,
+                        borderRadius: '6px',
+                        fontSize: '0.6875rem',
+                        fontWeight: 700,
+                        bgcolor: badge.color === 'success'
+                          ? 'rgba(16, 185, 129, 0.2)'
+                          : (badge.color === 'warning' ? 'rgba(245, 158, 11, 0.2)' : 'rgba(96, 165, 250, 0.18)'),
+                        color: badge.color === 'success'
+                          ? '#34d399'
+                          : (badge.color === 'warning' ? '#fbbf24' : '#93c5fd'),
+                        border: '1px solid',
+                        borderColor: badge.color === 'success'
+                          ? 'rgba(16, 185, 129, 0.35)'
+                          : (badge.color === 'warning' ? 'rgba(245, 158, 11, 0.35)' : 'rgba(96, 165, 250, 0.3)'),
+                        lineHeight: 1.4
+                      }}
+                    >
+                      {badge.count}
+                    </Box>
+                  )}
                 </ListItemButton>
               </ListItem>
             );
@@ -448,6 +567,67 @@ const Sidebar = ({ isMobile, mobileOpen, setMobileOpen, collapsed, setCollapsed,
       {/* Bottom Actions (User Profile, Search, Fullscreen, Theme Toggle) */}
       <Box sx={{ p: 1.5, borderTop: `1px solid ${theme.palette.divider}`, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
         
+        {/* Fullscreen & Theme Toggle */}
+        <Box sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: collapsed ? 'center' : 'space-between',
+          gap: 1,
+          px: collapsed ? 0 : 0.5,
+          mb: 1
+        }}>
+          <Tooltip title="Klavye Kısayolları (?)" placement={collapsed ? 'right' : 'top'}>
+            <IconButton
+              onClick={() => setShortcutsOpen(true)}
+              size="small"
+              sx={{
+                width: 36,
+                height: 36,
+                borderRadius: '8px',
+                bgcolor: 'rgba(255, 255, 255, 0.05)',
+                color: '#cbd5e1',
+                '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.1)', color: '#fff' }
+              }}
+            >
+              <KeyboardIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+
+          <Tooltip title={mode === 'dark' ? 'Aydınlık Tema' : 'Karanlık Tema'} placement={collapsed ? 'right' : 'top'}>
+            <IconButton
+              onClick={toggleColorMode}
+              size="small"
+              sx={{
+                width: 36,
+                height: 36,
+                borderRadius: '8px',
+                bgcolor: 'rgba(255, 255, 255, 0.05)',
+                color: '#cbd5e1',
+                '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.1)', color: '#fff' }
+              }}
+            >
+              {mode === 'dark' ? <LightModeIcon fontSize="small" /> : <DarkModeIcon fontSize="small" />}
+            </IconButton>
+          </Tooltip>
+
+          <Tooltip title={isFullscreen ? 'Tam Ekrandan Çık' : 'Tam Ekran'} placement={collapsed ? 'right' : 'top'}>
+            <IconButton
+              onClick={toggleFullscreen}
+              size="small"
+              sx={{
+                width: 36,
+                height: 36,
+                borderRadius: '8px',
+                bgcolor: 'rgba(255, 255, 255, 0.05)',
+                color: '#cbd5e1',
+                '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.1)', color: '#fff' }
+              }}
+            >
+              {isFullscreen ? <FullscreenExitIcon fontSize="small" /> : <FullscreenIcon fontSize="small" />}
+            </IconButton>
+          </Tooltip>
+        </Box>
+
         {/* User Profile */}
         {currentUser ? (
           <>
@@ -528,6 +708,8 @@ const Sidebar = ({ isMobile, mobileOpen, setMobileOpen, collapsed, setCollapsed,
       sx={{ 
         width: { sm: collapsed ? collapsedWidth : drawerWidth }, 
         flexShrink: { sm: 0 },
+        bgcolor: '#0f172a',
+        alignSelf: 'stretch',
         transition: 'width 0.3s ease'
       }}
     >
@@ -563,6 +745,10 @@ const Sidebar = ({ isMobile, mobileOpen, setMobileOpen, collapsed, setCollapsed,
               bgcolor: '#0f172a',
               transition: 'width 0.3s ease',
               overflowX: 'hidden',
+              height: '100vh',
+              position: 'fixed',
+              top: 0,
+              bottom: 0,
               boxShadow: '4px 0 24px rgba(0,0,0,0.05)'
             },
           }}
@@ -577,6 +763,7 @@ const Sidebar = ({ isMobile, mobileOpen, setMobileOpen, collapsed, setCollapsed,
       {canAuth ? <LoginDialog open={loginDialogOpen} onClose={() => setLoginDialogOpen(false)} /> : null}
       <LicenseInfoDialog open={licenseInfoOpen} onClose={() => setLicenseInfoOpen(false)} />
       <ContactFormDialog open={contactDialogOpen} onClose={() => setContactDialogOpen(false)} />
+      <KeyboardShortcutsDialog open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
     </Box>
   );
 };

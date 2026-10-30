@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import transferManager from '../utils/transferManager';
 import { useNotifications } from '../components/NotificationSystem';
 import { calculateDeskNumber } from '../utils/deskUtils';
@@ -11,6 +11,26 @@ export const useStudentPlacement = (
     readOnly
 ) => {
     const { showSuccess, showError } = useNotifications();
+    const [undoStack, setUndoStack] = useState([]);
+    const [redoStack, setRedoStack] = useState([]);
+
+    const handleUndo = useCallback(() => {
+        if (undoStack.length === 0 || !yerlestirmeSonucu) return;
+        const previousState = undoStack[undoStack.length - 1];
+        setUndoStack(prev => prev.slice(0, -1));
+        setRedoStack(prev => [...prev, yerlestirmeSonucu]);
+        yerlestirmeGuncelle(previousState);
+        showSuccess('Son yerleşim işlemi geri alındı.', { id: 'undo-redo-placement', duration: 1800 });
+    }, [undoStack, yerlestirmeSonucu, yerlestirmeGuncelle, showSuccess]);
+
+    const handleRedo = useCallback(() => {
+        if (redoStack.length === 0 || !yerlestirmeSonucu) return;
+        const nextState = redoStack[redoStack.length - 1];
+        setRedoStack(prev => prev.slice(0, -1));
+        setUndoStack(prev => [...prev, yerlestirmeSonucu]);
+        yerlestirmeGuncelle(nextState);
+        showSuccess('Yerleşim işlemi tekrar uygulandı.', { id: 'undo-redo-placement', duration: 1800 });
+    }, [redoStack, yerlestirmeSonucu, yerlestirmeGuncelle, showSuccess]);
 
     // Masa numarası hesaplama fonksiyonu
     const calculateDeskNumberForMasa = useCallback((masa) => {
@@ -36,6 +56,10 @@ export const useStudentPlacement = (
         if (!yerlestirmeSonucu || !yerlestirmeSonucu.salon) {
             return;
         }
+
+        // Geri alma geçmişine mevcut durumu kaydet
+        setUndoStack(prev => [...prev.slice(-19), yerlestirmeSonucu]);
+        setRedoStack([]);
 
         const currentSalon = yerlestirmeSonucu.salon;
         const fromMasa = currentSalon.masalar?.find(m => m.id === fromMasaId);
@@ -147,6 +171,10 @@ export const useStudentPlacement = (
             return;
         }
         try {
+            if (yerlestirmeSonucu) {
+                setUndoStack(prev => [...prev.slice(-19), yerlestirmeSonucu]);
+                setRedoStack([]);
+            }
             const result = await transferManager.executeTransfer(transferData);
 
             const updatedTumSalonlar = (yerlestirmeSonucu.tumSalonlar || []).map(salon => {
@@ -213,6 +241,10 @@ export const useStudentPlacement = (
     return {
         handleStudentMove,
         handleStudentTransfer,
-        calculateDeskNumberForMasa
+        calculateDeskNumberForMasa,
+        handleUndo,
+        handleRedo,
+        canUndo: undoStack.length > 0,
+        canRedo: redoStack.length > 0
     };
 };

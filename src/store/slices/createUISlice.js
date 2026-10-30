@@ -6,13 +6,15 @@ export const createUISlice = (set, get) => ({
         sinavDonemi: '1',
         sinavTarihi: '',
         sinavSaati: '',
+        dersler: [],
+        dallar: [],
         kisitlar: {
             cinsiyetKisiti: true,
             sinifSeviyesiKisiti: true,
             arkaArkaSinifKisiti: true
         }
     },
-    aktifTab: 'ayarlar',
+    aktifTab: 'genel-ayarlar',
     yukleme: false,
     yuklemeMesaji: null,
     hata: null,
@@ -49,6 +51,8 @@ export const createUISlice = (set, get) => ({
             sinavDonemi: '1',
             sinavTarihi: '',
             sinavSaati: '',
+            dersler: [],
+            dallar: [],
             kisitlar: {
                 cinsiyetKisiti: true,
                 sinifSeviyesiKisiti: true,
@@ -57,7 +61,7 @@ export const createUISlice = (set, get) => ({
         },
         yerlestirmeSonucu: null,
         placementIndex: {},
-        aktifTab: 'ayarlar',
+        aktifTab: 'genel-ayarlar',
         yukleme: false,
         yuklemeMesaji: null,
         hata: null,

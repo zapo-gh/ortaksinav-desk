@@ -77,7 +77,7 @@ export const ExamProvider = ({ children }) => {
   const { data: settingsData, isLoading: settingsLoading } = useSettingsQuery();
 
   const isWriteAllowed = React.useMemo(() => {
-    logger.debug('ğŸ” isWriteAllowed check:', { role, isWriteAllowed: role === 'admin' });
+    logger.debug('🔍 isWriteAllowed check:', { role, isWriteAllowed: role === 'admin' });
     return role === 'admin';
   }, [role]);
 
@@ -102,7 +102,7 @@ export const ExamProvider = ({ children }) => {
           updateAyarlar(settings);
         }
         setLocalDataLoaded(true);
-        logger.info('âœ… Yerel veriler SQLite\'tan yüklendi:', { students: students?.length, salons: salons?.length, settings: Object.keys(settings || {}).length });
+        logger.info('✅ Yerel veriler SQLite\'tan yüklendi:', { students: students?.length, salons: salons?.length, settings: Object.keys(settings || {}).length });
       } catch (error) {
         logger.error('âŒ Yerel veri yükleme hatası:', error);
         setLocalDataLoaded(true);
@@ -119,7 +119,7 @@ export const ExamProvider = ({ children }) => {
     const shouldSync = !initialSyncRef.current.students && studentsData && studentsData.length > 0 && !studentsLoading;
 
     if (shouldSync) {
-      logger.info('ğŸ“¥ ExamContext: İlk yükleme - Sunucudan öğrenciler senkronize ediliyor (Server First)...', studentsData.length);
+      logger.info('📥 ExamContext: İlk yükleme - Sunucudan öğrenciler senkronize ediliyor (Server First)...', studentsData.length);
       setOgrenciler(studentsData);
       initialSyncRef.current.students = true;
     }
@@ -131,7 +131,7 @@ export const ExamProvider = ({ children }) => {
     const shouldSync = !initialSyncRef.current.salons && salonsData && salonsData.length > 0 && !salonsLoading;
 
     if (shouldSync) {
-      logger.info('ğŸ“¥ ExamContext: İlk yükleme - Sunucudan salonlar senkronize ediliyor (Server First)...', salonsData.length);
+      logger.info('📥 ExamContext: İlk yükleme - Sunucudan salonlar senkronize ediliyor (Server First)...', salonsData.length);
       setSalonlar(salonsData);
       initialSyncRef.current.salons = true;
     }
@@ -146,7 +146,7 @@ export const ExamProvider = ({ children }) => {
       try {
         if (salonlar && salonlar.length > 0) {
           await db.saveSalons(salonlar);
-          logger.info('âœ… Salonlar SQLite\'a kaydedildi:', salonlar.length);
+          logger.info('✅ Salonlar SQLite\'a kaydedildi:', salonlar.length);
         }
       } catch (error) {
         logger.error('âŒ Salonlar SQLite\'a kaydedilemedi:', error);
@@ -162,7 +162,7 @@ export const ExamProvider = ({ children }) => {
     const shouldSync = !initialSyncRef.current.settings && hasData && !settingsLoading;
 
     if (shouldSync) {
-      logger.info('ğŸ“¥ ExamContext: İlk yükleme - Sunucudan ayarlar senkronize ediliyor (Server First)...');
+      logger.info('📥 ExamContext: İlk yükleme - Sunucudan ayarlar senkronize ediliyor (Server First)...');
       updateAyarlar(settingsData);
       initialSyncRef.current.settings = true;
     }
@@ -300,7 +300,7 @@ export const ExamProvider = ({ children }) => {
     ogrencilerYukle: async (yeniOgrenciler) => {
       try {
         await db.saveStudents(yeniOgrenciler);
-        logger.info('âœ… Öğrenciler SQLite\'a kaydedildi');
+        logger.info('✅ Öğrenciler SQLite\'a kaydedildi');
         // Her durumda local state'i güncelle (offline çalışma desteği)
         setOgrenciler(yeniOgrenciler);
         return { success: true };
@@ -319,7 +319,7 @@ export const ExamProvider = ({ children }) => {
     ogrencileriTemizle: async () => {
       try {
         await db.saveStudents([]);
-        logger.info('âœ… Tüm öğrenciler veritabanından silindi');
+        logger.info('✅ Tüm öğrenciler veritabanından silindi');
         clearOgrenciler();
         await queryClient.invalidateQueries(['students']);
         return { success: true };
@@ -334,7 +334,7 @@ export const ExamProvider = ({ children }) => {
       setSalonlar(yeniSalonlar);
       try {
         await db.saveSalons(yeniSalonlar);
-        logger.info('âœ… Salonlar SQLite\'a kaydedildi:', yeniSalonlar.length);
+        logger.info('✅ Salonlar SQLite\'a kaydedildi:', yeniSalonlar.length);
       } catch (error) {
         logger.error('âŒ Salonlar SQLite\'a kaydedilemedi:', error);
       }

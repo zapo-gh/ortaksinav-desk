@@ -28,7 +28,8 @@ import {
   AccessTime as TimeIcon,
   Settings as SettingsIcon,
   Save as SaveIcon,
-  Cancel as CancelIcon
+  Cancel as CancelIcon,
+  ArrowForward as ArrowForwardIcon
 } from '@mui/icons-material';
 import PageHeader from './common/PageHeader';
 import DialogHeader from './common/DialogHeader';
@@ -125,14 +126,15 @@ const areGeneralSettingsEqual = (prev, next) => {
 };
 
 const GenelAyarlarFormu = memo(({ ayarlar, onAyarlarDegistir, readOnly: readOnlyProp = null }) => {
-  const { ayarlar: storeAyarlar, ayarlarGuncelle } = useExamStore();
   const role = useExamStore(s => s.role);
+  const setAktifTab = useExamStore(s => s.setAktifTab);
   const { showSuccess } = useNotifications();
   const isWriteAllowed = role === 'admin';
   const readOnly = readOnlyProp !== null ? readOnlyProp : !isWriteAllowed;
   const [formData, setFormData] = useState(() => normalizeGeneralSettings(ayarlar));
   const [errors, setErrors] = useState(() => validateGeneralSettings(normalizeGeneralSettings(ayarlar)));
   const [kurumModalOpen, setKurumModalOpen] = useState(false);
+  const [tempOkulAdi, setTempOkulAdi] = useState('');
 
   React.useEffect(() => {
     const normalized = normalizeGeneralSettings(ayarlar);
@@ -207,11 +209,11 @@ const GenelAyarlarFormu = memo(({ ayarlar, onAyarlarDegistir, readOnly: readOnly
         icon={<SettingsIcon />}
         title="Sınav Ayarları"
         titleExtra={
-          <Box sx={{ 
-            bgcolor: (theme) => theme.palette.mode === 'light' ? '#eff6ff' : 'rgba(37, 99, 235, 0.2)', 
-            color: (theme) => theme.palette.mode === 'light' ? '#2563eb' : '#60a5fa', 
-            px: 1.5, 
-            py: 0.5, 
+          <Box sx={{
+            bgcolor: (theme) => theme.palette.mode === 'light' ? 'rgba(79, 70, 229, 0.08)' : 'rgba(129, 140, 248, 0.15)',
+            color: 'primary.main',
+            px: 1.5,
+            py: 0.5,
             borderRadius: '24px',
             fontSize: '0.85rem',
             fontWeight: 600
@@ -220,14 +222,14 @@ const GenelAyarlarFormu = memo(({ ayarlar, onAyarlarDegistir, readOnly: readOnly
           </Box>
         }
         actions={
-          <Button 
-            variant="contained" 
-            onClick={() => setKurumModalOpen(true)}
+          <Button
+            variant="contained"
+            onClick={() => {
+              setTempOkulAdi(formData.okulAdi || '');
+              setKurumModalOpen(true);
+            }}
             startIcon={<SchoolIcon />}
-            sx={{ 
-              bgcolor: '#2563eb',
-              color: '#ffffff',
-              '&:hover': { bgcolor: '#1d4ed8' },
+            sx={{
               fontWeight: 600,
               borderRadius: '10px',
               textTransform: 'none',
@@ -240,7 +242,7 @@ const GenelAyarlarFormu = memo(({ ayarlar, onAyarlarDegistir, readOnly: readOnly
           </Button>
         }
       />
-      
+
       {readOnly && (
         <Alert severity="info" sx={{ mb: 3 }}>
           Bu alanı sadece görüntüleyebilirsiniz. Değişiklik yapmak için yönetici olarak giriş yapın.
@@ -249,12 +251,12 @@ const GenelAyarlarFormu = memo(({ ayarlar, onAyarlarDegistir, readOnly: readOnly
 
       <Box sx={{ display: 'flex', flexDirection: { xs: 'column', lg: 'row' }, gap: 3, mb: 4, alignItems: 'stretch' }}>
         {/* Sınav ve Dönem Bilgileri */}
-        <Card elevation={0} sx={{ flex: 1, border: '1px solid #e2e8f0', borderRadius: '16px' }}>
+        <Card elevation={0} sx={{ flex: 1, border: '1px solid', borderColor: 'divider', borderRadius: '16px', bgcolor: 'background.paper' }}>
           <CardContent sx={{ p: { xs: 2, sm: 3 }, height: '100%', display: 'flex', flexDirection: 'column' }}>
             <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                <BookIcon sx={{ color: '#64748b', fontSize: 22 }} />
-                <Typography variant="h6" sx={{ color: '#0f172a', fontWeight: 700, fontSize: { xs: '1.1rem', sm: '1.25rem' }, letterSpacing: '-0.01em' }}>
+                <BookIcon color="action" sx={{ fontSize: 22 }} />
+                <Typography variant="h6" sx={{ color: 'text.primary', fontWeight: 700, fontSize: { xs: '1.1rem', sm: '1.25rem' }, letterSpacing: '-0.01em' }}>
                   Sınav ve Dönem Bilgileri
                 </Typography>
               </Box>
@@ -318,13 +320,6 @@ const GenelAyarlarFormu = memo(({ ayarlar, onAyarlarDegistir, readOnly: readOnly
                     error={Boolean(errors.sinavTarihi)}
                     helperText={errors.sinavTarihi || ''}
                     disabled={readOnly}
-                    InputProps={{
-                      startAdornment: (
-                        <Box sx={{ display: 'flex', alignItems: 'center', pl: 0.5, pr: 0.5 }}>
-                          <CalendarIcon fontSize="small" color={errors.sinavTarihi ? 'error' : 'action'} />
-                        </Box>
-                      ),
-                    }}
                   />
 
                   <TextField
@@ -346,13 +341,6 @@ const GenelAyarlarFormu = memo(({ ayarlar, onAyarlarDegistir, readOnly: readOnly
                     error={Boolean(errors.sinavSaati)}
                     helperText={errors.sinavSaati || ''}
                     disabled={readOnly}
-                    InputProps={{
-                      startAdornment: (
-                        <Box sx={{ display: 'flex', alignItems: 'center', pl: 0.5, pr: 0.5 }}>
-                          <TimeIcon fontSize="small" color={errors.sinavSaati ? 'error' : 'action'} />
-                        </Box>
-                      ),
-                    }}
                   />
                 </Box>
               </Box>
@@ -361,49 +349,94 @@ const GenelAyarlarFormu = memo(({ ayarlar, onAyarlarDegistir, readOnly: readOnly
         </Card>
 
         {/* Algoritma Kısıtlamaları */}
-        <Card elevation={0} sx={{ flex: 1, border: '1px solid #e2e8f0', borderRadius: '16px' }}>
+        <Card elevation={0} sx={{ flex: 1, border: '1px solid', borderColor: 'divider', borderRadius: '16px', bgcolor: 'background.paper' }}>
           <CardContent sx={{ p: { xs: 2, sm: 3 }, height: '100%', display: 'flex', flexDirection: 'column' }}>
             <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                <AlertIcon sx={{ color: '#64748b', fontSize: 20 }} />
-                <Typography variant="h6" sx={{ color: '#0f172a', fontWeight: 700, fontSize: { xs: '1.05rem', sm: '1.2rem' }, letterSpacing: '-0.01em' }}>
+                <AlertIcon color="action" sx={{ fontSize: 20 }} />
+                <Typography variant="h6" sx={{ color: 'text.primary', fontWeight: 700, fontSize: { xs: '1.05rem', sm: '1.2rem' }, letterSpacing: '-0.01em' }}>
                   Algoritma Kısıtlamaları
                 </Typography>
               </Box>
               <Divider sx={{ mb: 3 }} />
 
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
-                <Box sx={{ flex: '1 1 220px', p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1, display: 'flex', flexDirection: 'column', gap: 1, alignItems: 'center', textAlign: 'center' }}>
-                  <Typography variant="body2" sx={{ fontWeight: 500 }}>Cinsiyet Kısıtı</Typography>
-                  <Typography variant="caption" color="text.secondary">(Kız-Erkek yan yana)</Typography>
-                  <FormControlLabel
-                    control={<Switch checked={Boolean(formData.kisitlar?.cinsiyetKisiti)} onChange={() => handleKisitToggle('cinsiyetKisiti')} disabled={readOnly} color="primary" />}
-                    label={formData.kisitlar?.cinsiyetKisiti ? 'Aktif' : 'Pasif'}
-                  />
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <Box sx={{
+                  p: 2,
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  borderRadius: 2,
+                  bgcolor: (theme) => theme.palette.mode === 'light' ? '#f8fafc' : 'rgba(255,255,255,0.02)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between'
+                }}>
+                  <Box>
+                    <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary' }}>Cinsiyet Kısıtı</Typography>
+                    <Typography variant="caption" color="text.secondary">Kız-Erkek yan yana oturmasın</Typography>
+                  </Box>
+                  <Switch checked={Boolean(formData.kisitlar?.cinsiyetKisiti)} onChange={() => handleKisitToggle('cinsiyetKisiti')} disabled={readOnly} color="primary" />
                 </Box>
 
-                <Box sx={{ flex: '1 1 220px', p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1, display: 'flex', flexDirection: 'column', gap: 1, alignItems: 'center', textAlign: 'center' }}>
-                  <Typography variant="body2" sx={{ fontWeight: 500 }}>Sınıf Seviyesi Kısıtı</Typography>
-                  <Typography variant="caption" color="text.secondary">(Aynı seviye yan yana)</Typography>
-                  <FormControlLabel
-                    control={<Switch checked={Boolean(formData.kisitlar?.sinifSeviyesiKisiti)} onChange={() => handleKisitToggle('sinifSeviyesiKisiti')} disabled={readOnly} color="primary" />}
-                    label={formData.kisitlar?.sinifSeviyesiKisiti ? 'Aktif' : 'Pasif'}
-                  />
+                <Box sx={{
+                  p: 2,
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  borderRadius: 2,
+                  bgcolor: (theme) => theme.palette.mode === 'light' ? '#f8fafc' : 'rgba(255,255,255,0.02)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between'
+                }}>
+                  <Box>
+                    <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary' }}>Sınıf Seviyesi Kısıtı</Typography>
+                    <Typography variant="caption" color="text.secondary">Aynı sınıf seviyesindeki öğrenciler yan yana oturmasın</Typography>
+                  </Box>
+                  <Switch checked={Boolean(formData.kisitlar?.sinifSeviyesiKisiti)} onChange={() => handleKisitToggle('sinifSeviyesiKisiti')} disabled={readOnly} color="primary" />
                 </Box>
 
-                <Box sx={{ flex: '1 1 220px', p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1, display: 'flex', flexDirection: 'column', gap: 1, alignItems: 'center', textAlign: 'center' }}>
-                  <Typography variant="body2" sx={{ fontWeight: 500 }}>Arka Arkaya Sınıf Kısıtı</Typography>
-                  <Typography variant="caption" color="text.secondary">(Üst-alt aynı seviye)</Typography>
-                  <FormControlLabel
-                    control={<Switch checked={Boolean(formData.kisitlar?.arkaArkaSinifKisiti)} onChange={() => handleKisitToggle('arkaArkaSinifKisiti')} disabled={readOnly} color="primary" />}
-                    label={formData.kisitlar?.arkaArkaSinifKisiti ? 'Aktif' : 'Pasif'}
-                  />
+                <Box sx={{
+                  p: 2,
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  borderRadius: 2,
+                  bgcolor: (theme) => theme.palette.mode === 'light' ? '#f8fafc' : 'rgba(255,255,255,0.02)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between'
+                }}>
+                  <Box>
+                    <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary' }}>Arka Arkaya Sınıf Kısıtı</Typography>
+                    <Typography variant="caption" color="text.secondary">Aynı seviyedeki öğrenciler arka arkaya oturmasın</Typography>
+                  </Box>
+                  <Switch checked={Boolean(formData.kisitlar?.arkaArkaSinifKisiti)} onChange={() => handleKisitToggle('arkaArkaSinifKisiti')} disabled={readOnly} color="primary" />
                 </Box>
               </Box>
             </Box>
-            
           </CardContent>
         </Card>
+      </Box>
+
+      {/* İlerleme / Sonraki Adım Aksiyon Çubuğu */}
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', mb: 3 }}>
+        <Button
+          variant="contained"
+          color="primary"
+          size="large"
+          endIcon={<ArrowForwardIcon />}
+          onClick={() => setAktifTab('ogrenciler')}
+          sx={{
+            px: 3.5,
+            py: 1.25,
+            borderRadius: '10px',
+            textTransform: 'none',
+            fontWeight: 700,
+            fontSize: '0.95rem',
+            boxShadow: (theme) => theme.palette.mode === 'dark' ? 'none' : 2
+          }}
+        >
+          Sonraki Adım: Öğrenciler Listesi ➜
+        </Button>
       </Box>
 
       {/* Kurum Bilgileri Modalı */}
@@ -414,11 +447,11 @@ const GenelAyarlarFormu = memo(({ ayarlar, onAyarlarDegistir, readOnly: readOnly
             <TextField
               label="Okul Adı"
               name="okulAdi"
-              value={formData.okulAdi}
-              onChange={handleChange}
+              value={tempOkulAdi}
+              onChange={(e) => setTempOkulAdi(e.target.value)}
               fullWidth
               variant="outlined"
-              error={Boolean(errors.okulAdi)}
+              error={Boolean(errors.okulAdi && !tempOkulAdi.trim())}
               helperText={errors.okulAdi || 'Örn: Atatürk Anadolu Lisesi'}
               disabled={readOnly}
             />
@@ -427,12 +460,22 @@ const GenelAyarlarFormu = memo(({ ayarlar, onAyarlarDegistir, readOnly: readOnly
         <DialogActions sx={{ p: 2, pt: 1 }}>
           <Button onClick={() => setKurumModalOpen(false)} color="inherit" sx={{ fontWeight: 600 }}>İptal</Button>
           <Button onClick={() => {
+            const sanitizedOkulAdi = sanitizeText(tempOkulAdi, { trim: false });
+            const yeniFormData = {
+              ...formData,
+              okulAdi: sanitizedOkulAdi
+            };
+            setFormData(yeniFormData);
+            setErrors(validateGeneralSettings(yeniFormData));
+            if (onAyarlarDegistir) {
+              onAyarlarDegistir(yeniFormData);
+            }
             setKurumModalOpen(false);
             showSuccess('Kurum bilgileri başarıyla kaydedildi.');
-          }} variant="contained" color="primary" sx={{ fontWeight: 600 }}>Kaydet</Button>
+          }} variant="contained" color="primary" sx={{ fontWeight: 600 }} disabled={readOnly}>Kaydet</Button>
         </DialogActions>
-      </Dialog>
-    </Box>
+      </Dialog >
+    </Box >
   );
 });
 

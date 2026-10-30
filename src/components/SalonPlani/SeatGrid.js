@@ -19,6 +19,7 @@ const SeatGrid = ({
   calculateDeskNumberForMasa,
   plan2D,
   hasConstraintConflict,
+  conflictsMap,
   dndJustEnded
 }) => {
   if (sinifDuzeni.gruplar) {
@@ -50,11 +51,12 @@ const SeatGrid = ({
                 minWidth: '220px',
                 maxWidth: '270px',
                 width: '100%',
-                bgcolor: '#f8fafc',
+                bgcolor: (theme) => theme.palette.mode === 'dark' ? 'background.paper' : '#f8fafc',
                 p: { xs: 0.75, sm: 1 },
                 borderRadius: '10px',
-                border: '1px solid #e2e8f0',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+                border: '1px solid',
+                borderColor: 'divider',
+                boxShadow: (theme) => theme.palette.mode === 'dark' ? 'none' : '0 1px 3px rgba(0,0,0,0.02)'
               }}
             >
               <Typography
@@ -62,10 +64,11 @@ const SeatGrid = ({
                 sx={{
                   textAlign: 'center',
                   fontWeight: 800,
-                  color: '#475569',
+                  color: 'text.secondary',
                   mb: 1,
                   fontSize: '0.78rem',
-                  borderBottom: '1px solid #e2e8f0',
+                  borderBottom: '1px solid',
+                  borderColor: 'divider',
                   pb: 0.5
                 }}
               >
@@ -123,8 +126,7 @@ const SeatGrid = ({
                         ) : 'Boş masa'
                       }
                       arrow
-                      TransitionComponent={Zoom}
-                      enterDelay={300}
+                      enterDelay={500}
                       leaveDelay={100}
                     >
                       <DroppableSeat masa={masa} onStudentMove={handleStudentMove} readOnly={readOnly}>
@@ -145,7 +147,7 @@ const SeatGrid = ({
                           getConstraintConflictInfo={getConstraintConflictInfo}
                           calculateDeskNumberForMasa={calculateDeskNumberForMasa}
                           plan2D={plan2D}
-                          conflict={hasConstraintConflict(masa, plan2D)}
+                          conflict={conflictsMap ? conflictsMap.get(masa.id) : (hasConstraintConflict ? hasConstraintConflict(masa, plan2D) : null)}
                           dndJustEnded={dndJustEnded}
                         />
                       </DroppableSeat>
@@ -215,8 +217,7 @@ const SeatGrid = ({
               ) : 'Boş masa'
             }
             arrow
-            TransitionComponent={Zoom}
-            enterDelay={300}
+            enterDelay={500}
             leaveDelay={100}
           >
             <DroppableSeat
@@ -241,7 +242,7 @@ const SeatGrid = ({
                 getConstraintConflictInfo={getConstraintConflictInfo}
                 calculateDeskNumberForMasa={calculateDeskNumberForMasa}
                 plan2D={plan2D}
-                conflict={hasConstraintConflict(masa, plan2D)}
+                conflict={conflictsMap ? conflictsMap.get(masa.id) : (hasConstraintConflict ? hasConstraintConflict(masa, plan2D) : null)}
                 dndJustEnded={dndJustEnded}
               />
             </DroppableSeat>
@@ -252,4 +253,4 @@ const SeatGrid = ({
   );
 };
 
-export default SeatGrid;
+export default React.memo(SeatGrid);

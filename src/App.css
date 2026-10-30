@@ -1,6 +1,9 @@
 /* App.css - Unused styles removed for optimization */
 .App {
   text-align: center;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
 /* Pulse animasyonu - seçili öğrenci vurgulama için */

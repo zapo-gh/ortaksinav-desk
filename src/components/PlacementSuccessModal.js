@@ -6,6 +6,7 @@ import {
     Box,
     LinearProgress,
     Fade,
+    Button,
     useTheme
 } from '@mui/material';
 import { alpha } from '@mui/material/styles';
@@ -13,34 +14,38 @@ import {
     CheckCircle as CheckCircleIcon,
     People as PeopleIcon,
     Chair as ChairIcon,
-    PersonOff as PersonOffIcon
+    PersonOff as PersonOffIcon,
+    ArrowForward as ArrowForwardIcon
 } from '@mui/icons-material';
 
 const PlacementSuccessModal = ({ open, onClose, statistics, title, message }) => {
     const theme = useTheme();
     const [progress, setProgress] = useState(100);
-    const DURATION = 2000; // 2 saniye (useRealTimeUpdates ile çakışmayı önle)
+    const [isPaused, setIsPaused] = useState(false);
+    const DURATION = 5000; // 5 saniye - kullanıcı istatistikleri rahatça inceleyebilsin
 
     useEffect(() => {
-        if (open) {
-            setProgress(100);
-            const startTime = Date.now();
+        if (!open) return;
 
-            const timer = setInterval(() => {
-                const elapsed = Date.now() - startTime;
+        setProgress(100);
+        let elapsed = 0;
+        const intervalTime = 50;
+
+        const timer = setInterval(() => {
+            if (!isPaused) {
+                elapsed += intervalTime;
                 const remaining = Math.max(0, 100 - (elapsed / DURATION) * 100);
-
                 setProgress(remaining);
 
                 if (elapsed >= DURATION) {
                     clearInterval(timer);
                     onClose();
                 }
-            }, 50);
+            }
+        }, intervalTime);
 
-            return () => clearInterval(timer);
-        }
-    }, [open, onClose]);
+        return () => clearInterval(timer);
+    }, [open, onClose, isPaused]);
 
     // if (!statistics) return null; // İstatistik olmasa da modal açılsın (başarı mesajı için)
 
@@ -48,6 +53,8 @@ const PlacementSuccessModal = ({ open, onClose, statistics, title, message }) =>
         <Dialog
             open={open}
             onClose={onClose}
+            onMouseEnter={() => setIsPaused(true)}
+            onMouseLeave={() => setIsPaused(false)}
             PaperProps={{
                 sx: {
                     borderRadius: 3,
@@ -76,7 +83,7 @@ const PlacementSuccessModal = ({ open, onClose, statistics, title, message }) =>
                     {title || "Yerleştirme Tamamlandı!"}
                 </Typography>
 
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 4 }}>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
                     {message || "Öğrenciler başarıyla salonlara yerleştirildi."}
                 </Typography>
 
@@ -109,22 +116,41 @@ const PlacementSuccessModal = ({ open, onClose, statistics, title, message }) =>
                     </Box>
                 )}
 
-                <Box sx={{ width: '100%', mt: 2 }}>
+                <Button
+                    variant="contained"
+                    color="primary"
+                    fullWidth
+                    size="medium"
+                    endIcon={<ArrowForwardIcon />}
+                    onClick={onClose}
+                    sx={{
+                        borderRadius: '10px',
+                        py: 1,
+                        fontWeight: 700,
+                        textTransform: 'none',
+                        fontSize: '0.95rem',
+                        mb: 2
+                    }}
+                >
+                    Salon Planına Git
+                </Button>
+
+                <Box sx={{ width: '100%' }}>
                     <LinearProgress
                         variant="determinate"
                         value={progress}
                         sx={{
-                            height: 6,
+                            height: 5,
                             borderRadius: 3,
                             bgcolor: 'action.hover',
                             '& .MuiLinearProgress-bar': {
                                 borderRadius: 3,
-                                bgcolor: 'success.main'
+                                bgcolor: isPaused ? 'warning.main' : 'success.main'
                             }
                         }}
                     />
-                    <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-                        Salon planına yönlendiriliyorsunuz...
+                    <Typography variant="caption" color="text.secondary" sx={{ mt: 0.8, display: 'block' }}>
+                        {isPaused ? 'Bekletiliyor (İncelemek için fareyi üzerinde tutun)' : '5 saniye içinde otomatik yönlendiriliyorsunuz...'}
                     </Typography>
                 </Box>
             </DialogContent>

@@ -32,7 +32,7 @@
     "zustand": "^5.0.9"
   },
   "scripts": {
-    "kill-app": "taskkill /F /IM app.exe 2>nul || exit 0",
+    "kill-app": "taskkill /F /IM app.exe 2>nul & powershell -Command \"Stop-Process -Id (Get-NetTCPConnection -LocalPort 3000 -ErrorAction SilentlyContinue).OwningProcess -Force -ErrorAction SilentlyContinue\" 2>nul || exit 0",
     "clean-dev": "npm run kill-app && npx tauri dev",
     "dev": "vite",
     "start": "vite",

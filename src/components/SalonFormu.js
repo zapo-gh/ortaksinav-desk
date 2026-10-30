@@ -1,4 +1,4 @@
-import React, { useState, memo, useRef, useEffect, useCallback } from 'react';
+import React, { useState, memo, useRef, useEffect, useCallback, useMemo } from 'react';
 import deepEqual from '../utils/deepEqual';
 import PageHeader from './common/PageHeader';
 import DialogHeader from './common/DialogHeader';
@@ -9,16 +9,12 @@ import {
   Typography,
   TextField,
   Button,
-  Grid,
   Box,
   Chip,
   IconButton,
-  FormControl,
-  InputLabel,
   Select,
   MenuItem,
   Paper,
-  FormControlLabel,
   Switch,
   Alert,
   AlertTitle,
@@ -26,230 +22,305 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Checkbox
+  Checkbox,
+  Tooltip,
+  InputAdornment,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow
 } from '@mui/material';
 import {
   Add as AddIcon,
   Delete as DeleteIcon,
   ContentCopy as ContentCopyIcon,
   MeetingRoom as MeetingRoomIcon,
-  Person as PersonIcon,
   Chair as ChairIcon,
-  DragIndicator as DragIndicatorIcon,
   Warning as WarningIcon,
-  Save as SaveIcon
+  Save as SaveIcon,
+  ArrowForward as ArrowForwardIcon,
+  AutoAwesome as AutoAwesomeIcon,
+  CopyAll as CopyAllIcon,
+  SortByAlpha as SortByAlphaIcon,
+  Search as SearchIcon,
+  Bolt as BoltIcon
 } from '@mui/icons-material';
+import { useExamStore } from '../store/useExamStore';
 import { useNotifications } from './NotificationSystem';
 import { useExamSelector } from '../context/ExamContext';
 import logger from '../utils/logger';
-// Basit, sürükle-bıraksız salon kartı bileşeni
-const SalonItem = ({ form, index, onFormChange, onFormDelete, onFormCopy, yerlesimPlaniVarMi, topluSilmeModu, seciliSalonlar, onSalonSecimi, shouldFocus, onFocusDone }) => {
+
+// ==========================================
+// 1. KOMPAKT TEK SATIRLIK SALON SATIRI (ROW)
+// ==========================================
+const SalonRow = memo(({
+  form,
+  index,
+  onFormChange,
+  onFormDelete,
+  onFormCopy,
+  onEqualizeGroups,
+  onApplyToAll,
+  yerlesimPlaniVarMi,
+  topluSilmeModu,
+  seciliSalonlar,
+  onSalonSecimi,
+  shouldFocus,
+  onFocusDone
+}) => {
   const inputRef = useRef(null);
 
   useEffect(() => {
     if (shouldFocus && inputRef.current) {
       inputRef.current.focus();
       inputRef.current.select();
-      inputRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      if (onFocusDone) {
-        onFocusDone();
-      }
+      inputRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      if (onFocusDone) onFocusDone();
     }
   }, [shouldFocus, onFocusDone]);
 
+  const carpan = form.siraTipi === 'tekli' ? 1 : 2;
+  const toplamSiraSayisi = form.gruplar?.reduce((sum, g) => sum + (parseInt(g.siraSayisi) || 0), 0) || 0;
+  const toplamKapasite = toplamSiraSayisi * carpan;
+  const isLocked = yerlesimPlaniVarMi && yerlesimPlaniVarMi();
+
   return (
-    <Paper
-      elevation={2}
+    <TableRow
+      hover
       sx={{
-        py: 1,
-        px: 2,
-        mb: 1.5,
-        maxWidth: '100%',
-        transition: 'all 0.2s ease'
+        opacity: form.aktif ? 1 : 0.6,
+        bgcolor: form.aktif ? 'inherit' : (theme) => theme.palette.mode === 'light' ? '#fbfbfb' : 'rgba(255,255,255,0.02)',
+        transition: 'background-color 0.15s ease',
+        '&:hover': {
+          bgcolor: (theme) => theme.palette.mode === 'light' ? '#f8fafc' : 'rgba(255,255,255,0.04)'
+        }
       }}
     >
-      <Grid container spacing={1.5} alignItems="center" sx={{ flexWrap: { xs: 'wrap', xl: 'nowrap' } }}>
-        {/* Toplu Silme Checkbox */}
-        {topluSilmeModu && (
-          <Grid item xs="auto">
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Checkbox
-                checked={seciliSalonlar.includes(form.id)}
-                onChange={(e) => onSalonSecimi(form.id, e.target.checked)}
-                color="primary"
-                size="small"
-              />
-            </Box>
-          </Grid>
-        )}
-
-        {/* Drag Handle - artık sadece görsel ikon */}
-        <Grid item xs="auto">
-          <Box
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              opacity: topluSilmeModu ? 0.5 : 1
-            }}
-          >
-            <DragIndicatorIcon color="action" />
-          </Box>
-        </Grid>
-
-        {/* Salon Adı */}
-        <Grid item xs={12} sm={3} md="auto">
-          <TextField
-            inputRef={inputRef}
-            label="Salon Adı *"
-            value={form.salonAdi}
-            onChange={(e) => onFormChange(form.id, 'salonAdi', e.target.value)}
-            required
-            variant="outlined"
-            placeholder="Örn: 9/A"
+      {/* Toplu Silme Checkbox */}
+      {topluSilmeModu && (
+        <TableCell width={36} sx={{ py: 0.75, px: 0.5, textAlign: 'center' }}>
+          <Checkbox
+            checked={seciliSalonlar.includes(form.id)}
+            onChange={(e) => onSalonSecimi(form.id, e.target.checked)}
             size="small"
-            sx={{ width: { xs: '100%', md: '110px' } }}
-            disabled={yerlesimPlaniVarMi && yerlesimPlaniVarMi()}
+            sx={{ p: 0.25 }}
           />
-        </Grid>
+        </TableCell>
+      )}
 
-        {/* Sıra Tipi */}
-        <Grid item xs={12} sm={6} md="auto">
-          <FormControl size="small" sx={{ width: { xs: '100%', md: '130px' } }}>
-            <InputLabel>Sıra Tipi</InputLabel>
-            <Select
-              value={form.siraTipi}
-              onChange={(e) => onFormChange(form.id, 'siraTipi', e.target.value)}
-              label="Sıra Tipi"
-              disabled={yerlesimPlaniVarMi && yerlesimPlaniVarMi()}
-            >
-              <MenuItem value="tekli">Tekli Sıra</MenuItem>
-              <MenuItem value="ikili">İkili Sıra</MenuItem>
-            </Select>
-          </FormControl>
-        </Grid>
+      {/* İndeks No (#1, #2) */}
+      <TableCell width={40} sx={{ py: 0.75, px: 0.75, textAlign: 'center' }}>
+        <Typography variant="caption" sx={{ fontWeight: 800, color: 'text.secondary', fontSize: '0.8rem' }}>
+          #{index + 1}
+        </Typography>
+      </TableCell>
 
-        {/* Aktif Durumu */}
-        <Grid item xs={12} sm={6} md="auto">
-          <FormControlLabel
-            control={
-              <Switch
-                checked={form.aktif}
-                onChange={(e) => onFormChange(form.id, 'aktif', e.target.checked)}
-                color="primary"
-              />
+      {/* Salon Adı */}
+      <TableCell width={130} sx={{ py: 0.75, px: 0.75 }}>
+        <TextField
+          inputRef={inputRef}
+          value={form.salonAdi}
+          onChange={(e) => onFormChange(form.id, 'salonAdi', e.target.value)}
+          placeholder="Örn: 9/A"
+          size="small"
+          disabled={isLocked}
+          sx={{
+            width: '100%',
+            '& .MuiOutlinedInput-root': {
+              height: 32,
+              fontSize: '0.88rem',
+              fontWeight: 700,
+              bgcolor: 'background.paper'
             }
-            label="Aktif"
-            sx={{ m: 0 }}
-          />
-        </Grid>
+          }}
+        />
+      </TableCell>
 
-        {/* Grup Sayısı */}
-        <Grid item xs={6} sm={4} md="auto">
-          <TextField
-            label="Grup Sayısı"
-            type="number"
-            value={form.grupSayisi}
-            onChange={(e) => onFormChange(form.id, 'grupSayisi', parseInt(e.target.value) || 1)}
-            required
-            variant="outlined"
-            inputProps={{ min: 1, max: 10 }}
+      {/* Sıra Tipi */}
+      <TableCell width={115} sx={{ py: 0.75, px: 0.75 }}>
+        <Select
+          value={form.siraTipi}
+          onChange={(e) => onFormChange(form.id, 'siraTipi', e.target.value)}
+          size="small"
+          disabled={isLocked}
+          sx={{
+            height: 32,
+            fontSize: '0.82rem',
+            fontWeight: 600,
+            width: '100%',
+            bgcolor: 'background.paper'
+          }}
+        >
+          <MenuItem value="tekli">Tekli (1)</MenuItem>
+          <MenuItem value="ikili">İkili (2)</MenuItem>
+        </Select>
+      </TableCell>
+
+      {/* Grup Sayısı */}
+      <TableCell width={95} sx={{ py: 0.75, px: 0.75 }}>
+        <Select
+          value={form.grupSayisi}
+          onChange={(e) => onFormChange(form.id, 'grupSayisi', parseInt(e.target.value) || 1)}
+          size="small"
+          disabled={isLocked}
+          sx={{
+            height: 32,
+            fontSize: '0.82rem',
+            fontWeight: 600,
+            width: '100%',
+            bgcolor: 'background.paper'
+          }}
+        >
+          {[1, 2, 3, 4, 5, 6, 7, 8].map(n => (
+            <MenuItem key={n} value={n}>{n} Grup</MenuItem>
+          ))}
+        </Select>
+      </TableCell>
+
+      {/* Grup Sıra Sayıları (Kompakt Yan Yana Kutucuklar) */}
+      <TableCell sx={{ py: 0.75, px: 0.75 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
+          {form.gruplar?.map((grup) => (
+            <Tooltip key={grup.id} title={`${grup.id}. Grup: ${grup.siraSayisi} Sıra × ${carpan} = ${grup.siraSayisi * carpan} Koltuk`}>
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  bgcolor: 'background.paper',
+                  borderRadius: '5px',
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  overflow: 'hidden',
+                  height: 28
+                }}
+              >
+                <Typography
+                  variant="caption"
+                  sx={{
+                    px: 0.6,
+                    fontSize: '0.7rem',
+                    fontWeight: 700,
+                    bgcolor: (theme) => theme.palette.mode === 'light' ? '#f1f5f9' : 'rgba(255,255,255,0.06)',
+                    color: 'text.secondary',
+                    lineHeight: '28px',
+                    userSelect: 'none'
+                  }}
+                >
+                  G{grup.id}
+                </Typography>
+                <input
+                  type="number"
+                  min={1}
+                  max={30}
+                  value={grup.siraSayisi}
+                  disabled={isLocked}
+                  onChange={(e) => onFormChange(form.id, 'grupSiraSayisi', { grupId: grup.id, siraSayisi: e.target.value })}
+                  style={{
+                    width: '36px',
+                    height: '26px',
+                    textAlign: 'center',
+                    border: 'none',
+                    outline: 'none',
+                    fontWeight: 'bold',
+                    fontSize: '0.82rem',
+                    background: 'transparent',
+                    color: 'inherit'
+                  }}
+                />
+              </Box>
+            </Tooltip>
+          ))}
+
+          {/* Hepsini Eşitle Butonu */}
+          {form.gruplar?.length > 1 && (
+            <Tooltip title="Tüm grupları 1. gruba eşitle">
+              <span>
+                <IconButton
+                  size="small"
+                  onClick={() => onEqualizeGroups(form.id)}
+                  disabled={isLocked}
+                  sx={{ width: 26, height: 26, p: 0 }}
+                >
+                  <BoltIcon sx={{ fontSize: 16, color: 'warning.main' }} />
+                </IconButton>
+              </span>
+            </Tooltip>
+          )}
+        </Box>
+      </TableCell>
+
+      {/* Toplam Kapasite */}
+      <TableCell width={105} align="center" sx={{ py: 0.75, px: 0.75 }}>
+        <Tooltip title={`${toplamSiraSayisi} Sıra × ${carpan} Kişi = ${toplamKapasite} Koltuk`}>
+          <Chip
+            icon={<ChairIcon sx={{ fontSize: 14 }} />}
+            label={`${toplamKapasite} Kişi`}
+            color={form.aktif ? 'primary' : 'default'}
             size="small"
-            sx={{ width: { xs: '100%', md: '80px' } }}
-            disabled={yerlesimPlaniVarMi && yerlesimPlaniVarMi()}
+            sx={{ fontWeight: 800, fontSize: '0.78rem', height: 26 }}
           />
-        </Grid>
+        </Tooltip>
+      </TableCell>
 
-        {/* Grup Detayları */}
-        {form.gruplar?.map((grup) => (
-          <Grid key={grup.id} item xs={2} sm={1.5} md="auto">
-            <TextField
-              label={`G${grup.id}`}
-              type="number"
-              value={grup.siraSayisi}
-              onChange={(e) => onFormChange(form.id, 'grupSiraSayisi', { grupId: grup.id, siraSayisi: e.target.value })}
-              variant="outlined"
-              inputProps={{ min: 1, max: 50 }}
-              size="small"
-              sx={{ width: { xs: '100%', md: '60px' } }}
-              disabled={yerlesimPlaniVarMi && yerlesimPlaniVarMi()}
-            />
-          </Grid>
-        ))}
+      {/* Aktif / Pasif */}
+      <TableCell width={75} align="center" sx={{ py: 0.75, px: 0.75 }}>
+        <Switch
+          checked={form.aktif}
+          onChange={(e) => onFormChange(form.id, 'aktif', e.target.checked)}
+          color="primary"
+          size="small"
+        />
+      </TableCell>
 
-        {/* Kapasite */}
-        <Grid item xs={6} sm={3} md="auto">
-          <Box
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              height: '38px',
-              border: 1,
-              borderColor: 'divider',
-              borderRadius: 1,
-              bgcolor: 'grey.50',
-              px: 1.5,
-              minWidth: '60px'
-            }}
-          >
-            <ChairIcon variant="outlined" sx={{ mr: 0.5, color: 'text.secondary', fontSize: 20 }} />
-            <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
-              {form.gruplar?.reduce((toplam, grup) => {
-                return toplam + (grup.siraSayisi * (form.siraTipi === 'tekli' ? 1 : 2));
-              }, 0) || 0}
-            </Typography>
-          </Box>
-        </Grid>
-
-        {/* Kopyala ve Sil Butonları */}
-        <Grid item xs={12} sm={6} md="auto">
-          <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1 }}>
-            <IconButton
-              color="primary"
-              onClick={() => onFormCopy(form.id)}
-              size="small"
-              disabled={yerlesimPlaniVarMi && yerlesimPlaniVarMi()}
-              sx={{
-                '&:hover': {
-                  backgroundColor: 'primary.light',
-                  color: 'white'
-                }
-              }}
-              title="Salonu Kopyala"
-            >
-              <ContentCopyIcon />
-            </IconButton>
-            <IconButton
-              color="error"
-              onClick={() => onFormDelete(form.id)}
-              size="small"
-              disabled={yerlesimPlaniVarMi && yerlesimPlaniVarMi()}
-              sx={{
-                '&:hover': {
-                  backgroundColor: 'error.light',
-                  color: 'white'
-                }
-              }}
-              title="Salonu Sil"
-            >
-              <DeleteIcon />
-            </IconButton>
-          </Box>
-        </Grid>
-      </Grid>
-    </Paper>
+      {/* Aksiyonlar (Tümüne Uygula, Kopyala, Sil) */}
+      <TableCell width={105} align="right" sx={{ py: 0.75, px: 0.75 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.25 }}>
+          <Tooltip title="Bu salonun düzenini tüm salonlara uygula">
+            <span>
+              <IconButton size="small" color="info" onClick={() => onApplyToAll(form)} disabled={isLocked} sx={{ width: 28, height: 28 }}>
+                <CopyAllIcon sx={{ fontSize: 16 }} />
+              </IconButton>
+            </span>
+          </Tooltip>
+          <Tooltip title="Salonu Kopyala">
+            <span>
+              <IconButton size="small" color="primary" onClick={() => onFormCopy(form.id)} disabled={isLocked} sx={{ width: 28, height: 28 }}>
+                <ContentCopyIcon sx={{ fontSize: 16 }} />
+              </IconButton>
+            </span>
+          </Tooltip>
+          <Tooltip title="Salonu Sil">
+            <span>
+              <IconButton size="small" color="error" onClick={() => onFormDelete(form.id)} disabled={isLocked} sx={{ width: 28, height: 28 }}>
+                <DeleteIcon sx={{ fontSize: 16 }} />
+              </IconButton>
+            </span>
+          </Tooltip>
+        </Box>
+      </TableCell>
+    </TableRow>
   );
-};
+});
 
-const SalonFormu = memo(({ salonlar = [], onSalonlarDegistir: onSalonlarDegistirProp, onKaydet, yerlestirmeSonucu = null, readOnly: readOnlyProp = false }) => {
-  // Notification sistemi
+SalonRow.displayName = 'SalonRow';
+
+
+// ==========================================
+// 2. ANA SALON FORMU BİLEŞENİ (KOMPAKT TASARIM)
+// ==========================================
+const SalonFormu = memo(({
+  salonlar = [],
+  onSalonlarDegistir: onSalonlarDegistirProp,
+  onKaydet,
+  yerlestirmeSonucu = null,
+  readOnly: readOnlyProp = false
+}) => {
   const { showSuccess, showError, showWarning } = useNotifications();
   const isWriteAllowed = useExamSelector((state) => state.role === 'admin');
   const readOnly = readOnlyProp || (process.env.NODE_ENV === 'test' ? false : !isWriteAllowed);
-  const showReadOnlyMessage = React.useCallback(() => {
-    showWarning('Bu işlemi gerçekleştirmek için yönetici olarak giriş yapmanız gerekir.');
-  }, [showWarning]);
+  const setAktifTab = useExamStore(s => s.setAktifTab);
 
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const onSalonlarDegistir = useCallback((yeniSalonlar) => {
@@ -264,24 +335,36 @@ const SalonFormu = memo(({ salonlar = [], onSalonlarDegistir: onSalonlarDegistir
     }
   };
 
-  // Basit state yönetimi - sadece salonlar listesi
   const [aktifSalonFormlari, setAktifSalonFormlari] = useState([]);
   const [onayDialogAcik, setOnayDialogAcik] = useState(false);
   const [silinecekSalonId, setSilinecekSalonId] = useState(null);
   const [silinecekSalonAdi, setSilinecekSalonAdi] = useState('');
 
-  // Toplu silme için state'ler
+  // Arama & Filtre
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterStatus, setFilterStatus] = useState('all'); // 'all' | 'active' | 'passive'
+
+  // Toplu silme
   const [topluSilmeModu, setTopluSilmeModu] = useState(false);
   const [seciliSalonlar, setSeciliSalonlar] = useState([]);
   const [topluSilmeDialogAcik, setTopluSilmeDialogAcik] = useState(false);
 
-  // Yeni eklenen/kopyalanan salona odaklama state'i
+  // Hızlı Salon Sihirbazı Modalı
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [wizardGradeList, setWizardGradeList] = useState('9/A, 9/B, 9/C, 9/D, 9/E');
+  const [wizardSiraTipi, setWizardSiraTipi] = useState('ikili');
+  const [wizardGrupSayisi, setWizardGrupSayisi] = useState(4);
+  const [wizardSiraSayisi, setWizardSiraSayisi] = useState(5);
+
+  // Tümüne Uygula Onay Dialogu
+  const [applyAllDialog, setApplyAllDialog] = useState({ open: false, sourceForm: null });
+
+  // Odaklanma state'i
   const [focusSalonId, setFocusSalonId] = useState(null);
   const handleFocusDone = useCallback(() => {
     setFocusSalonId(null);
   }, []);
 
-  // Yerleştirme planı kontrolü
   const yerlesimPlaniVarMi = () => {
     return yerlestirmeSonucu && (
       (yerlestirmeSonucu.salonlar && yerlestirmeSonucu.salonlar.length > 0) ||
@@ -290,48 +373,34 @@ const SalonFormu = memo(({ salonlar = [], onSalonlarDegistir: onSalonlarDegistir
     );
   };
 
-  // Ref to track if we're making an internal update (to prevent useEffect loop)
-  const isInternalUpdateRef = React.useRef(false);
+  const isInternalUpdateRef = useRef(false);
 
-  // Salonlar prop'u değiştiğinde form verilerini güncelle
-  React.useEffect(() => {
-    // Skip if this update came from our own handleAnindaKaydet
+  // Salonlar prop'u değiştiğinde senkronize et
+  useEffect(() => {
     if (isInternalUpdateRef.current) {
-      logger.debug('⏭️ SalonFormu: İç güncelleme tespit edildi, useEffect atlanıyor');
       isInternalUpdateRef.current = false;
       return;
     }
 
-    logger.debug('🔄 SalonFormu: salonlar prop değişti:', {
-      salonlarLength: salonlar.length,
-      aktifFormlarLength: aktifSalonFormlari.length
-    });
-
-    // Eğer salonlar boşsa ve aktif formlar da boşsa, hiçbir şey yapma
-    if (salonlar.length === 0 && aktifSalonFormlari.length === 0) {
-      return;
-    }
-
-    // Eğer salonlar boşsa ama aktif formlar doluysa, kullanıcı silme yapmış demektir
+    if (salonlar.length === 0 && aktifSalonFormlari.length === 0) return;
     if (salonlar.length === 0 && aktifSalonFormlari.length > 0) {
       setAktifSalonFormlari([]);
       return;
     }
 
-    // Prop'tan gelen salonları normalize et
     const normalizedPropSalonlar = salonlar.map(salon => ({
       id: salon.id,
       salonAdi: salon.salonAdi || salon.ad || '',
-      siraTipi: salon.siraTipi,
-      grupSayisi: salon.grupSayisi,
+      siraTipi: salon.siraTipi || 'ikili',
+      grupSayisi: salon.grupSayisi || 4,
       gruplar: (salon.gruplar || []).map((grup, idx) => ({
         ...grup,
-        id: idx + 1
+        id: idx + 1,
+        siraSayisi: grup.siraSayisi || 5
       })),
-      aktif: salon.aktif
+      aktif: salon.aktif !== false
     }));
 
-    // Mevcut aktif formları normalize et
     const normalizedAktifFormlar = aktifSalonFormlari.map(form => ({
       id: form.id,
       salonAdi: form.salonAdi,
@@ -339,132 +408,178 @@ const SalonFormu = memo(({ salonlar = [], onSalonlarDegistir: onSalonlarDegistir
       grupSayisi: form.grupSayisi,
       gruplar: (form.gruplar || []).map((grup, idx) => ({
         ...grup,
-        id: idx + 1
+        id: idx + 1,
+        siraSayisi: grup.siraSayisi
       })),
       aktif: form.aktif
     }));
 
-    // Değişiklik olup olmadığını kontrol et (deep comparison)
     const hasChanges = !deepEqual(normalizedPropSalonlar, normalizedAktifFormlar);
-
     if (hasChanges) {
-      logger.debug('✅ SalonFormu: Değişiklik tespit edildi, form verileri güncelleniyor');
       setAktifSalonFormlari(normalizedPropSalonlar);
     }
   }, [salonlar, aktifSalonFormlari]);
 
+  // Anında kaydetme sistemi
+  const handleAnindaKaydet = (formId, guncelForm) => {
+    const kapasite = guncelForm.gruplar?.reduce((toplam, grup) => {
+      return toplam + (grup.siraSayisi * (guncelForm.siraTipi === 'tekli' ? 1 : 2));
+    }, 0) || 0;
 
-  // Yeni salon formu ekleme
+    let salonId = guncelForm.id;
+    const mevcutSalonlar = salonlar || [];
+    const aktifFormlar = aktifSalonFormlari || [];
+
+    if (mevcutSalonlar.some(s => s.id === salonId) || aktifFormlar.some(f => f.id === salonId && f.id !== formId)) {
+      salonId = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      setAktifSalonFormlari(prev => prev.map(form =>
+        form.id === formId ? { ...form, id: salonId } : form
+      ));
+    }
+
+    const salon = {
+      id: salonId,
+      salonAdi: guncelForm.salonAdi,
+      siraTipi: guncelForm.siraTipi,
+      grupSayisi: guncelForm.grupSayisi,
+      gruplar: guncelForm.gruplar,
+      kapasite: kapasite,
+      aktif: guncelForm.aktif,
+      ad: guncelForm.salonAdi,
+      satir: Math.ceil(Math.sqrt(kapasite)),
+      sutun: Math.ceil(kapasite / Math.ceil(Math.sqrt(kapasite)))
+    };
+
+    let guncelSalonlar;
+    const salonMevcut = salonlar.some(s => s.id === salon.id);
+    if (salonMevcut) {
+      guncelSalonlar = salonlar.map(s => s.id === salon.id ? salon : s);
+    } else {
+      guncelSalonlar = [...salonlar, salon];
+    }
+
+    isInternalUpdateRef.current = true;
+    if (onSalonlarDegistir && typeof onSalonlarDegistir === 'function') {
+      onSalonlarDegistir(guncelSalonlar);
+    }
+  };
+
+  // Yeni salon ekleme
   const handleSalonFormEkle = () => {
-    // Yerleştirme planı kontrolü
     if (yerlesimPlaniVarMi()) {
       showWarning('⚠️ Mevcut bir yerleştirme planı bulunduğu için salon eklenemez. Önce mevcut planı temizleyin.');
       return;
     }
 
-    // Eğer boş salon formu varsa yeni ekleme
     const bosFormVar = aktifSalonFormlari.some(form => !form.salonAdi.trim());
     if (bosFormVar) {
       showWarning('⚠️ Lütfen önce mevcut salonun adını girin!');
       return;
     }
 
-    // Daha stabil ID oluştur - mevcut salonların maksimum ID'sini al ve 1 ekle
-    const mevcutSalonlar = salonlar || [];
-    const aktifFormlar = aktifSalonFormlari || [];
-    const tumSalonlar = [...mevcutSalonlar, ...aktifFormlar];
-
+    const tumSalonlar = [...(salonlar || []), ...(aktifSalonFormlari || [])];
     let yeniId = 1;
     if (tumSalonlar.length > 0) {
-      const mevcutIdler = tumSalonlar.map(s => {
-        const id = parseInt(s.id);
-        return isNaN(id) ? 0 : id;
-      });
-      yeniId = Math.max(...mevcutIdler) + 1;
+      const mevcutIdler = tumSalonlar.map(s => parseInt(s.id)).filter(id => !isNaN(id));
+      if (mevcutIdler.length > 0) {
+        yeniId = Math.max(...mevcutIdler) + 1;
+      }
     }
+
+    const defaultSiraSayisi = 5;
+    const defaultGrupSayisi = 4;
+    const defaultGruplar = Array.from({ length: defaultGrupSayisi }, (_, i) => ({
+      id: i + 1,
+      siraSayisi: defaultSiraSayisi
+    }));
 
     const yeniForm = {
       id: yeniId,
       salonAdi: '',
-      siraTipi: 'tekli',
-      grupSayisi: 1,
-      gruplar: [{ id: 1, siraSayisi: 1 }],
+      siraTipi: 'ikili',
+      grupSayisi: defaultGrupSayisi,
+      gruplar: defaultGruplar,
       aktif: true
     };
+
     setAktifSalonFormlari(prev => [...prev, yeniForm]);
     setFocusSalonId(yeniForm.id);
-    // Global state'e de ekle (boş adla geçici olarak eklenir, kullanıcı düzenler)
+
     try {
-      const kapasite = yeniForm.gruplar.reduce((t, g) => t + (g.siraSayisi * (yeniForm.siraTipi === 'tekli' ? 1 : 2)), 0);
+      const kapasite = defaultGruplar.reduce((t, g) => t + (g.siraSayisi * 2), 0);
       const yeniSalon = {
-        id: yeniForm.id,
-        salonAdi: yeniForm.salonAdi,
-        siraTipi: yeniForm.siraTipi,
-        grupSayisi: yeniForm.grupSayisi,
-        gruplar: yeniForm.gruplar,
-        kapasite,
-        aktif: true,
+        ...yeniForm,
         ad: yeniForm.salonAdi,
+        kapasite,
         satir: Math.ceil(Math.sqrt(kapasite)),
         sutun: Math.ceil(kapasite / Math.ceil(Math.sqrt(kapasite)))
       };
       if (onSalonlarDegistir) {
         onSalonlarDegistir([...(salonlar || []), yeniSalon]);
       }
-    } catch (e) { console.debug('Salon ekleme persist hatası:', e); }
+    } catch (e) {
+      logger.debug('Salon ekleme persist hatası:', e);
+    }
   };
 
-  // Salon formu silme - onay dialogu aç
+  // Salon silme modalını aç
   const handleSalonFormSil = (formId) => {
-    // Yerleştirme planı kontrolü
     if (yerlesimPlaniVarMi()) {
       showWarning('⚠️ Mevcut bir yerleştirme planı bulunduğu için salon silinemez. Önce mevcut planı temizleyin.');
       return;
     }
-
     const silinecekSalon = aktifSalonFormlari.find(form => form.id === formId);
-    const salonAdi = silinecekSalon ? silinecekSalon.salonAdi : 'Bu salon';
-
     setSilinecekSalonId(formId);
-    setSilinecekSalonAdi(salonAdi);
+    setSilinecekSalonAdi(silinecekSalon ? silinecekSalon.salonAdi : 'Bu salon');
     setOnayDialogAcik(true);
   };
 
-  // Salon formu kopyalama
+  const handleOnaySil = () => {
+    if (silinecekSalonId) {
+      const yeniSalonlar = aktifSalonFormlari.filter(form => form.id !== silinecekSalonId);
+      setAktifSalonFormlari(yeniSalonlar);
+      if (onSalonlarDegistir && typeof onSalonlarDegistir === 'function') {
+        onSalonlarDegistir(yeniSalonlar);
+      }
+      showSuccess(`✅ "${silinecekSalonAdi}" silindi!`);
+    }
+    setOnayDialogAcik(false);
+    setSilinecekSalonId(null);
+    setSilinecekSalonAdi('');
+  };
+
+  const handleOnayIptal = () => {
+    setOnayDialogAcik(false);
+    setSilinecekSalonId(null);
+    setSilinecekSalonAdi('');
+  };
+
+  // Salon kopyalama
   const handleSalonFormKopyala = (formId) => {
-    // Yerleştirme planı kontrolü
     if (yerlesimPlaniVarMi()) {
       showWarning('⚠️ Mevcut bir yerleştirme planı bulunduğu için salon kopyalanamaz. Önce mevcut planı temizleyin.');
       return;
     }
 
     const kopyalanacakForm = aktifSalonFormlari.find(form => form.id === formId);
-    if (!kopyalanacakForm) {
-      showError('❌ Kopyalanacak salon bulunamadı!');
-      return;
-    }
+    if (!kopyalanacakForm) return;
 
-    // Daha stabil ID oluştur - mevcut salonların maksimum ID'sini al ve 1 ekle
-    const mevcutSalonlar = salonlar || [];
-    const aktifFormlar = aktifSalonFormlari || [];
-    const tumSalonlar = [...mevcutSalonlar, ...aktifFormlar];
-
+    const tumSalonlar = [...(salonlar || []), ...(aktifSalonFormlari || [])];
     let yeniId = 1;
     if (tumSalonlar.length > 0) {
-      const mevcutIdler = tumSalonlar.map(s => {
-        const id = parseInt(s.id);
-        return isNaN(id) ? 0 : id;
-      });
-      yeniId = Math.max(...mevcutIdler) + 1;
+      const mevcutIdler = tumSalonlar.map(s => parseInt(s.id)).filter(id => !isNaN(id));
+      if (mevcutIdler.length > 0) {
+        yeniId = Math.max(...mevcutIdler) + 1;
+      }
     }
 
     const kopyaForm = {
-      id: yeniId, // Gerçekten benzersiz ID
+      id: yeniId,
       salonAdi: `${kopyalanacakForm.salonAdi} (Kopya)`,
       siraTipi: kopyalanacakForm.siraTipi,
       grupSayisi: kopyalanacakForm.grupSayisi,
       gruplar: kopyalanacakForm.gruplar?.map((grup, index) => ({
-        id: index + 1, // Basit grup numarası: 1, 2, 3...
+        id: index + 1,
         siraSayisi: grup.siraSayisi
       })) || [],
       aktif: true
@@ -472,261 +587,35 @@ const SalonFormu = memo(({ salonlar = [], onSalonlarDegistir: onSalonlarDegistir
 
     setAktifSalonFormlari(prev => [...prev, kopyaForm]);
     setFocusSalonId(kopyaForm.id);
-    // Global state'e de ekle (hemen persist)
+
     try {
       const kapasite = kopyaForm.gruplar.reduce((t, g) => t + (g.siraSayisi * (kopyaForm.siraTipi === 'tekli' ? 1 : 2)), 0);
       const yeniSalon = {
-        id: kopyaForm.id,
-        salonAdi: kopyaForm.salonAdi,
-        siraTipi: kopyaForm.siraTipi,
-        grupSayisi: kopyaForm.grupSayisi,
-        gruplar: kopyaForm.gruplar,
-        kapasite,
-        aktif: true,
+        ...kopyaForm,
         ad: kopyaForm.salonAdi,
+        kapasite,
         satir: Math.ceil(Math.sqrt(kapasite)),
         sutun: Math.ceil(kapasite / Math.ceil(Math.sqrt(kapasite)))
       };
       if (onSalonlarDegistir) {
         onSalonlarDegistir([...(salonlar || []), yeniSalon]);
       }
-    } catch (e) { console.debug('Salon kopyalama persist hatası:', e); }
+    } catch (e) {
+      logger.debug('Kopyalama persist hatası:', e);
+    }
     showSuccess(`✅ "${kopyalanacakForm.salonAdi}" salonu kopyalandı!`);
   };
 
-  // Onay dialogu - silme işlemini gerçekleştir
-  const handleOnaySil = () => {
-    if (silinecekSalonId) {
-      // Aktif formlardan sil
-      setAktifSalonFormlari(prev => prev.filter(form => form.id !== silinecekSalonId));
-
-      // Global state'den de sil (eğer salon kaydedilmişse)
-      if (salonlar && salonlar.length > 0) {
-        const guncelSalonlar = salonlar.filter(s => s.id !== silinecekSalonId);
-        if (onSalonlarDegistir && typeof onSalonlarDegistir === 'function') {
-          onSalonlarDegistir(guncelSalonlar);
-        }
-      }
-      showSuccess(`✅ "${silinecekSalonAdi}" başarıyla silindi!`);
-    }
-
-    // Dialog'u kapat
-    setOnayDialogAcik(false);
-    setSilinecekSalonId(null);
-    setSilinecekSalonAdi('');
-  };
-
-  // Onay dialogu - iptal
-  const handleOnayIptal = () => {
-    setOnayDialogAcik(false);
-    setSilinecekSalonId(null);
-    setSilinecekSalonAdi('');
-  };
-
-  // Toplu silme fonksiyonları
-  const handleTopluSilmeModuToggle = () => {
-    setTopluSilmeModu(!topluSilmeModu);
-    setSeciliSalonlar([]);
-  };
-
-  const handleTumunuSec = () => {
-    const tumSalonIdleri = aktifSalonFormlari.map(salon => salon.id);
-    setSeciliSalonlar(tumSalonIdleri);
-  };
-
-  const handleSalonSecimi = (salonId, secili) => {
-    if (secili) {
-      setSeciliSalonlar(prev => [...prev, salonId]);
-    } else {
-      setSeciliSalonlar(prev => prev.filter(id => id !== salonId));
-    }
-  };
-
-  const handleTopluSilmeOnay = () => {
-    if (seciliSalonlar.length === 0) {
-      showWarning('Lütfen silinecek salonları seçin!');
-      return;
-    }
-
-    setTopluSilmeDialogAcik(true);
-  };
-
-  const handleTopluSilmeTamamla = () => {
-    // Yerleştirme planı kontrolü
-    if (yerlesimPlaniVarMi()) {
-      showWarning('Mevcut bir yerleştirme planı bulunduğu için salon silinemez. Önce mevcut planı temizleyin.');
-      setTopluSilmeDialogAcik(false);
-      return;
-    }
-
-    // Seçili salonları sil
-    const yeniSalonlar = aktifSalonFormlari.filter(salon => !seciliSalonlar.includes(salon.id));
-    setAktifSalonFormlari(yeniSalonlar);
-
-    // Global state'i güncelle
-    if (onSalonlarDegistir && typeof onSalonlarDegistir === 'function') {
-      onSalonlarDegistir(yeniSalonlar);
-    }
-
-    // State'leri temizle
-    const silinenSayi = seciliSalonlar.length;
-    setSeciliSalonlar([]);
-    setTopluSilmeModu(false);
-    setTopluSilmeDialogAcik(false);
-
-    showSuccess(`${silinenSayi} salon başarıyla silindi!`);
-  };
-
-  const handleTopluSilmeIptal = () => {
-    setTopluSilmeDialogAcik(false);
-    setSeciliSalonlar([]);
-    setTopluSilmeModu(false);
-  };
-
-  // Anında kaydetme sistemi
-  const handleAnindaKaydet = (formId, guncelForm) => {
-    // Aktif durumu değişikliklerini hemen kaydet
-    if (guncelForm.hasOwnProperty('aktif')) {
-      logger.debug('🔄 Salon aktif durumu değişiyor:', guncelForm.salonAdi, guncelForm.aktif);
-
-      // Kapasite hesapla
-      const kapasite = guncelForm.gruplar?.reduce((toplam, grup) => {
-        return toplam + (grup.siraSayisi * (guncelForm.siraTipi === 'tekli' ? 1 : 2));
-      }, 0) || 0;
-
-      // Güncel salon objesini oluştur
-      const guncelSalon = {
-        id: guncelForm.id,
-        salonAdi: guncelForm.salonAdi,
-        siraTipi: guncelForm.siraTipi,
-        grupSayisi: guncelForm.grupSayisi,
-        gruplar: guncelForm.gruplar,
-        kapasite: kapasite,
-        aktif: guncelForm.aktif,
-        ad: guncelForm.salonAdi,
-        satir: Math.ceil(Math.sqrt(kapasite)),
-        sutun: Math.ceil(kapasite / Math.ceil(Math.sqrt(kapasite)))
-      };
-
-      // Salonlar prop'undan yeni liste oluştur (source of truth)
-      const yeniSalonlar = salonlar.map(salon => {
-        if (salon.id === formId) {
-          return guncelSalon;
-        }
-        return salon;
-      });
-
-      logger.debug('💾 Aktif durum kaydediliyor:', {
-        salonId: guncelSalon.id,
-        salonAdi: guncelSalon.salonAdi,
-        aktif: guncelSalon.aktif
-      });
-
-      // Set flag to prevent useEffect from overwriting this change
-      isInternalUpdateRef.current = true;
-
-      // ExamContext'e kaydet
-      if (onSalonlarDegistir) {
-        onSalonlarDegistir(yeniSalonlar);
-      }
-      return;
-    }
-
-    // Kopyalama sırasında anında kaydetmeyi geciktir - SADECE (Kopya) ile bitenler için
-    if (guncelForm.salonAdi && guncelForm.salonAdi.includes('(Kopya)') && guncelForm.salonAdi.endsWith('(Kopya)')) {
-      logger.debug('⏳ Kopyalanan salon kaydetme geciktiriliyor...');
-      return; // Kopyalanan salonları hemen kaydetme
-    }
-
-    // Eğer salon adı dolu ise anında kaydet
-    if (guncelForm.salonAdi.trim()) {
-      const kapasite = guncelForm.gruplar?.reduce((toplam, grup) => {
-        return toplam + (grup.siraSayisi * (guncelForm.siraTipi === 'tekli' ? 1 : 2));
-      }, 0) || 0;
-
-      // Benzersiz ID kontrolü - eğer ID çakışıyorsa yeni ID oluştur
-      let salonId = guncelForm.id;
-      const mevcutSalonlar = salonlar || [];
-      const aktifFormlar = aktifSalonFormlari || [];
-
-      // Hem salonlar hem de aktif formlarda ID çakışması kontrolü
-      if (mevcutSalonlar.some(s => s.id === salonId) || aktifFormlar.some(f => f.id === salonId && f.id !== formId)) {
-        salonId = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        logger.debug('⚠️ ID çakışması tespit edildi, yeni ID oluşturuluyor:', salonId);
-
-        // Form ID'sini de güncelle
-        setAktifSalonFormlari(prev => prev.map(form =>
-          form.id === formId ? { ...form, id: salonId } : form
-        ));
-      }
-
-      const salon = {
-        id: salonId,
-        salonAdi: guncelForm.salonAdi,
-        siraTipi: guncelForm.siraTipi,
-        grupSayisi: guncelForm.grupSayisi,
-        gruplar: guncelForm.gruplar,
-        kapasite: kapasite,
-        aktif: guncelForm.aktif,
-        // SalonFormu formatından gelen ek bilgiler
-        ad: guncelForm.salonAdi, // Eski format uyumluluğu için
-        satir: Math.ceil(Math.sqrt(kapasite)), // Fallback için
-        sutun: Math.ceil(kapasite / Math.ceil(Math.sqrt(kapasite))) // Fallback için
-      };
-
-      logger.debug('💾 Salon kaydediliyor:', {
-        salonId: salon.id,
-        salonAdi: salon.salonAdi,
-        kapasite: salon.kapasite,
-        siraTipi: salon.siraTipi,
-        gruplar: salon.gruplar
-      });
-
-      // Global salonlar listesine ekle veya güncelle - SIRALAMA KORUNARAK
-      let guncelSalonlar;
-
-      // Eğer salon mevcut ise, sıralamayı koruyarak güncelle
-      const salonMevcut = salonlar.some(s => s.id === salon.id);
-      if (salonMevcut) {
-        guncelSalonlar = salonlar.map(s => {
-          if (s.id === salon.id) {
-            return salon; // Mevcut salonu güncelle
-          }
-          return s; // Diğer salonları olduğu gibi bırak
-        });
-      } else {
-        // Yeni salon ise, sıralamayı koruyarak sona ekle
-        guncelSalonlar = [...salonlar, salon];
-      }
-
-      if (onSalonlarDegistir && typeof onSalonlarDegistir === 'function') {
-        logger.debug('🔄 Salon güncelleniyor (sıralama korunuyor):', {
-          salonId: salon.id,
-          salonAdi: salon.salonAdi,
-          eskiSiralama: salonlar.map(s => ({ id: s.id, ad: s.salonAdi })),
-          yeniSiralama: guncelSalonlar.map(s => ({ id: s.id, ad: s.salonAdi }))
-        });
-
-        onSalonlarDegistir(guncelSalonlar);
-        logger.debug('✅ Salon global state\'e kaydedildi (sıralama korundu)');
-      }
-    }
-  };
-
-  // Salon form değişikliği
+  // Form değişikliği işleyicisi
   const handleSalonFormChange = (formId, field, value) => {
-    // Yerleştirme planı kontrolü - sadece kritik alanlar için
     const kritikAlanlar = ['grupSayisi', 'grupSiraSayisi', 'siraTipi'];
     if (kritikAlanlar.includes(field) && yerlesimPlaniVarMi()) {
       showWarning('⚠️ Mevcut bir yerleştirme planı bulunduğu için salon yapısı değiştirilemez. Önce mevcut planı temizleyin.');
       return;
     }
 
-    // ÖZEL DURUM: Aktif durumu değişikliği için senkron güncelleme
+    // Aktiflik durumu
     if (field === 'aktif') {
-      logger.debug('🔄 Aktif durumu değişiyor:', { formId, value });
-
-      // Local state'i güncelle
       setAktifSalonFormlari(prev => prev.map(form => {
         if (form.id === formId) {
           return { ...form, aktif: value };
@@ -734,70 +623,47 @@ const SalonFormu = memo(({ salonlar = [], onSalonlarDegistir: onSalonlarDegistir
         return form;
       }));
 
-      // Parent state'i de hemen güncelle (salonlar prop'undan)
       const guncelSalonlar = salonlar.map(salon => {
         if (salon.id === formId) {
-          // Kapasite hesapla
           const form = aktifSalonFormlari.find(f => f.id === formId);
           const kapasite = form?.gruplar?.reduce((toplam, grup) => {
             return toplam + (grup.siraSayisi * (form.siraTipi === 'tekli' ? 1 : 2));
           }, 0) || salon.kapasite || 0;
-
-          return {
-            ...salon,
-            aktif: value,
-            kapasite: kapasite
-          };
+          return { ...salon, aktif: value, kapasite };
         }
         return salon;
       });
 
-      logger.debug('💾 Aktif durum kaydediliyor (senkron):', {
-        formId,
-        aktif: value,
-        guncelSalonlarLength: guncelSalonlar.length
-      });
-
-      // Set flag to prevent useEffect loop
       isInternalUpdateRef.current = true;
-
-      // Parent'ı güncelle
-      if (onSalonlarDegistir) {
-        onSalonlarDegistir(guncelSalonlar);
-      }
-
-      return; // Erken çık, handleAnindaKaydet'i çağırma
+      if (onSalonlarDegistir) onSalonlarDegistir(guncelSalonlar);
+      return;
     }
 
-    // DİĞER ALANLAR için normal akış
+    // Diğer alanlar
     setAktifSalonFormlari(prev => prev.map(form => {
       if (form.id === formId) {
         let guncelForm;
 
-        // Grup sıra sayısı değişikliği için özel işlem
         if (field === 'grupSiraSayisi') {
           const yeniGruplar = form.gruplar?.map(grup =>
             grup.id === value.grupId ? { ...grup, siraSayisi: parseInt(value.siraSayisi) || 1 } : grup
           ) || [];
           guncelForm = { ...form, gruplar: yeniGruplar };
-        }
-        // Grup sayısı değişikliği için özel işlem
-        else if (field === 'grupSayisi') {
+        } else if (field === 'grupSayisi') {
+          const defaultRows = form.gruplar?.[0]?.siraSayisi || 5;
           const yeniGruplar = [];
           for (let i = 1; i <= value; i++) {
             const mevcutGrup = form.gruplar.find(g => g.id === i);
             yeniGruplar.push({
               id: i,
-              siraSayisi: mevcutGrup ? mevcutGrup.siraSayisi : 1
+              siraSayisi: mevcutGrup ? mevcutGrup.siraSayisi : defaultRows
             });
           }
           guncelForm = { ...form, grupSayisi: value, gruplar: yeniGruplar };
-        }
-        else {
+        } else {
           guncelForm = { ...form, [field]: value };
         }
 
-        // Anında kaydet (aktif hariç diğer alanlar için)
         handleAnindaKaydet(formId, guncelForm);
         return guncelForm;
       }
@@ -805,131 +671,350 @@ const SalonFormu = memo(({ salonlar = [], onSalonlarDegistir: onSalonlarDegistir
     }));
   };
 
+  // Bir salonun gruplarını 1. gruba eşitle
+  const handleEqualizeGroups = (formId) => {
+    setAktifSalonFormlari(prev => prev.map(form => {
+      if (form.id === formId && form.gruplar?.length > 0) {
+        const firstGroupRows = form.gruplar[0].siraSayisi || 5;
+        const newGruplar = form.gruplar.map(g => ({ ...g, siraSayisi: firstGroupRows }));
+        const guncelForm = { ...form, gruplar: newGruplar };
+        handleAnindaKaydet(formId, guncelForm);
+        return guncelForm;
+      }
+      return form;
+    }));
+    showSuccess('⚡ Sıralar 1. gruba eşitlendi.');
+  };
 
-  // Grup sıra sayısı değişikliği
-  const handleGrupSiraSayisiChange = (formId, grupId, siraSayisi) => {
-    // Yerleştirme planı kontrolü
+  // Bu salonun düzenini tüm salonlara uygula
+  const handleOpenApplyToAll = (sourceForm) => {
     if (yerlesimPlaniVarMi()) {
-      showWarning('⚠️ Mevcut bir yerleştirme planı bulunduğu için salon yapısı değiştirilemez. Önce mevcut planı temizleyin.');
+      showWarning('⚠️ Mevcut bir yerleştirme planı bulunduğu için salon düzeni toplu değiştirilemez.');
+      return;
+    }
+    setApplyAllDialog({ open: true, sourceForm });
+  };
+
+  const handleApplyToAllConfirm = () => {
+    if (!applyAllDialog.sourceForm) return;
+    const { siraTipi, grupSayisi, gruplar } = applyAllDialog.sourceForm;
+
+    const guncelSalonlar = aktifSalonFormlari.map(form => {
+      const newGruplar = gruplar.map((g, idx) => ({ id: idx + 1, siraSayisi: g.siraSayisi }));
+      const kapasite = newGruplar.reduce((t, g) => t + (g.siraSayisi * (siraTipi === 'tekli' ? 1 : 2)), 0);
+      return {
+        ...form,
+        siraTipi,
+        grupSayisi,
+        gruplar: newGruplar,
+        kapasite
+      };
+    });
+
+    setAktifSalonFormlari(guncelSalonlar);
+    if (onSalonlarDegistir) {
+      onSalonlarDegistir(guncelSalonlar);
+    }
+    setApplyAllDialog({ open: false, sourceForm: null });
+    showSuccess(`✅ "${applyAllDialog.sourceForm.salonAdi}" düzeni tüm salonlara uygulandı!`);
+  };
+
+  // Salonları A-Z doğal sınıf sırasına göre sırala
+  const handleSortSalons = () => {
+    const parseSalon = (name) => {
+      if (!name) return { level: 999, section: '' };
+      const m = String(name).trim().match(/^(\d+)[-/]?\s*([A-Za-zÇĞİÖŞÜçğıöşü]+)?/);
+      if (!m) return { level: 999, section: name };
+      return { level: parseInt(m[1], 10), section: (m[2] || '').toUpperCase() };
+    };
+
+    const sorted = [...aktifSalonFormlari].sort((a, b) => {
+      const pa = parseSalon(a.salonAdi);
+      const pb = parseSalon(b.salonAdi);
+      if (pa.level !== pb.level) return pa.level - pb.level;
+      return pa.section.localeCompare(pb.section, 'tr-TR');
+    });
+
+    setAktifSalonFormlari(sorted);
+    if (onSalonlarDegistir) {
+      onSalonlarDegistir(sorted);
+    }
+    showSuccess('Salonlar sınıf seviyesi ve şube sırasına göre dizildi.');
+  };
+
+  // Hızlı Salon Sihirbazı Submit
+  const handleWizardSubmit = () => {
+    if (!wizardGradeList.trim()) {
+      showWarning('Lütfen en az bir salon adı girin!');
       return;
     }
 
-    setAktifSalonFormlari(prev => prev.map(form => {
-      if (form.id === formId) {
-        const yeniGruplar = form.gruplar?.map(grup =>
-          grup.id === grupId ? { ...grup, siraSayisi: parseInt(siraSayisi) || 1 } : grup
-        ) || [];
-        const guncelForm = { ...form, gruplar: yeniGruplar };
-        // Anında kaydet
-        handleAnindaKaydet(formId, guncelForm);
-        return guncelForm;
-      }
-      return form;
+    const salonIsimleri = wizardGradeList
+      .split(/[,;\n]+/)
+      .map(s => s.trim())
+      .filter(Boolean);
+
+    if (salonIsimleri.length === 0) {
+      showWarning('Geçerli salon adı bulunamadı!');
+      return;
+    }
+
+    const defaultGruplar = Array.from({ length: wizardGrupSayisi }, (_, i) => ({
+      id: i + 1,
+      siraSayisi: wizardSiraSayisi
     }));
+    const carpan = wizardSiraTipi === 'tekli' ? 1 : 2;
+    const kapasite = wizardGrupSayisi * wizardSiraSayisi * carpan;
+
+    const tumSalonlar = [...(salonlar || []), ...(aktifSalonFormlari || [])];
+    let maxId = 0;
+    if (tumSalonlar.length > 0) {
+      const idler = tumSalonlar.map(s => parseInt(s.id)).filter(id => !isNaN(id));
+      if (idler.length > 0) maxId = Math.max(...idler);
+    }
+
+    const yeniSalonlar = [];
+    const mevcutIsimler = new Set(aktifSalonFormlari.map(s => s.salonAdi.trim().toUpperCase()));
+
+    salonIsimleri.forEach((isim) => {
+      if (mevcutIsimler.has(isim.toUpperCase())) return;
+      maxId += 1;
+      yeniSalonlar.push({
+        id: maxId,
+        salonAdi: isim,
+        siraTipi: wizardSiraTipi,
+        grupSayisi: wizardGrupSayisi,
+        gruplar: defaultGruplar,
+        kapasite,
+        aktif: true,
+        ad: isim,
+        satir: Math.ceil(Math.sqrt(kapasite)),
+        sutun: Math.ceil(kapasite / Math.ceil(Math.sqrt(kapasite)))
+      });
+      mevcutIsimler.add(isim.toUpperCase());
+    });
+
+    if (yeniSalonlar.length === 0) {
+      showWarning('Belirtilen salon isimlerinin tümü zaten mevcut!');
+      return;
+    }
+
+    const sonListe = [...aktifSalonFormlari, ...yeniSalonlar];
+    setAktifSalonFormlari(sonListe);
+    if (onSalonlarDegistir) {
+      onSalonlarDegistir(sonListe);
+    }
+
+    setWizardOpen(false);
+    showSuccess(`🎉 ${yeniSalonlar.length} yeni salon eklendi!`);
   };
 
-  // Kapasite hesaplama
-  const kapasiteHesapla = (siraTipi, gruplar) => {
-    return gruplar?.reduce((toplam, grup) => {
-      return toplam + (grup.siraSayisi * (siraTipi === 'tekli' ? 1 : 2));
-    }, 0) || 0;
+  // Toplu silme
+  const handleTopluSilmeModuToggle = () => {
+    setTopluSilmeModu(!topluSilmeModu);
+    setSeciliSalonlar([]);
   };
 
-  // readOnly görünümü: hook'lar tanımlandıktan sonra koşullu render
+  const handleTumunuSec = () => {
+    setSeciliSalonlar(aktifSalonFormlari.map(s => s.id));
+  };
+
+  const handleSalonSecimi = (salonId, secili) => {
+    setSeciliSalonlar(prev => secili ? [...prev, salonId] : prev.filter(id => id !== salonId));
+  };
+
+  const handleTopluSilmeOnay = () => {
+    if (seciliSalonlar.length === 0) {
+      showWarning('Lütfen silinecek salonları seçin!');
+      return;
+    }
+    setTopluSilmeDialogAcik(true);
+  };
+
+  const handleTopluSilmeTamamla = () => {
+    if (yerlesimPlaniVarMi()) {
+      showWarning('Mevcut bir yerleştirme planı bulunduğu için salon silinemez.');
+      setTopluSilmeDialogAcik(false);
+      return;
+    }
+
+    const yeniSalonlar = aktifSalonFormlari.filter(s => !seciliSalonlar.includes(s.id));
+    setAktifSalonFormlari(yeniSalonlar);
+    if (onSalonlarDegistir) {
+      onSalonlarDegistir(yeniSalonlar);
+    }
+    const count = seciliSalonlar.length;
+    setSeciliSalonlar([]);
+    setTopluSilmeModu(false);
+    setTopluSilmeDialogAcik(false);
+    showSuccess(`${count} salon başarıyla silindi!`);
+  };
+
+  // İstatistiksel Metrikler
+  const metrics = useMemo(() => {
+    const toplam = aktifSalonFormlari.length;
+    const aktifler = aktifSalonFormlari.filter(s => s.aktif !== false);
+    const aktifSayisi = aktifler.length;
+    const pasifSayisi = toplam - aktifSayisi;
+
+    let toplamKoltuk = 0;
+    let toplamMasa = 0;
+
+    aktifler.forEach(s => {
+      const c = s.siraTipi === 'tekli' ? 1 : 2;
+      const masa = s.gruplar?.reduce((acc, g) => acc + (parseInt(g.siraSayisi) || 0), 0) || 0;
+      toplamMasa += masa;
+      toplamKoltuk += masa * c;
+    });
+
+    const ortalama = aktifSayisi > 0 ? Math.round(toplamKoltuk / aktifSayisi) : 0;
+    return { toplam, aktifSayisi, pasifSayisi, toplamKoltuk, toplamMasa, ortalama };
+  }, [aktifSalonFormlari]);
+
+  // Arama & Filtrelemeye göre gösterilecek salonlar
+  const filteredSalonlar = useMemo(() => {
+    return aktifSalonFormlari.filter(s => {
+      if (filterStatus === 'active' && s.aktif === false) return false;
+      if (filterStatus === 'passive' && s.aktif !== false) return false;
+
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim();
+        const ad = (s.salonAdi || '').toLowerCase();
+        return ad.includes(q);
+      }
+      return true;
+    });
+  }, [aktifSalonFormlari, filterStatus, searchQuery]);
+
+  // ReadOnly Modu
   if (readOnly) {
     return (
       <Box sx={{ width: '100%', mt: 0, mb: 4 }}>
-      <PageHeader
-        icon={<MeetingRoomIcon sx={{ color: '#4F46E5', fontSize: 24 }} />}
-        title="Sınav Salonları Yönetimi"
-      />
-      <Card>
-        <CardContent>
-          <Alert severity="info" sx={{ mb: 3 }}>
-            Salon listesi görüntüleme modunda. Düzenleme yapabilmek için yönetici olarak giriş yapın.
-          </Alert>
-          {Array.isArray(salonlar) && salonlar.length > 0 ? (
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              {salonlar.map((salon) => (
-                <Paper key={salon.id || salon.salonId} sx={{ p: 2, border: '1px solid', borderColor: 'divider' }}>
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center' }}>
-                    <Chip label={salon.salonAdi || 'İsimsiz Salon'} color="primary" variant="outlined" />
-                    <Typography variant="body2" color="text.secondary">
-                      Kapasite: {salon.kapasite ?? '—'}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Sıra Tipi: {salon.siraTipi || '—'}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Grup Sayısı: {salon.grupSayisi ?? '—'}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Aktif: {salon.aktif === false ? 'Hayır' : 'Evet'}
-                    </Typography>
-                  </Box>
-                </Paper>
-              ))}
-            </Box>
-          ) : (
-            <Typography variant="body2" color="text.secondary">
-              Henüz salon eklenmemiş
-            </Typography>
-          )}
-        </CardContent>
-      </Card>
-    </Box>
+        <PageHeader
+          icon={<MeetingRoomIcon sx={{ color: '#4F46E5', fontSize: 24 }} />}
+          title="Sınav Salonları Yönetimi"
+        />
+        <Card>
+          <CardContent>
+            <Alert severity="info" sx={{ mb: 3 }}>
+              Salon listesi görüntüleme modunda. Düzenleme yapabilmek için yönetici olarak giriş yapın.
+            </Alert>
+            {Array.isArray(salonlar) && salonlar.length > 0 ? (
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                {salonlar.map((salon) => (
+                  <Paper key={salon.id || salon.salonId} sx={{ p: 1.5, border: '1px solid', borderColor: 'divider' }}>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center' }}>
+                      <Chip label={salon.salonAdi || 'İsimsiz Salon'} color="primary" variant="outlined" size="small" />
+                      <Typography variant="body2" color="text.secondary">
+                        Kapasite: {salon.kapasite ?? '—'}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Sıra Tipi: {salon.siraTipi || '—'}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Grup Sayısı: {salon.grupSayisi ?? '—'}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Aktif: {salon.aktif === false ? 'Hayır' : 'Evet'}
+                      </Typography>
+                    </Box>
+                  </Paper>
+                ))}
+              </Box>
+            ) : (
+              <Typography variant="body2" color="text.secondary">
+                Henüz salon eklenmemiş
+              </Typography>
+            )}
+          </CardContent>
+        </Card>
+      </Box>
     );
   }
 
   return (
     <Box sx={{ width: '100%', mt: 0, mb: 4 }}>
+      {/* ÜST BAŞLIK */}
       <PageHeader
         icon={<MeetingRoomIcon sx={{ color: '#4F46E5', fontSize: 24 }} />}
         title="Sınav Salonları Yönetimi"
         actions={
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
             {hasUnsavedChanges && (
+              <Tooltip title="Değişiklikleri veritabanına kaydet" arrow>
+                <Button
+                  variant="contained"
+                  color="warning"
+                  startIcon={<SaveIcon />}
+                  size="small"
+                  onClick={handleKaydet}
+                  disabled={yerlesimPlaniVarMi() || readOnly}
+                  sx={{ fontWeight: 700, height: 36, borderRadius: '10px' }}
+                >
+                  Kaydet
+                </Button>
+              </Tooltip>
+            )}
+
+            <Tooltip title="Tek tıkla otomatik salon şablonu oluşturucu" arrow>
+              <Button
+                variant="outlined"
+                color="primary"
+                startIcon={<AutoAwesomeIcon />}
+                size="small"
+                onClick={() => setWizardOpen(true)}
+                disabled={yerlesimPlaniVarMi() || readOnly}
+                sx={{ fontWeight: 600, height: 36, borderRadius: '10px' }}
+              >
+                Hızlı Sihirbaz
+              </Button>
+            </Tooltip>
+
+            {aktifSalonFormlari.length > 1 && (
+              <Tooltip title="Salonları A-Z Seviye Sırasına Göre Diz (9/A, 9/B...)" arrow>
+                <Button
+                  variant="outlined"
+                  color="inherit"
+                  startIcon={<SortByAlphaIcon />}
+                  size="small"
+                  onClick={handleSortSalons}
+                  disabled={yerlesimPlaniVarMi() || readOnly}
+                  sx={{ height: 36, borderRadius: '10px' }}
+                >
+                  Sırala
+                </Button>
+              </Tooltip>
+            )}
+
+            <Tooltip title="Yeni boş sınav salonu ekle" arrow>
               <Button
                 variant="contained"
-                color="warning"
-                startIcon={<SaveIcon />}
+                color="primary"
+                startIcon={<AddIcon />}
                 size="small"
-                onClick={handleKaydet}
+                onClick={handleSalonFormEkle}
                 disabled={yerlesimPlaniVarMi() || readOnly}
-                sx={{ 
-                  animation: 'pulse 2s infinite',
-                  '@keyframes pulse': {
-                    '0%': { opacity: 1 },
-                    '50%': { opacity: 0.7 },
-                    '100%': { opacity: 1 },
-                  }
-                }}
+                sx={{ fontWeight: 700, height: 36, borderRadius: '10px' }}
               >
-                Değişiklikleri Kaydet
+                Yeni Salon Ekle
               </Button>
-            )}
-            <Button
-              variant="outlined"
-              startIcon={<AddIcon />}
-              size="small"
-              onClick={handleSalonFormEkle}
-              disabled={yerlesimPlaniVarMi() || readOnly}
-            >
-              Yeni Salon Ekle
-            </Button>
+            </Tooltip>
 
             {aktifSalonFormlari.length > 0 && (
               <>
-                <Button
-                  variant={topluSilmeModu ? "contained" : "outlined"}
-                  color={topluSilmeModu ? "error" : "primary"}
-                  startIcon={<DeleteIcon />}
-                  size="small"
-                  onClick={handleTopluSilmeModuToggle}
-                  disabled={yerlesimPlaniVarMi() || readOnly}
-                >
-                  {topluSilmeModu ? 'İptal' : 'Toplu Sil'}
-                </Button>
+                <Tooltip title={topluSilmeModu ? "Toplu silme modundan çık" : "Birden fazla salonu seçip tek seferde sil"} arrow>
+                  <Button
+                    variant={topluSilmeModu ? "contained" : "outlined"}
+                    color={topluSilmeModu ? "error" : "inherit"}
+                    startIcon={<DeleteIcon />}
+                    size="small"
+                    onClick={handleTopluSilmeModuToggle}
+                    disabled={yerlesimPlaniVarMi() || readOnly}
+                    sx={{ height: 36, borderRadius: '10px' }}
+                  >
+                    {topluSilmeModu ? 'İptal' : 'Toplu Sil'}
+                  </Button>
+                </Tooltip>
 
                 {topluSilmeModu && (
                   <>
@@ -939,10 +1024,10 @@ const SalonFormu = memo(({ salonlar = [], onSalonlarDegistir: onSalonlarDegistir
                       size="small"
                       onClick={handleTumunuSec}
                       disabled={seciliSalonlar.length === aktifSalonFormlari.length}
+                      sx={{ height: 36, borderRadius: '10px' }}
                     >
                       Tümünü Seç
                     </Button>
-
                     <Button
                       variant="contained"
                       color="error"
@@ -950,6 +1035,7 @@ const SalonFormu = memo(({ salonlar = [], onSalonlarDegistir: onSalonlarDegistir
                       size="small"
                       onClick={handleTopluSilmeOnay}
                       disabled={seciliSalonlar.length === 0}
+                      sx={{ height: 36, fontWeight: 700, borderRadius: '10px' }}
                     >
                       Sil ({seciliSalonlar.length})
                     </Button>
@@ -960,176 +1046,415 @@ const SalonFormu = memo(({ salonlar = [], onSalonlarDegistir: onSalonlarDegistir
           </Box>
         }
       />
-      <Card>
-        <CardContent>
 
-          {/* Yerleştirme Planı Uyarısı */}
+      <Card elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: '12px' }}>
+        <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
+
+          {/* YERLEŞTİRME PLANI UYARISI */}
           {yerlesimPlaniVarMi() && (
             <Alert
               severity="warning"
-              sx={{ mb: 3 }}
-              icon={<WarningIcon />}
+              sx={{ mb: 2, borderRadius: '8px', py: 0.5 }}
+              icon={<WarningIcon fontSize="small" />}
             >
-              <AlertTitle>Yerleştirme Planı Mevcut</AlertTitle>
-              <Typography variant="body2">
-                Mevcut bir yerleştirme planı bulunduğu için salon yapısında değişiklik yapılamaz.
-                Salon ekleme, silme, grup sayısı değiştirme ve sıra sayısı değiştirme işlemleri kısıtlanmıştır.
-                <br />
-                <strong>Önce mevcut planı temizleyin, sonra salon yapısını değiştirin.</strong>
+              <AlertTitle sx={{ fontWeight: 700, fontSize: '0.9rem', mb: 0.2 }}>Yerleştirme Planı Mevcut</AlertTitle>
+              <Typography variant="caption">
+                Mevcut bir plan bulunduğu için salon yapısı kısıtlanmıştır. Değişiklik yapmak için önce planı temizleyin.
               </Typography>
             </Alert>
           )}
 
+          {/* KOMPAKT TEK SATIRLIK İSTATİSTİK VE ARAMA ŞERİDİ */}
+          {aktifSalonFormlari.length > 0 && (
+            <Box sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: 1.5,
+              mb: 2,
+              p: 1.25,
+              bgcolor: (theme) => theme.palette.mode === 'light' ? '#f8fafc' : 'rgba(255,255,255,0.02)',
+              borderRadius: '8px',
+              border: '1px solid',
+              borderColor: 'divider'
+            }}>
+              {/* Sol: Kompakt Rozetler */}
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                <Chip
+                  label={`🏛️ ${metrics.toplam} Salon (${metrics.aktifSayisi} Aktif)`}
+                  size="small"
+                  variant="outlined"
+                  sx={{ fontWeight: 700, bgcolor: 'background.paper', height: 28 }}
+                />
+                <Chip
+                  label={`👥 ${metrics.toplamKoltuk} Koltuk`}
+                  size="small"
+                  color="success"
+                  sx={{ fontWeight: 800, height: 28 }}
+                />
+                <Chip
+                  label={`🪑 ${metrics.toplamMasa} Sıra`}
+                  size="small"
+                  color="primary"
+                  variant="outlined"
+                  sx={{ fontWeight: 700, bgcolor: 'background.paper', height: 28 }}
+                />
+                <Chip
+                  label={`📊 ~${metrics.ortalama} Kişi/Salon`}
+                  size="small"
+                  variant="outlined"
+                  sx={{ fontWeight: 600, bgcolor: 'background.paper', height: 28 }}
+                />
+              </Box>
 
+              {/* Sağ: Kompakt Arama ve Filtre */}
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <TextField
+                  placeholder="Salon ara (Örn: 9/A)..."
+                  size="small"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  sx={{
+                    width: 170,
+                    '& .MuiOutlinedInput-root': {
+                      height: 28,
+                      fontSize: '0.8rem',
+                      bgcolor: 'background.paper'
+                    }
+                  }}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <SearchIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
+                      </InputAdornment>
+                    )
+                  }}
+                />
 
+                <Chip
+                  label={`Tümü (${metrics.toplam})`}
+                  size="small"
+                  color={filterStatus === 'all' ? 'primary' : 'default'}
+                  variant={filterStatus === 'all' ? 'filled' : 'outlined'}
+                  onClick={() => setFilterStatus('all')}
+                  sx={{ fontWeight: 600, height: 28, cursor: 'pointer' }}
+                />
+                <Chip
+                  label={`Aktif (${metrics.aktifSayisi})`}
+                  size="small"
+                  color={filterStatus === 'active' ? 'primary' : 'default'}
+                  variant={filterStatus === 'active' ? 'filled' : 'outlined'}
+                  onClick={() => setFilterStatus('active')}
+                  sx={{ fontWeight: 600, height: 28, cursor: 'pointer' }}
+                />
+              </Box>
+            </Box>
+          )}
 
-          {/* Boş durum metni - yazılabilir modda, salonlar listesi boşken */}
+          {/* BOŞ DURUM */}
           {Array.isArray(salonlar) && salonlar.length === 0 && aktifSalonFormlari.length === 0 && (
-            <Box sx={{ width: '100%', py: 2 }}>
-              <EmptyState 
-                icon={MeetingRoomIcon} 
-                title="Henüz salon eklenmemiş" 
-                description="Sınav salonu eklemek için 'Yeni Salon Ekle' butonunu kullanabilirsiniz." 
+            <Box sx={{ width: '100%', py: 4 }}>
+              <EmptyState
+                icon={MeetingRoomIcon}
+                title="Henüz salon eklenmemiş"
+                description="Sınav salonlarınızı 'Yeni Salon Ekle' butonu veya 'Hızlı Sihirbaz' ile oluşturabilirsiniz."
+                actionLabel="Yeni Salon Ekle"
+                onAction={handleSalonFormEkle}
               />
             </Box>
           )}
 
-          {/* Salon Formları */}
-          {aktifSalonFormlari?.map((form, index) => (
-            <SalonItem
-              key={form.id}
-              form={form}
-              index={index}
-              onFormChange={handleSalonFormChange}
-              onFormDelete={handleSalonFormSil}
-              onFormCopy={handleSalonFormKopyala}
-              yerlesimPlaniVarMi={yerlesimPlaniVarMi}
-              topluSilmeModu={topluSilmeModu}
-              seciliSalonlar={seciliSalonlar}
-              onSalonSecimi={handleSalonSecimi}
-              shouldFocus={form.id === focusSalonId}
-              onFocusDone={handleFocusDone}
-            />
-          ))}
+          {/* ARAMA SONUCU YOK */}
+          {filteredSalonlar.length === 0 && aktifSalonFormlari.length > 0 && (
+            <Box sx={{ textAlign: 'center', py: 3 }}>
+              <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 600 }}>
+                "{searchQuery}" aramasına uygun salon bulunamadı.
+              </Typography>
+              <Button size="small" onClick={() => { setSearchQuery(''); setFilterStatus('all'); }} sx={{ mt: 0.5 }}>
+                Filtreyi Temizle
+              </Button>
+            </Box>
+          )}
+
+          {/* ======================================================== */}
+          {/* KOMPAKT SALON TABLOSU (HER SALON TEK BİR İNCE SATIRDIR)   */}
+          {/* ======================================================== */}
+          {filteredSalonlar.length > 0 && (
+            <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: '8px', overflow: 'hidden' }}>
+              <Table size="small">
+                <TableHead>
+                  <TableRow sx={{ bgcolor: (theme) => theme.palette.mode === 'light' ? '#f1f5f9' : 'rgba(255,255,255,0.06)' }}>
+                    {topluSilmeModu && <TableCell width={36} align="center" sx={{ py: 0.8, px: 0.5, fontWeight: 700, fontSize: '0.78rem' }}>Seç</TableCell>}
+                    <TableCell width={40} align="center" sx={{ py: 0.8, px: 0.75, fontWeight: 700, fontSize: '0.78rem' }}>#</TableCell>
+                    <TableCell width={130} sx={{ py: 0.8, px: 0.75, fontWeight: 700, fontSize: '0.78rem' }}>Salon Adı</TableCell>
+                    <TableCell width={115} sx={{ py: 0.8, px: 0.75, fontWeight: 700, fontSize: '0.78rem' }}>Sıra Tipi</TableCell>
+                    <TableCell width={95} sx={{ py: 0.8, px: 0.75, fontWeight: 700, fontSize: '0.78rem' }}>Grup</TableCell>
+                    <TableCell sx={{ py: 0.8, px: 0.75, fontWeight: 700, fontSize: '0.78rem' }}>Grup Sıra Adetleri</TableCell>
+                    <TableCell width={105} align="center" sx={{ py: 0.8, px: 0.75, fontWeight: 700, fontSize: '0.78rem' }}>Kapasite</TableCell>
+                    <TableCell width={75} align="center" sx={{ py: 0.8, px: 0.75, fontWeight: 700, fontSize: '0.78rem' }}>Durum</TableCell>
+                    <TableCell width={105} align="right" sx={{ py: 0.8, px: 0.75, fontWeight: 700, fontSize: '0.78rem' }}>İşlemler</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {filteredSalonlar.map((form, index) => (
+                    <SalonRow
+                      key={form.id}
+                      form={form}
+                      index={index}
+                      onFormChange={handleSalonFormChange}
+                      onFormDelete={handleSalonFormSil}
+                      onFormCopy={handleSalonFormKopyala}
+                      onEqualizeGroups={handleEqualizeGroups}
+                      onApplyToAll={handleOpenApplyToAll}
+                      yerlesimPlaniVarMi={yerlesimPlaniVarMi}
+                      topluSilmeModu={topluSilmeModu}
+                      seciliSalonlar={seciliSalonlar}
+                      onSalonSecimi={handleSalonSecimi}
+                      shouldFocus={form.id === focusSalonId}
+                      onFocusDone={handleFocusDone}
+                    />
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+
+          {/* İLERLEME / SONRAKİ ADIM BUTONU */}
+          {aktifSalonFormlari.length > 0 && (
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', mt: 2, pt: 1.5, borderTop: '1px solid', borderColor: 'divider' }}>
+              <Button
+                variant="contained"
+                color="primary"
+                size="medium"
+                endIcon={<ArrowForwardIcon />}
+                onClick={() => setAktifTab('planlama')}
+                sx={{
+                  px: 3,
+                  py: 0.8,
+                  borderRadius: '8px',
+                  textTransform: 'none',
+                  fontWeight: 700,
+                  fontSize: '0.9rem'
+                }}
+              >
+                Sonraki Adım: Planlama Yap ➜
+              </Button>
+            </Box>
+          )}
 
         </CardContent>
       </Card>
 
 
-      {/* Modern Onay Dialogu */}
+      {/* ========================================== */}
+      {/* 3. MODALLAR                                */}
+      {/* ========================================== */}
+
+      {/* HIZLI SALON SİHİRBAZI MODALI */}
+      <Dialog
+        open={wizardOpen}
+        onClose={() => setWizardOpen(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 2.5, p: 0.5 } }}
+      >
+        <DialogTitle>
+          <DialogHeader
+            icon={<AutoAwesomeIcon sx={{ color: 'primary.main' }} />}
+            title="Hızlı Salon Sihirbazı"
+            subtitle="Tek tıkla birden fazla salonu standart düzenle oluşturun"
+          />
+        </DialogTitle>
+        <DialogContent sx={{ pt: 1 }}>
+          <Typography variant="caption" sx={{ fontWeight: 700, mb: 1, display: 'block', color: 'text.secondary' }}>
+            Hızlı Şube Ekle:
+          </Typography>
+          <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap', mb: 2 }}>
+            <Chip size="small" label="+ 9'lar (9/A - 9/E)" onClick={() => setWizardGradeList('9/A, 9/B, 9/C, 9/D, 9/E')} sx={{ fontWeight: 600, cursor: 'pointer' }} />
+            <Chip size="small" label="+ 10'lar (10/A - 10/E)" onClick={() => setWizardGradeList('10/A, 10/B, 10/C, 10/D, 10/E')} sx={{ fontWeight: 600, cursor: 'pointer' }} />
+            <Chip size="small" label="+ 11'ler (11/A - 11/E)" onClick={() => setWizardGradeList('11/A, 11/B, 11/C, 11/D, 11/E')} sx={{ fontWeight: 600, cursor: 'pointer' }} />
+            <Chip size="small" label="+ 12'ler (12/A - 12/E)" onClick={() => setWizardGradeList('12/A, 12/B, 12/C, 12/D, 12/E')} sx={{ fontWeight: 600, cursor: 'pointer' }} />
+            <Chip size="small" label="Tüm Lise (9A-12E)" onClick={() => setWizardGradeList('9/A, 9/B, 9/C, 10/A, 10/B, 10/C, 11/A, 11/B, 11/C, 12/A, 12/B, 12/C')} sx={{ fontWeight: 600, cursor: 'pointer' }} />
+          </Box>
+
+          <TextField
+            label="Salon Adları (Virgülle veya alt alta) *"
+            fullWidth
+            multiline
+            rows={2.5}
+            size="small"
+            value={wizardGradeList}
+            onChange={(e) => setWizardGradeList(e.target.value)}
+            placeholder="Örn: 9/A, 9/B, 9/C..."
+            sx={{ mb: 2 }}
+          />
+
+          <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', mb: 2 }}>
+            <Box sx={{ flex: 1, minWidth: 120 }}>
+              <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', display: 'block', mb: 0.5 }}>Sıra Tipi</Typography>
+              <Select
+                value={wizardSiraTipi}
+                onChange={(e) => setWizardSiraTipi(e.target.value)}
+                size="small"
+                fullWidth
+                sx={{ height: 34 }}
+              >
+                <MenuItem value="tekli">Tekli (1 Kişi)</MenuItem>
+                <MenuItem value="ikili">İkili (2 Kişi)</MenuItem>
+              </Select>
+            </Box>
+            <Box sx={{ flex: 1, minWidth: 120 }}>
+              <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', display: 'block', mb: 0.5 }}>Grup (Sütun)</Typography>
+              <TextField
+                type="number"
+                size="small"
+                fullWidth
+                value={wizardGrupSayisi}
+                onChange={(e) => setWizardGrupSayisi(Math.max(1, parseInt(e.target.value) || 1))}
+                inputProps={{ min: 1, max: 8 }}
+                sx={{ '& .MuiOutlinedInput-root': { height: 34 } }}
+              />
+            </Box>
+            <Box sx={{ flex: 1, minWidth: 120 }}>
+              <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', display: 'block', mb: 0.5 }}>Sıra / Grup</Typography>
+              <TextField
+                type="number"
+                size="small"
+                fullWidth
+                value={wizardSiraSayisi}
+                onChange={(e) => setWizardSiraSayisi(Math.max(1, parseInt(e.target.value) || 1))}
+                inputProps={{ min: 1, max: 30 }}
+                sx={{ '& .MuiOutlinedInput-root': { height: 34 } }}
+              />
+            </Box>
+          </Box>
+
+          <Box sx={{
+            p: 1.25,
+            bgcolor: (theme) => theme.palette.mode === 'light' ? '#f0fdf4' : 'rgba(34,197,94,0.05)',
+            borderRadius: '6px',
+            border: '1px solid',
+            borderColor: 'success.200',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between'
+          }}>
+            <Typography variant="body2" sx={{ fontWeight: 600, color: 'success.dark', fontSize: '0.85rem' }}>
+              Her Salonun Kapasitesi:
+            </Typography>
+            <Chip
+              label={`${wizardGrupSayisi * wizardSiraSayisi * (wizardSiraTipi === 'tekli' ? 1 : 2)} Koltuk`}
+              color="success"
+              size="small"
+              sx={{ fontWeight: 800 }}
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2, gap: 1 }}>
+          <Button onClick={() => setWizardOpen(false)} variant="outlined" size="small">
+            İptal
+          </Button>
+          <Button onClick={handleWizardSubmit} variant="contained" color="primary" size="small" sx={{ fontWeight: 700 }}>
+            Salonları Oluştur
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* TÜMÜNE UYGULA ONAY DİALOGU */}
+      <Dialog
+        open={applyAllDialog.open}
+        onClose={() => setApplyAllDialog({ open: false, sourceForm: null })}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 2 } }}
+      >
+        <DialogTitle>
+          <DialogHeader
+            icon={<CopyAllIcon sx={{ color: 'info.main' }} />}
+            title="Düzeni Tüm Salonlara Uygula"
+          />
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" sx={{ mb: 1.5 }}>
+            <strong>"{applyAllDialog.sourceForm?.salonAdi}"</strong> salonunun sıra düzenini diğer TÜM salonlara uygulamak istiyor musunuz?
+          </Typography>
+          <Paper variant="outlined" sx={{ p: 1.25, borderRadius: '6px', bgcolor: 'grey.50' }}>
+            <Typography variant="caption" sx={{ fontWeight: 600, display: 'block' }}>
+              • Sıra Tipi: {applyAllDialog.sourceForm?.siraTipi === 'tekli' ? 'Tekli' : 'İkili'}
+            </Typography>
+            <Typography variant="caption" sx={{ fontWeight: 600, display: 'block' }}>
+              • Grup Sayısı: {applyAllDialog.sourceForm?.grupSayisi} Grup
+            </Typography>
+            <Typography variant="caption" sx={{ fontWeight: 600, display: 'block' }}>
+              • Sıra Dağılımı: {applyAllDialog.sourceForm?.gruplar?.map(g => `${g.siraSayisi}`).join(' - ')} Sıra
+            </Typography>
+          </Paper>
+        </DialogContent>
+        <DialogActions sx={{ px: 2.5, pb: 2, gap: 1 }}>
+          <Button onClick={() => setApplyAllDialog({ open: false, sourceForm: null })} variant="outlined" size="small">
+            İptal
+          </Button>
+          <Button onClick={handleApplyToAllConfirm} variant="contained" color="info" size="small" sx={{ fontWeight: 700 }}>
+            Tümüne Uygula
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* TEKİL SİLME ONAY DİALOGU */}
       <Dialog
         open={onayDialogAcik}
         onClose={handleOnayIptal}
         maxWidth="xs"
         fullWidth
-        PaperProps={{
-          sx: {
-            borderRadius: 3,
-            boxShadow: '0 8px 32px rgba(0,0,0,0.12)'
-          }
-        }}
+        PaperProps={{ sx: { borderRadius: 2 } }}
       >
         <DialogTitle>
           <DialogHeader icon={<DeleteIcon />} title="Salon Silme Onayı" variant="danger" />
         </DialogTitle>
         <DialogContent>
-          <Typography variant="body1" sx={{ mb: 2 }}>
+          <Typography variant="body2" sx={{ mb: 1 }}>
             <strong>"{silinecekSalonAdi}"</strong> salonunu silmek istediğinizden emin misiniz?
           </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Bu işlem geri alınamaz ve salon tüm verileriyle birlikte kalıcı olarak silinecektir.
+          <Typography variant="caption" color="text.secondary">
+            Bu işlem geri alınamaz.
           </Typography>
         </DialogContent>
-        <DialogActions sx={{
-          justifyContent: 'center',
-          gap: 2,
-          pb: 2,
-          px: 3
-        }}>
-          <Button
-            onClick={handleOnayIptal}
-            variant="outlined"
-            sx={{
-              borderRadius: 2,
-              px: 3,
-              py: 1,
-              fontWeight: 600
-            }}
-          >
+        <DialogActions sx={{ justifyContent: 'center', gap: 1.5, pb: 2, px: 2.5 }}>
+          <Button onClick={handleOnayIptal} variant="outlined" size="small">
             İptal
           </Button>
-          <Button
-            onClick={handleOnaySil}
-            variant="contained"
-            color="error"
-            sx={{
-              borderRadius: 2,
-              px: 3,
-              py: 1,
-              fontWeight: 600,
-              boxShadow: 3
-            }}
-          >
-            Evet, Sil
+          <Button onClick={handleOnaySil} variant="contained" color="error" size="small" sx={{ fontWeight: 700 }}>
+            Sil
           </Button>
         </DialogActions>
       </Dialog>
 
-      {/* Toplu Silme Onay Dialogu */}
+      {/* TOPLU SİLME ONAY DİALOGU */}
       <Dialog
         open={topluSilmeDialogAcik}
-        onClose={handleTopluSilmeIptal}
+        onClose={() => setTopluSilmeDialogAcik(false)}
         maxWidth="xs"
         fullWidth
-        PaperProps={{
-          sx: {
-            borderRadius: 3,
-            boxShadow: '0 8px 32px rgba(0,0,0,0.12)'
-          }
-        }}
+        PaperProps={{ sx: { borderRadius: 2 } }}
       >
         <DialogTitle>
           <DialogHeader icon={<DeleteIcon />} title="Toplu Salon Silme" variant="danger" />
         </DialogTitle>
         <DialogContent>
-          <Typography variant="body1" sx={{ mb: 2 }}>
+          <Typography variant="body2" sx={{ mb: 1 }}>
             <strong>{seciliSalonlar.length} salon</strong> silmek istediğinizden emin misiniz?
           </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Bu işlem geri alınamaz ve seçili salonlar tüm verileriyle birlikte kalıcı olarak silinecektir.
+          <Typography variant="caption" color="text.secondary">
+            Bu işlem geri alınamaz.
           </Typography>
         </DialogContent>
-        <DialogActions sx={{
-          justifyContent: 'center',
-          gap: 2,
-          pb: 2,
-          px: 3
-        }}>
-          <Button
-            onClick={handleTopluSilmeIptal}
-            variant="outlined"
-            sx={{
-              borderRadius: 2,
-              px: 3,
-              py: 1,
-              fontWeight: 600
-            }}
-          >
+        <DialogActions sx={{ justifyContent: 'center', gap: 1.5, pb: 2, px: 2.5 }}>
+          <Button onClick={() => setTopluSilmeDialogAcik(false)} variant="outlined" size="small">
             İptal
           </Button>
-          <Button
-            onClick={handleTopluSilmeTamamla}
-            variant="contained"
-            color="error"
-            sx={{
-              borderRadius: 2,
-              px: 3,
-              py: 1,
-              fontWeight: 600,
-              boxShadow: 3
-            }}
-          >
-            Evet, Sil
+          <Button onClick={handleTopluSilmeTamamla} variant="contained" color="error" size="small" sx={{ fontWeight: 700 }}>
+            Sil
           </Button>
         </DialogActions>
       </Dialog>

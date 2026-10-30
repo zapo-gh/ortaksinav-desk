@@ -43,6 +43,7 @@ import {
 } from '@mui/icons-material';
 import { useExamSelector } from '../context/ExamContext';
 import { getPozisyon, calculateGroupBasedDeskNumbers } from './SalonPlani/utils';
+import { turkishNormalize } from '../utils/turkishUtils';
 
 const SabitAtamalar = () => {
   const ogrenciler = useExamSelector((state) => state.ogrenciler);
@@ -66,15 +67,7 @@ const SabitAtamalar = () => {
 
   // Türkçe karakterleri normalize eden fonksiyon
   const normalizeText = useCallback((text) => {
-    if (!text) return '';
-    return text
-      .toLowerCase()
-      .replace(/ğ/g, 'g')
-      .replace(/ü/g, 'u')
-      .replace(/ş/g, 's')
-      .replace(/ı/g, 'i')
-      .replace(/ö/g, 'o')
-      .replace(/ç/g, 'c');
+    return turkishNormalize(text);
   }, []);
 
   // Sınıf seviyesine göre renk belirleme (9: Mavi, 10: Yeşil, 11: Turuncu, 12: Mor)
@@ -191,21 +184,19 @@ const SabitAtamalar = () => {
     });
     if (!q) return base;
 
-    const normalizedQuery = normalizeText(q);
-    const qLower = q.toLowerCase();
+    const normalizedQuery = turkishNormalize(q);
+    const qLower = q.toLocaleLowerCase('tr-TR');
 
     return base.filter(o => {
       const ad = o.ad || '';
       const soyad = o.soyad || '';
+      const fullName = `${ad} ${soyad}`.trim();
       const numara = String(o.numara || '');
 
-      const normalizedAd = normalizeText(ad);
-      const normalizedSoyad = normalizeText(soyad);
-
-      return normalizedAd.includes(normalizedQuery) ||
-        normalizedSoyad.includes(normalizedQuery) ||
-        ad.toLowerCase().includes(qLower) ||
-        soyad.toLowerCase().includes(qLower) ||
+      return turkishNormalize(fullName).includes(normalizedQuery) ||
+        turkishNormalize(ad).includes(normalizedQuery) ||
+        turkishNormalize(soyad).includes(normalizedQuery) ||
+        fullName.toLocaleLowerCase('tr-TR').includes(qLower) ||
         numara.includes(q);
     });
   }, [ogrenciler, query, selectedClasses, selectedClass, normalizeText, normalizeClassCode, normalizedAllowedClasses]);
@@ -496,7 +487,7 @@ const SabitAtamalar = () => {
           />
         }
       />
-      <Card elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: '16px', mb: 4 }}>
+      <Card elevation={0} sx={{ border: '1px solid', borderColor: 'divider', bgcolor: 'background.paper', borderRadius: '16px', mb: 4 }}>
         <CardContent sx={{ p: { xs: 1.5, sm: 2.5 } }}>
 
           {/* Salon Kapasite Sekmeleri / Kartları (Yatay Kaydırılabilir Bar) */}
@@ -527,12 +518,16 @@ const SabitAtamalar = () => {
                     borderRadius: '8px',
                     cursor: 'pointer',
                     border: '1px solid',
-                    borderColor: isSelected ? 'primary.main' : '#e2e8f0',
-                    bgcolor: isSelected ? '#eff6ff' : '#ffffff',
+                    borderColor: isSelected ? 'primary.main' : 'divider',
+                    bgcolor: isSelected
+                      ? (theme) => theme.palette.mode === 'dark' ? 'rgba(79, 70, 229, 0.2)' : '#eff6ff'
+                      : 'background.paper',
                     transition: 'all 0.15s ease',
                     '&:hover': {
                       borderColor: 'primary.main',
-                      bgcolor: isSelected ? '#eff6ff' : '#f8fafc'
+                      bgcolor: isSelected
+                        ? (theme) => theme.palette.mode === 'dark' ? 'rgba(79, 70, 229, 0.25)' : '#eff6ff'
+                        : 'action.hover'
                     }
                   }}
                 >
@@ -544,8 +539,8 @@ const SabitAtamalar = () => {
                       px: 0.75,
                       py: 0.25,
                       borderRadius: '4px',
-                      bgcolor: isFull ? '#fee2e2' : (pinnedCount > 0 ? '#dbeafe' : '#f1f5f9'),
-                      color: isFull ? '#b91c1c' : (pinnedCount > 0 ? '#1e40af' : '#64748b'),
+                      bgcolor: isFull ? 'error.light' : (pinnedCount > 0 ? (theme) => theme.palette.mode === 'dark' ? 'rgba(79, 70, 229, 0.3)' : '#dbeafe' : 'action.hover'),
+                      color: isFull ? 'error.contrastText' : (pinnedCount > 0 ? (theme) => theme.palette.mode === 'dark' ? '#bfdbfe' : '#1e40af' : 'text.secondary'),
                       fontSize: '0.7rem',
                       fontWeight: 700
                     }}
@@ -572,11 +567,11 @@ const SabitAtamalar = () => {
               gap: 2.5
             }}
           >
-            {/* SOL KOLON: Öğrenci Arama & Liste (Kompaktlaştırıldı) */}
-            <Box sx={{ width: { xs: '100%', lg: 310 }, flexShrink: 0 }}>
-              <Card variant="outlined" sx={{ borderRadius: '14px', border: '1px solid #e2e8f0' }}>
+            {/* SOL KOLON: Öğrenci Arama & Liste (Kompakt ve Sticky) */}
+            <Box sx={{ width: { xs: '100%', lg: 320 }, flexShrink: 0, position: { lg: 'sticky' }, top: { lg: 84 }, zIndex: 5 }}>
+              <Card variant="outlined" sx={{ borderRadius: '14px', borderColor: 'divider', bgcolor: 'background.paper' }}>
                 <CardContent sx={{ p: 1.75 }}>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 1.25, color: '#1e293b', fontSize: '0.85rem' }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 1.25, color: 'text.primary', fontSize: '0.85rem' }}>
                     1. Öğrenci Seçin
                   </Typography>
 
@@ -613,7 +608,14 @@ const SabitAtamalar = () => {
                     <Alert
                       severity="info"
                       icon={<PersonAddIcon fontSize="small" />}
-                      sx={{ mb: 1.5, borderRadius: 2, bgcolor: '#eff6ff', border: '1px solid #bfdbfe', py: 0.25 }}
+                      sx={{
+                        mb: 1.5,
+                        borderRadius: 2,
+                        bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(79, 70, 229, 0.15)' : '#eff6ff',
+                        border: '1px solid',
+                        borderColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(79, 70, 229, 0.3)' : '#bfdbfe',
+                        py: 0.25
+                      }}
                       action={
                         <Button
                           size="small"
@@ -627,10 +629,10 @@ const SabitAtamalar = () => {
                         </Button>
                       }
                     >
-                      <Typography variant="caption" sx={{ fontWeight: 800, color: '#1e3a8a', display: 'block', fontSize: '0.72rem' }}>
+                      <Typography variant="caption" sx={{ fontWeight: 800, color: 'primary.main', display: 'block', fontSize: '0.72rem' }}>
                         {selectedStudent.ad} {selectedStudent.soyad} ({selectedStudent.sinif})
                       </Typography>
-                      <Typography variant="caption" sx={{ color: '#3b82f6', fontSize: '0.68rem' }}>
+                      <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.68rem' }}>
                         Sağdaki şemadan boş koltuğa tıklayın.
                       </Typography>
                     </Alert>
@@ -655,7 +657,7 @@ const SabitAtamalar = () => {
                     )}
                   </Box>
 
-                  <List dense sx={{ maxHeight: 420, overflowY: 'auto', border: '1px solid #f1f5f9', borderRadius: 2 }}>
+                  <List dense sx={{ maxHeight: { xs: 360, lg: 'calc(100vh - 380px)' }, overflowY: 'auto', border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
                     {filteredStudents.slice(0, 300).map((o) => {
                       const isPinnedHere = o.pinned && String(o.pinnedSalonId) === String(activeSalonId);
                       const isSelected = selectedStudentIds.includes(getStudentKey(o));
@@ -680,9 +682,16 @@ const SabitAtamalar = () => {
                             disabled={readOnly}
                             sx={{
                               borderRadius: 1.5,
-                              borderLeft: isSelected ? '4px solid #2563eb' : '4px solid transparent',
-                              bgcolor: isSelected ? '#eff6ff' : (isPinnedHere ? '#f0fdf4' : undefined),
-                              '&:hover': { bgcolor: isSelected ? '#dbeafe' : '#f8fafc' }
+                              borderLeft: isSelected ? '4px solid' : '4px solid transparent',
+                              borderLeftColor: isSelected ? 'primary.main' : 'transparent',
+                              bgcolor: isSelected
+                                ? (theme) => theme.palette.mode === 'dark' ? 'rgba(79, 70, 229, 0.2)' : '#eff6ff'
+                                : (isPinnedHere ? (theme) => theme.palette.mode === 'dark' ? 'rgba(16, 185, 129, 0.15)' : '#f0fdf4' : undefined),
+                              '&:hover': {
+                                bgcolor: isSelected
+                                  ? (theme) => theme.palette.mode === 'dark' ? 'rgba(79, 70, 229, 0.28)' : '#dbeafe'
+                                  : 'action.hover'
+                              }
                             }}
                           >
                           <ListItemText
@@ -753,7 +762,7 @@ const SabitAtamalar = () => {
 
             {/* SAĞ KOLON: Salon Görsel Şeması (Tam Sığacak Şekilde Kompakt ve Esnek) */}
             <Box sx={{ flexGrow: 1, minWidth: 0, width: '100%' }}>
-              <Card variant="outlined" sx={{ borderRadius: '16px', border: '1px solid #e2e8f0', overflow: 'hidden' }}>
+              <Card variant="outlined" sx={{ borderRadius: '16px', border: '1px solid', borderColor: 'divider', bgcolor: 'background.paper', overflow: 'hidden' }}>
                 {/* Şema Üst Bar */}
                 <Box
                   sx={{
@@ -763,14 +772,15 @@ const SabitAtamalar = () => {
                     alignItems: { xs: 'stretch', sm: 'center' },
                     gap: 1,
                     p: 1.75,
-                    bgcolor: '#f8fafc',
-                    borderBottom: '1px solid #e2e8f0'
+                    bgcolor: (theme) => theme.palette.mode === 'dark' ? 'background.default' : '#f8fafc',
+                    borderBottom: '1px solid',
+                    borderColor: 'divider'
                   }}
                 >
                   <Box>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <EventSeatIcon sx={{ color: 'primary.main', fontSize: 19 }} />
-                      <Typography variant="subtitle1" sx={{ fontWeight: 800, color: '#0f172a', fontSize: '0.95rem' }}>
+                      <Typography variant="subtitle1" sx={{ fontWeight: 800, color: 'text.primary', fontSize: '0.95rem' }}>
                         {activeSalon ? `${activeSalon.label} Oturma Şeması` : 'Salon Seçin'}
                       </Typography>
                     </Box>
@@ -782,13 +792,19 @@ const SabitAtamalar = () => {
                   </Box>
 
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-                    <Box sx={{ display: 'flex', border: '1px solid #cbd5e1', borderRadius: '8px', p: 0.25, bgcolor: '#ffffff' }}>
+                    <Box sx={{ display: 'flex', border: '1px solid', borderColor: 'divider', borderRadius: '8px', p: 0.25, bgcolor: 'background.paper' }}>
                       <Tooltip title="Görsel Koltuk Şeması">
                         <IconButton
                           size="small"
                           onClick={() => setViewMode('schema')}
                           color={viewMode === 'schema' ? 'primary' : 'default'}
-                          sx={{ bgcolor: viewMode === 'schema' ? '#eff6ff' : 'transparent', borderRadius: '6px', p: 0.5 }}
+                          sx={{
+                            bgcolor: viewMode === 'schema'
+                              ? (theme) => theme.palette.mode === 'dark' ? 'rgba(79, 70, 229, 0.2)' : '#eff6ff'
+                              : 'transparent',
+                            borderRadius: '6px',
+                            p: 0.5
+                          }}
                         >
                           <ViewModuleIcon fontSize="small" />
                         </IconButton>
@@ -798,7 +814,13 @@ const SabitAtamalar = () => {
                           size="small"
                           onClick={() => setViewMode('list')}
                           color={viewMode === 'list' ? 'primary' : 'default'}
-                          sx={{ bgcolor: viewMode === 'list' ? '#eff6ff' : 'transparent', borderRadius: '6px', p: 0.5 }}
+                          sx={{
+                            bgcolor: viewMode === 'list'
+                              ? (theme) => theme.palette.mode === 'dark' ? 'rgba(79, 70, 229, 0.2)' : '#eff6ff'
+                              : 'transparent',
+                            borderRadius: '6px',
+                            p: 0.5
+                          }}
                         >
                           <ViewListIcon fontSize="small" />
                         </IconButton>
@@ -884,10 +906,11 @@ const SabitAtamalar = () => {
                                 key={`grup-${grupId}`}
                                 sx={{
                                   width: '100%',
-                                  bgcolor: '#f8fafc',
+                                  bgcolor: (theme) => theme.palette.mode === 'dark' ? 'background.default' : '#f8fafc',
                                   p: { xs: 0.7, sm: 0.85, md: 0.75 },
                                   borderRadius: '9px',
-                                  border: '1px solid #e2e8f0',
+                                  border: '1px solid',
+                                  borderColor: 'divider',
                                   boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
                                 }}
                               >
@@ -896,10 +919,11 @@ const SabitAtamalar = () => {
                                   sx={{
                                     textAlign: 'center',
                                     fontWeight: 800,
-                                    color: '#475569',
+                                    color: 'text.secondary',
                                     mb: 0.75,
                                     fontSize: { xs: '0.76rem', md: '0.74rem' },
-                                    borderBottom: '1px solid #e2e8f0',
+                                    borderBottom: '1px solid',
+                                    borderColor: 'divider',
                                     pb: 0.4
                                   }}
                                 >
@@ -937,13 +961,15 @@ const SabitAtamalar = () => {
                                           justifyContent: 'space-between',
                                           position: 'relative',
                                           cursor: !readOnly && !student && hasSelectedStudent ? 'pointer' : 'default',
-                                          border: '1.5px solid',
+                                          border: !readOnly && !student && hasSelectedStudent ? '2px dashed' : '1.5px solid',
                                           borderColor: student
                                             ? classStyle.border
-                                            : (!readOnly && hasSelectedStudent ? '#93c5fd' : '#e2e8f0'),
+                                            : (!readOnly && hasSelectedStudent ? 'primary.main' : 'divider'),
                                           bgcolor: student
-                                            ? classStyle.bgcolor
-                                            : (!readOnly && hasSelectedStudent ? '#eff6ff' : '#ffffff'),
+                                            ? (theme) => theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.07)' : classStyle.bgcolor
+                                            : (!readOnly && hasSelectedStudent
+                                                ? (theme) => theme.palette.mode === 'dark' ? 'rgba(79, 70, 229, 0.18)' : '#eff6ff'
+                                                : 'background.paper'),
                                           transition: 'all 0.15s ease',
                                           '&:hover': {
                                             transform: !readOnly && !student && hasSelectedStudent ? 'scale(1.02)' : 'none',
@@ -983,7 +1009,7 @@ const SabitAtamalar = () => {
                                               sx={{
                                                 fontWeight: 800,
                                                 fontSize: { xs: '0.72rem', md: '0.69rem' },
-                                                color: '#0f172a',
+                                                color: 'text.primary',
                                                 lineHeight: 1.15,
                                                 mb: 0.35,
                                                 wordBreak: 'break-word',
@@ -1003,7 +1029,7 @@ const SabitAtamalar = () => {
                                                   height: 14,
                                                   fontSize: { xs: '0.6rem', md: '0.57rem' },
                                                   fontWeight: 700,
-                                                  bgcolor: '#ffffff',
+                                                  bgcolor: (theme) => theme.palette.mode === 'dark' ? 'background.paper' : '#ffffff',
                                                   color: classStyle.color,
                                                   border: `1px solid ${classStyle.border}`
                                                 }}
@@ -1015,13 +1041,13 @@ const SabitAtamalar = () => {
                                           </Box>
                                         ) : (
                                           <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', my: 'auto', py: 0.25 }}>
-                                            <ChairIcon sx={{ fontSize: 16, color: !readOnly && hasSelectedStudent ? '#3b82f6' : '#cbd5e1', mb: 0.15 }} />
+                                            <ChairIcon sx={{ fontSize: 16, color: !readOnly && hasSelectedStudent ? 'primary.main' : 'text.disabled', mb: 0.15 }} />
                                             <Typography
                                               variant="caption"
                                               sx={{
                                                 fontWeight: 700,
                                                 fontSize: '0.63rem',
-                                                color: !readOnly && hasSelectedStudent ? '#1d4ed8' : '#94a3b8'
+                                                color: !readOnly && hasSelectedStudent ? 'primary.main' : 'text.disabled'
                                               }}
                                             >
                                               {!readOnly && hasSelectedStudent ? '➕ Buraya Koy' : 'Boş'}
@@ -1050,10 +1076,11 @@ const SabitAtamalar = () => {
                             <ListItem
                               key={`list-pinned-${o.id}`}
                               sx={{
-                                border: '1px solid #e2e8f0',
+                                border: '1px solid',
+                                borderColor: 'divider',
                                 borderRadius: 2,
                                 mb: 1,
-                                bgcolor: '#ffffff'
+                                bgcolor: 'background.paper'
                               }}
                               secondaryAction={
                                 !readOnly && (

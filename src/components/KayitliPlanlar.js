@@ -4,7 +4,7 @@ import {
   List, ListItem, ListItemText, ListItemSecondaryAction,
   IconButton, CircularProgress, Alert, Chip,
   Dialog, DialogTitle, DialogContent, DialogActions,
-  TextField, InputAdornment,
+  TextField, InputAdornment, Tooltip,
   Tabs, Tab, Accordion, AccordionSummary, AccordionDetails, Divider, Grid
 } from '@mui/material';
 import {
@@ -28,10 +28,10 @@ import planManager from '../utils/planManager';
 import { useNotifications } from './NotificationSystem';
 import logger from '../utils/logger';
 import { subscribeToAuthChanges, getUserRole } from '../auth/authState';
-import { useExam } from '../context/ExamContext';
+import { useExamStore } from '../store/useExamStore';
 
 const KayitliPlanlar = ({ onPlanYukle }) => {
-  const { ayarlar } = useExam();
+  const ayarlar = useExamStore(s => s.ayarlar);
   const [kayitliPlanlar, setKayitliPlanlar] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -274,11 +274,18 @@ const KayitliPlanlar = ({ onPlanYukle }) => {
       await new Promise(r => setTimeout(r, 400));
       try {
         const db = await import('../database/tauriDb');
-        const students = await db.default.getAllStudents();
+        const [students, salons, settings] = await Promise.all([
+          db.default.getAllStudents(),
+          db.default.getAllSalons ? db.default.getAllSalons() : [],
+          db.default.getSettings ? db.default.getSettings() : null
+        ]);
         const { useExamStore } = await import('../store/useExamStore');
-        useExamStore.getState().setOgrenciler(students);
+        const store = useExamStore.getState();
+        if (students) store.setOgrenciler(students);
+        if (salons && salons.length > 0) store.setSalonlar(salons);
+        if (settings && Object.keys(settings).length > 0) store.updateAyarlar(settings);
       } catch (e) {
-        logger.warn('⚠️ Öğrenciler güncellenemedi:', e);
+        logger.warn('⚠️ DB yedeği sonrası veriler güncellenemedi:', e);
       }
       showSuccess(`DB yedeği yüklendi: ${selectedDbFileName}`);
       await loadPlans();
@@ -358,10 +365,10 @@ const KayitliPlanlar = ({ onPlanYukle }) => {
 
   const handleRestorePlan = async (planId) => {
     try {
-      logger.debug('ğŸ” Arşivden çıkarma tetiklendi. planId:', planId, 'type:', typeof planId);
+      logger.debug('🔍 Arşivden çıkarma tetiklendi. planId:', planId, 'type:', typeof planId);
       setIsLoading(true);
       await planManager.restorePlan(planId);
-      logger.debug('âœ… restorePlan tamamlandı. planId:', planId, 'type:', typeof planId);
+      logger.debug('✅ restorePlan tamamlandı. planId:', planId, 'type:', typeof planId);
       showSuccess('Plan arşivden çıkarıldı.');
       await loadPlans();
       logger.debug('ğŸ“‹ loadPlans tamamlandı sonrası refresh. planId:', planId);
@@ -473,29 +480,41 @@ const KayitliPlanlar = ({ onPlanYukle }) => {
         icon={<HistoryIcon sx={{ color: '#4F46E5', fontSize: 24 }} />}
         title="Kayıtlı Planlar"
             actions={
-              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', justifyContent: { xs: 'flex-end', sm: 'flex-start' } }}>
-                <Button
-                  variant="contained" color="primary" size="small"
-                  onClick={handleDbBackup}
-                  startIcon={<BackupIcon />}
-                  sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' }, px: { xs: 1, sm: 2 } }}
-                  disabled={isLoading || dbBackupLoading || dbImportLoading}
-                >
-                  {dbBackupLoading ? 'DB Yedek Alınıyor...' : 'DB Yedeği Al'}
-                </Button>
-                <Button
-                  variant="outlined" color="warning" size="small"
-                  onClick={handleDbImportPick}
-                  startIcon={<UploadIcon />}
-                  sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' }, px: { xs: 1, sm: 2 } }}
-                  disabled={isLoading || dbBackupLoading || dbImportLoading}
-                >
-                  {dbImportLoading ? 'DB Yükleniyor...' : 'DB Yedeğini Yükle'}
-                </Button>
+              <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
+                <Tooltip title="Tüm veritabanı yedeğini (.db) bilgisayarınıza indirin" arrow>
+                  <span>
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      size="small"
+                      onClick={handleDbBackup}
+                      startIcon={<BackupIcon />}
+                      sx={{ height: 36, fontWeight: 700, borderRadius: '10px', px: 2 }}
+                      disabled={isLoading || dbBackupLoading || dbImportLoading}
+                    >
+                      {dbBackupLoading ? 'DB Yedek Alınıyor...' : 'DB Yedeği Al'}
+                    </Button>
+                  </span>
+                </Tooltip>
+                <Tooltip title="Önceden yedeklenen bir .db dosyasını sisteme yükleyin" arrow>
+                  <span>
+                    <Button
+                      variant="outlined"
+                      color="warning"
+                      size="small"
+                      onClick={handleDbImportPick}
+                      startIcon={<UploadIcon />}
+                      sx={{ height: 36, fontWeight: 600, borderRadius: '10px', px: 2 }}
+                      disabled={isLoading || dbBackupLoading || dbImportLoading}
+                    >
+                      {dbImportLoading ? 'DB Yükleniyor...' : 'DB Yedeğini Yükle'}
+                    </Button>
+                  </span>
+                </Tooltip>
               </Box>
-        }
+            }
       />
-      <Card elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: '16px', mb: 4 }}>
+      <Card elevation={0} sx={{ border: '1px solid', borderColor: 'divider', bgcolor: 'background.paper', borderRadius: '16px', mb: 4 }}>
         <CardContent>
 
           <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
@@ -539,9 +558,10 @@ const KayitliPlanlar = ({ onPlanYukle }) => {
                         py: 1.25,
                         px: 2,
                         borderRadius: '12px',
-                        border: '1px solid #e2e8f0',
+                        border: '1px solid',
+                        borderColor: 'divider',
                         borderLeft: '4px solid #10b981', // Aktif Plan yeşili accent
-                        bgcolor: 'white',
+                        bgcolor: 'background.paper',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
@@ -549,9 +569,9 @@ const KayitliPlanlar = ({ onPlanYukle }) => {
                         gap: 2,
                         transition: 'all 0.2s ease',
                         '&:hover': {
-                          borderColor: '#cbd5e1',
-                          boxShadow: '0 4px 12px rgba(0,0,0,0.04)',
-                          bgcolor: '#f8fafc'
+                          borderColor: 'primary.main',
+                          boxShadow: (theme) => theme.palette.mode === 'dark' ? 'none' : '0 4px 12px rgba(0,0,0,0.04)',
+                          bgcolor: 'action.hover'
                         }
                       }}
                     >
@@ -561,8 +581,8 @@ const KayitliPlanlar = ({ onPlanYukle }) => {
                           label="Aktif Plan"
                           size="small"
                           sx={{
-                            bgcolor: '#ecfdf5',
-                            color: '#047857',
+                            bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(16, 185, 129, 0.2)' : '#ecfdf5',
+                            color: '#10b981',
                             fontWeight: 800,
                             fontSize: '0.72rem',
                             height: 22,
@@ -570,26 +590,26 @@ const KayitliPlanlar = ({ onPlanYukle }) => {
                           }}
                         />
 
-                        <Typography variant="subtitle1" sx={{ fontWeight: 800, color: '#0f172a', fontSize: '0.95rem', mr: 0.5 }}>
+                        <Typography variant="subtitle1" sx={{ fontWeight: 800, color: 'text.primary', fontSize: '0.95rem', mr: 0.5 }}>
                           {planName}
                         </Typography>
 
                         {/* Tek Satır Kompakt Metrikler */}
                         <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1.5, color: 'text.secondary', fontSize: '0.75rem', fontWeight: 600 }}>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4 }}>
-                            <PeopleIcon sx={{ fontSize: 15, color: '#64748b' }} />
+                            <PeopleIcon sx={{ fontSize: 15, color: 'text.secondary' }} />
                             <span>{plan.totalStudents || 0} Öğr.</span>
                           </Box>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4 }}>
-                            <MeetingRoomIcon sx={{ fontSize: 15, color: '#64748b' }} />
+                            <MeetingRoomIcon sx={{ fontSize: 15, color: 'text.secondary' }} />
                             <span>{plan.salonCount || 0} Salon</span>
                           </Box>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4 }}>
-                            <HistoryIcon sx={{ fontSize: 15, color: '#64748b' }} />
+                            <HistoryIcon sx={{ fontSize: 15, color: 'text.secondary' }} />
                             <span>Kayıt: {formatDate(plan.date || plan.createdAt)}</span>
                           </Box>
                           {plan.sinavTarihi && (
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4, color: '#059669' }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4, color: 'success.main' }}>
                               <span>🎯 Uygulama: {new Date(plan.sinavTarihi).toLocaleDateString('tr-TR')} {plan.sinavSaati || ''}</span>
                             </Box>
                           )}
@@ -629,7 +649,8 @@ const KayitliPlanlar = ({ onPlanYukle }) => {
                                 width: 32,
                                 height: 32,
                                 borderRadius: '8px',
-                                border: '1px solid #e2e8f0',
+                                border: '1px solid',
+                                borderColor: 'divider',
                                 '&:hover': { bgcolor: 'secondary.main', color: 'white' }
                               }}
                             >
@@ -644,7 +665,8 @@ const KayitliPlanlar = ({ onPlanYukle }) => {
                                 width: 32,
                                 height: 32,
                                 borderRadius: '8px',
-                                border: '1px solid #fee2e2',
+                                border: '1px solid',
+                                borderColor: 'divider',
                                 '&:hover': { bgcolor: 'error.main', color: 'white' }
                               }}
                             >
@@ -670,7 +692,7 @@ const KayitliPlanlar = ({ onPlanYukle }) => {
             ) : (
               <Box sx={{ mt: 2 }}>
                 {/* Konsept 2.1: Üst Bar - Zaman Tüneli Başlığı, Arama Çubuğu ve Hızlı Yıl/Dönem Çipleri */}
-                <Box sx={{ mb: 3, p: { xs: 1.5, sm: 2 }, borderRadius: '12px', bgcolor: '#f1f5f9', border: '1px solid #e2e8f0' }}>
+                <Box sx={{ mb: 3, p: { xs: 1.5, sm: 2 }, borderRadius: '12px', bgcolor: (theme) => theme.palette.mode === 'dark' ? 'background.default' : '#f1f5f9', border: '1px solid', borderColor: 'divider' }}>
                   {/* Arşiv Başlık Satırı */}
                   <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2, alignItems: { xs: 'stretch', sm: 'center' }, justifyContent: 'space-between', mb: 2 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -744,12 +766,12 @@ const KayitliPlanlar = ({ onPlanYukle }) => {
                     </Box>
 
                     <Chip
-                      icon={uniqueArchiveYears.some(y => (collapsedYears[y] !== undefined ? collapsedYears[y] : true)) ? <UnfoldMoreIcon /> : <UnfoldLessIcon />}
-                      label={uniqueArchiveYears.some(y => (collapsedYears[y] !== undefined ? collapsedYears[y] : true)) ? "Tümünü Genişlet" : "Tümünü Daralt"}
+                      icon={uniqueArchiveYears.some(y => (collapsedYears[y] !== undefined ? collapsedYears[y] : (uniqueArchiveYears.indexOf(y) !== 0))) ? <UnfoldMoreIcon /> : <UnfoldLessIcon />}
+                      label={uniqueArchiveYears.some(y => (collapsedYears[y] !== undefined ? collapsedYears[y] : (uniqueArchiveYears.indexOf(y) !== 0))) ? "Tümünü Genişlet" : "Tümünü Daralt"}
                       size="small"
                       variant="outlined"
                       onClick={() => {
-                        const isAnyYearCollapsed = uniqueArchiveYears.some(y => (collapsedYears[y] !== undefined ? collapsedYears[y] : true));
+                        const isAnyYearCollapsed = uniqueArchiveYears.some(y => (collapsedYears[y] !== undefined ? collapsedYears[y] : (uniqueArchiveYears.indexOf(y) !== 0)));
                         const newObj = {};
                         uniqueArchiveYears.forEach(y => { newObj[y] = !isAnyYearCollapsed; });
                         setCollapsedYears(newObj);
@@ -769,8 +791,8 @@ const KayitliPlanlar = ({ onPlanYukle }) => {
                     {timelineGroupedPlans.map(({ yil, donemler }, yearIndex) => {
                       // Arama varsa veya spesifik yıl seçildiyse yıl otomatik geniş açık olur
                       const forceExpand = archiveSearchText.trim() !== '' || selectedArchiveYear !== 'ALL';
-                      // Varsayılan olarak tüm yıllar kapalıdır; kullanıcı tıkladıysa state geçerlidir
-                      const isYearCollapsed = forceExpand ? false : (collapsedYears[yil] !== undefined ? collapsedYears[yil] : true);
+                      // Varsayılan olarak en yeni yıl (yearIndex === 0) açık, diğerleri kapalıdır
+                      const isYearCollapsed = forceExpand ? false : (collapsedYears[yil] !== undefined ? collapsedYears[yil] : (yearIndex !== 0));
                       const totalExamsInYear = donemler.reduce((acc, d) => acc + d.plans.length, 0);
 
                       return (
@@ -821,7 +843,8 @@ const KayitliPlanlar = ({ onPlanYukle }) => {
                               position: 'relative',
                               ml: 2,
                               pl: { xs: 3, sm: 4 },
-                              borderLeft: '2px dashed #93c5fd',
+                              borderLeft: '2px dashed',
+                              borderColor: 'primary.light',
                               pb: 1
                             }}>
                               {donemler.map(({ donem, plans }) => {
@@ -834,8 +857,8 @@ const KayitliPlanlar = ({ onPlanYukle }) => {
                                   <Box key={donem} sx={{ mb: 4 }}>
                                     {/* Dönem Alt Başlığı */}
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2, ml: -0.5 }}>
-                                      <EventNoteIcon sx={{ color: '#2563eb', fontSize: 20 }} />
-                                      <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#1e293b', fontSize: '0.95rem' }}>
+                                      <EventNoteIcon sx={{ color: 'primary.main', fontSize: 20 }} />
+                                      <Typography variant="subtitle2" sx={{ fontWeight: 800, color: 'text.primary', fontSize: '0.95rem' }}>
                                         {donem} ({plans.length} Sınav)
                                       </Typography>
                                     </Box>
@@ -854,9 +877,10 @@ const KayitliPlanlar = ({ onPlanYukle }) => {
                                               width: 14,
                                               height: 14,
                                               borderRadius: '50%',
-                                              bgcolor: '#ffffff',
-                                              border: '3px solid #2563eb',
-                                              boxShadow: '0 0 0 3px rgba(37,99,235,0.15)',
+                                              bgcolor: 'background.paper',
+                                              border: '3px solid',
+                                              borderColor: 'primary.main',
+                                              boxShadow: '0 0 0 3px rgba(79, 70, 229, 0.15)',
                                               zIndex: 2
                                             }} />
 
@@ -867,14 +891,16 @@ const KayitliPlanlar = ({ onPlanYukle }) => {
                                                 py: 1.25,
                                                 px: 2,
                                                 borderRadius: '12px',
-                                                border: '1px solid #e2e8f0',
-                                                borderLeft: '4px solid #2563eb',
-                                                bgcolor: '#ffffff',
+                                                border: '1px solid',
+                                                borderColor: 'divider',
+                                                borderLeft: '4px solid',
+                                                borderLeftColor: 'primary.main',
+                                                bgcolor: 'background.paper',
                                                 transition: 'all 0.2s ease',
                                                 '&:hover': {
-                                                  borderColor: '#cbd5e1',
-                                                  bgcolor: '#f8fafc',
-                                                  boxShadow: '0 4px 12px rgba(15, 23, 42, 0.04)'
+                                                  borderColor: 'primary.main',
+                                                  bgcolor: 'action.hover',
+                                                  boxShadow: (theme) => theme.palette.mode === 'dark' ? 'none' : '0 4px 12px rgba(15, 23, 42, 0.04)'
                                                 }
                                               }}
                                             >
@@ -885,25 +911,32 @@ const KayitliPlanlar = ({ onPlanYukle }) => {
                                                     <Chip
                                                       size="small"
                                                       label={meta.sinavNo}
-                                                      sx={{ height: 22, bgcolor: '#eff6ff', color: '#1d4ed8', fontWeight: 800, borderRadius: '6px', fontSize: '0.72rem' }}
+                                                      sx={{
+                                                        height: 22,
+                                                        bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(79, 70, 229, 0.2)' : '#eff6ff',
+                                                        color: 'primary.main',
+                                                        fontWeight: 800,
+                                                        borderRadius: '6px',
+                                                        fontSize: '0.72rem'
+                                                      }}
                                                     />
                                                   )}
-                                                  <Typography variant="subtitle1" sx={{ fontWeight: 800, color: '#0f172a', fontSize: '0.95rem', mr: 0.5 }}>
+                                                  <Typography variant="subtitle1" sx={{ fontWeight: 800, color: 'text.primary', fontSize: '0.95rem', mr: 0.5 }}>
                                                     {plan.name || 'İsimsiz Plan'}
                                                   </Typography>
 
                                                   {/* Tek Satır Kompakt Metrikler */}
                                                   <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1.5, color: 'text.secondary', fontSize: '0.75rem', fontWeight: 600 }}>
                                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4 }}>
-                                                      <PeopleIcon sx={{ fontSize: 15, color: '#64748b' }} />
+                                                      <PeopleIcon sx={{ fontSize: 15, color: 'text.secondary' }} />
                                                       <span>{plan.totalStudents || 0} Öğr.</span>
                                                     </Box>
                                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4 }}>
-                                                      <MeetingRoomIcon sx={{ fontSize: 15, color: '#64748b' }} />
+                                                      <MeetingRoomIcon sx={{ fontSize: 15, color: 'text.secondary' }} />
                                                       <span>{plan.salonCount || 0} Salon</span>
                                                     </Box>
                                                     {plan.sinavTarihi && (
-                                                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4, color: '#2563eb' }}>
+                                                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4, color: 'primary.main' }}>
                                                         <span>🎯 Uygulama: {new Date(plan.sinavTarihi).toLocaleDateString('tr-TR')} {plan.sinavSaati || ''}</span>
                                                       </Box>
                                                     )}
@@ -939,7 +972,7 @@ const KayitliPlanlar = ({ onPlanYukle }) => {
                                                         color="error"
                                                         onClick={() => handleDeleteClick(plan.id)}
                                                         title="Planı Sil"
-                                                        sx={{ p: 0.75, borderRadius: '8px', '&:hover': { bgcolor: 'error.main', color: '#ffffff' } }}
+                                                        sx={{ p: 0.75, borderRadius: '8px', border: '1px solid', borderColor: 'divider', '&:hover': { bgcolor: 'error.main', color: '#ffffff' } }}
                                                       >
                                                         <DeleteIcon sx={{ fontSize: 16 }} />
                                                       </IconButton>
@@ -966,8 +999,9 @@ const KayitliPlanlar = ({ onPlanYukle }) => {
                                               textTransform: 'none',
                                               fontWeight: 700,
                                               borderStyle: 'dashed',
-                                              bgcolor: '#ffffff',
-                                              '&:hover': { bgcolor: '#eff6ff', borderColor: '#2563eb' }
+                                              borderColor: 'divider',
+                                              bgcolor: 'background.paper',
+                                              '&:hover': { bgcolor: 'action.hover', borderColor: 'primary.main' }
                                             }}
                                           >
                                             + {plans.length - limit} Eski Sınavı Daha Göster

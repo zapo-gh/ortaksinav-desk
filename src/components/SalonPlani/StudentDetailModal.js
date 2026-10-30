@@ -91,10 +91,10 @@ const StudentDetailModal = ({
                 flex: '1 1 auto',
                 minWidth: '86px',
                 p: 1,
-                bgcolor: 'grey.50',
+                bgcolor: (theme) => theme.palette.mode === 'dark' ? 'background.default' : 'grey.50',
                 borderRadius: 2,
                 border: '1px solid',
-                borderColor: 'grey.200',
+                borderColor: 'divider',
                 display: 'flex',
                 alignItems: 'center',
                 gap: 1
@@ -103,7 +103,7 @@ const StudentDetailModal = ({
                   width: 34,
                   height: 34,
                   borderRadius: '50%',
-                  bgcolor: 'primary.50',
+                  bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(79, 70, 229, 0.2)' : 'rgba(79, 70, 229, 0.1)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -127,10 +127,10 @@ const StudentDetailModal = ({
                 flex: '1 1 auto',
                 minWidth: '86px',
                 p: 1,
-                bgcolor: 'grey.50',
+                bgcolor: (theme) => theme.palette.mode === 'dark' ? 'background.default' : 'grey.50',
                 borderRadius: 2,
                 border: '1px solid',
-                borderColor: 'grey.200',
+                borderColor: 'divider',
                 display: 'flex',
                 alignItems: 'center',
                 gap: 1
@@ -139,7 +139,7 @@ const StudentDetailModal = ({
                   width: 34,
                   height: 34,
                   borderRadius: '50%',
-                  bgcolor: 'secondary.50',
+                  bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(14, 165, 233, 0.2)' : 'rgba(14, 165, 233, 0.1)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -163,10 +163,10 @@ const StudentDetailModal = ({
                 flex: '2 1 auto',
                 minWidth: '122px',
                 p: 1,
-                bgcolor: 'grey.50',
+                bgcolor: (theme) => theme.palette.mode === 'dark' ? 'background.default' : 'grey.50',
                 borderRadius: 2,
                 border: '1px solid',
-                borderColor: 'grey.200',
+                borderColor: 'divider',
                 display: 'flex',
                 alignItems: 'center',
                 gap: 1
@@ -175,7 +175,7 @@ const StudentDetailModal = ({
                   width: 34,
                   height: 34,
                   borderRadius: '50%',
-                  bgcolor: 'success.50',
+                  bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.1)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -276,4 +276,4 @@ const StudentDetailModal = ({
   );
 };
 
-export default StudentDetailModal;
+export default React.memo(StudentDetailModal);

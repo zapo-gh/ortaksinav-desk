@@ -58,9 +58,13 @@ import { useStudentData } from './OgrenciListesi/hooks/useStudentData';
 import { useExcelImport } from './OgrenciListesi/hooks/useExcelImport';
 import DallarAyariDialog from './OgrenciListesi/DallarAyariDialog';
 import OgrenciListesiHeader from './OgrenciListesi/OgrenciListesiHeader';
+import { turkishNormalize, trCollator } from '../utils/turkishUtils';
+
+const trNumericCollator = trCollator;
 
 const OgrenciListesi = memo(({ ogrenciler, yerlestirmeSonucu = null, ayarlar = null, onAyarlarDegistir }) => {
   const role = useExamStore(s => s.role);
+  const setAktifTab = useExamStore(s => s.setAktifTab);
   const isWriteAllowed = role === 'admin';
 
   const fallbackDallar = React.useMemo(
@@ -174,22 +178,7 @@ const OgrenciListesi = memo(({ ogrenciler, yerlestirmeSonucu = null, ayarlar = n
 
   // Türkçe karakterleri normalize eden fonksiyon (performans için memoize)
   const normalizeText = useCallback((text) => {
-    if (!text || typeof text !== 'string') return '';
-    return text
-      .toLowerCase()
-      .replace(/ğ/g, 'g')
-      .replace(/Ğ/g, 'g')
-      .replace(/ü/g, 'u')
-      .replace(/Ü/g, 'u')
-      .replace(/ş/g, 's')
-      .replace(/Ş/g, 's')
-      .replace(/ı/g, 'i')
-      .replace(/İ/g, 'i')
-      .replace(/I/g, 'i')
-      .replace(/ö/g, 'o')
-      .replace(/Ö/g, 'o')
-      .replace(/ç/g, 'c')
-      .replace(/Ç/g, 'c');
+    return turkishNormalize(text);
   }, []);
 
   const [dialogAcik, setDialogAcik] = useState(false);
@@ -234,12 +223,13 @@ const OgrenciListesi = memo(({ ogrenciler, yerlestirmeSonucu = null, ayarlar = n
 
     // 2. Arama terimi filtreleme
     if (!manualEklemeAcik && aramaTerimi.trim()) {
-      const qLower = aramaTerimi.toLowerCase().trim();
-      const normalizedTerim = normalizeText(qLower);
+      const qRaw = aramaTerimi.trim();
+      const qLower = qRaw.toLocaleLowerCase('tr-TR');
+      const normalizedTerim = turkishNormalize(qRaw);
       const cache = normalizeCacheRef.current;
       const getNormalizedCached = (text) => {
         if (!cache.has(text)) {
-          cache.set(text, normalizeText(text));
+          cache.set(text, turkishNormalize(text));
         }
         return cache.get(text);
       };
@@ -247,14 +237,17 @@ const OgrenciListesi = memo(({ ogrenciler, yerlestirmeSonucu = null, ayarlar = n
       filtered = filtered.filter(ogrenci => {
         const ad = ogrenci.ad || '';
         const soyad = ogrenci.soyad || '';
+        const fullName = `${ad} ${soyad}`.trim();
         const numara = ogrenci.numara?.toString() || '';
         const sinif = ogrenci.sinif || '';
 
-        if (numara.includes(qLower) || sinif.toLowerCase().includes(qLower)) return true;
+        if (numara.includes(qRaw) || sinif.toLocaleLowerCase('tr-TR').includes(qLower)) return true;
+        if (fullName.toLocaleLowerCase('tr-TR').includes(qLower)) return true;
+        const normalizedFullName = getNormalizedCached(fullName);
+        if (normalizedFullName.includes(normalizedTerim)) return true;
         const normalizedAd = getNormalizedCached(ad);
         const normalizedSoyad = getNormalizedCached(soyad);
-        if (normalizedAd.includes(normalizedTerim) || normalizedSoyad.includes(normalizedTerim)) return true;
-        return ad.toLowerCase().includes(qLower) || soyad.toLowerCase().includes(qLower);
+        return normalizedAd.includes(normalizedTerim) || normalizedSoyad.includes(normalizedTerim);
       });
     }
 
@@ -262,8 +255,8 @@ const OgrenciListesi = memo(({ ogrenciler, yerlestirmeSonucu = null, ayarlar = n
     return [...filtered].sort((a, b) => {
       const sA = a.sinif || '';
       const sB = b.sinif || '';
-      // Numeric: true ile 9-A, 10-A sıralaması doğru olur
-      const sinifKiyas = sA.localeCompare(sB, 'tr', { numeric: true });
+      // Numeric: true ile 9-A, 10-A sıralaması doğru ve optimize Collator ile hızlı olur
+      const sinifKiyas = trNumericCollator.compare(sA, sB);
       if (sinifKiyas !== 0) return sinifKiyas;
 
       // Aynı sınıftakileri öğrenci numarasına göre sırala (artan)
@@ -829,7 +822,37 @@ const OgrenciListesi = memo(({ ogrenciler, yerlestirmeSonucu = null, ayarlar = n
             yerlesimPlaniVarMi={yerlesimPlaniVarMi}
             readOnly={readOnly}
             dallarEffective={dallarEffective}
+            onManuelEkle={() => setManualEklemeAcik(true)}
           />
+
+          {/* İlerleme / Sonraki Adım Aksiyon Çubuğu */}
+          {ogrenciler.length > 0 && (
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 3, pt: 2, borderTop: '1px solid', borderColor: 'divider', flexWrap: 'wrap', gap: 2 }}>
+              <Typography variant="body2" color="text.secondary">
+                Toplam <strong>{ogrenciler.length}</strong> öğrenci sisteme kayıtlı.
+              </Typography>
+              <Button
+                variant="contained"
+                color="primary"
+                size="medium"
+                onClick={() => {
+                  if (typeof setAktifTab === 'function') {
+                    setAktifTab('ayarlar');
+                  }
+                }}
+                sx={{
+                  borderRadius: 2,
+                  px: 3,
+                  py: 1,
+                  fontWeight: 600,
+                  textTransform: 'none',
+                  boxShadow: (theme) => theme.palette.mode === 'dark' ? 'none' : 2
+                }}
+              >
+                Sonraki Adım: Sınav Dersleri ➔
+              </Button>
+            </Box>
+          )}
         </CardContent>
       </Card>
 

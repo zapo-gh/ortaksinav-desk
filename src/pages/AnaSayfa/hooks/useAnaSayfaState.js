@@ -13,6 +13,8 @@ export const useAnaSayfaState = () => {
 
     const [seciliSalonId, setSeciliSalonId] = useState(null);
     const [showFirstTimeLoader, setShowFirstTimeLoader] = useState(false);
+    const [undoStack, setUndoStack] = useState([]);
+    const [redoStack, setRedoStack] = useState([]);
     const [printMenuAnchor, setPrintMenuAnchor] = useState(null);
     const [saveDialogOpen, setSaveDialogOpen] = useState(false);
     const [activePlanMeta, setActivePlanMeta] = useState(null);
@@ -125,20 +127,20 @@ export const useAnaSayfaState = () => {
     // Print logic
     const handleSalonPlaniPrint = useReactToPrint({
         contentRef: salonPlaniPrintRef,
-        documentTitle: 'Salon Planı',
-        pageStyle: `@media print { body { -webkit-print-color-adjust: exact; } .no-print { display: none !important; } @page { size: A4 landscape !important; margin: 0.5in !important; } }`
+        documentTitle: 'Salon Oturma Planı',
+        pageStyle: `@page { size: A4 landscape; margin: 0; } @media print { html, body { margin: 0 !important; padding: 0 !important; background: #ffffff !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; box-sizing: border-box !important; } * { box-sizing: border-box !important; } .no-print { display: none !important; } }`
     });
 
     const handleSinifListesiPrint = useReactToPrint({
         contentRef: sinifListesiPrintRef,
-        documentTitle: 'Sınıf Listesi',
-        pageStyle: `@media print { body { -webkit-print-color-adjust: exact; } .no-print { display: none !important; } .page-break { page-break-before: always; } .page-break-after { page-break-after: always; } @page { size: A4 portrait !important; margin: 0 !important; } }`
+        documentTitle: 'Öğrenci Listesi',
+        pageStyle: `@page { size: A4 portrait; margin: 0; } @media print { html, body { margin: 0 !important; padding: 0 !important; background: #ffffff !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; box-sizing: border-box !important; } * { box-sizing: border-box !important; } thead { display: table-header-group !important; } tr { page-break-inside: avoid !important; break-inside: avoid !important; } .no-print { display: none !important; } }`
     });
 
     const handleSalonImzaListesiPrint = useReactToPrint({
         contentRef: salonImzaListesiPrintRef,
-        documentTitle: 'Salon İmza Listesi',
-        pageStyle: `@media print { body { -webkit-print-color-adjust: exact; } .no-print { display: none !important; } .page-break { page-break-before: always; } .page-break-after { page-break-after: always; } @page { size: A4 portrait !important; margin: 0 !important; } }`
+        documentTitle: 'Sınav Yoklama ve İmza Listesi',
+        pageStyle: `@page { size: A4 portrait; margin: 0; } @media print { html, body { margin: 0 !important; padding: 0 !important; background: #ffffff !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; box-sizing: border-box !important; } * { box-sizing: border-box !important; } thead { display: table-header-group !important; } tr { page-break-inside: avoid !important; break-inside: avoid !important; } .no-print { display: none !important; } }`
     });
 
     const handlePrintMenuOpen = useCallback((event) => setPrintMenuAnchor(event.currentTarget), []);
@@ -238,6 +240,8 @@ export const useAnaSayfaState = () => {
         tabDegistir('planlama');
         planManager.clearCurrentPlan();
         setActivePlanMeta(null);
+        setUndoStack([]);
+        setRedoStack([]);
     }, [yerlestirmeTemizle, tabDegistir]);
 
     const handlePlanYukle = async (plan) => {
@@ -347,20 +351,45 @@ export const useAnaSayfaState = () => {
         return masa.id + 1;
     }, [yerlestirmeSonucu]);
 
+    const handleUndo = useCallback(() => {
+        if (undoStack.length === 0 || !yerlestirmeSonucu) return;
+        const previousState = undoStack[undoStack.length - 1];
+        setUndoStack(prev => prev.slice(0, -1));
+        setRedoStack(prev => [...prev, yerlestirmeSonucu]);
+        yerlestirmeGuncelle(previousState);
+        showSuccess('Son işlem geri alındı.');
+    }, [undoStack, yerlestirmeSonucu, yerlestirmeGuncelle, showSuccess]);
+
+    const handleRedo = useCallback(() => {
+        if (redoStack.length === 0 || !yerlestirmeSonucu) return;
+        const nextState = redoStack[redoStack.length - 1];
+        setRedoStack(prev => prev.slice(0, -1));
+        setUndoStack(prev => [...prev, yerlestirmeSonucu]);
+        yerlestirmeGuncelle(nextState);
+        showSuccess('İşlem tekrar uygulandı.');
+    }, [redoStack, yerlestirmeSonucu, yerlestirmeGuncelle, showSuccess]);
+
     const handleStudentMove = useCallback((action, data) => {
         if (readOnly) {
             showError('Yerleşim planını değiştirmek için yönetici olarak giriş yapmalısınız.');
             return;
         }
 
-        if (action === 'update_desk_number') {
-            const updatedOgrenciler = ogrenciler.map(o => o.id === data.studentId ? { ...o, masaNumarasi: data.deskNumber } : o);
+        const actualData = (typeof action === 'object' && action !== null) ? action : data;
+        const actualAction = typeof action === 'string' ? action : 'move';
+
+        if (actualAction === 'update_desk_number') {
+            const updatedOgrenciler = ogrenciler.map(o => o.id === actualData?.studentId ? { ...o, masaNumarasi: actualData?.deskNumber } : o);
             ogrencilerYukle(updatedOgrenciler);
             return;
         }
 
-        const { from, to, draggedStudent } = data || {};
+        const { from, to, draggedStudent } = actualData || {};
         if (!yerlestirmeSonucu?.salon) return;
+
+        // Geri alma (Undo) geçmişine kaydet
+        setUndoStack(prev => [...prev.slice(-19), yerlestirmeSonucu]);
+        setRedoStack([]);
 
         const currentSalon = yerlestirmeSonucu.salon;
         const fromMasa = currentSalon.masalar?.find(m => m.id === from);
@@ -414,6 +443,10 @@ export const useAnaSayfaState = () => {
             return;
         }
         try {
+            if (yerlestirmeSonucu) {
+                setUndoStack(prev => [...prev.slice(-19), yerlestirmeSonucu]);
+                setRedoStack([]);
+            }
             const result = await transferManager.executeTransfer(transferData);
             const updatedTumSalonlar = (yerlestirmeSonucu.tumSalonlar || []).map(s => {
                 if (s.id === result.fromSalon.id || s.salonId === result.fromSalon.id || s.id === result.fromSalon.salonId) return result.fromSalon;
@@ -523,6 +556,10 @@ export const useAnaSayfaState = () => {
         handlePlanYukle,
         handleStudentMove,
         handleStudentTransfer,
+        handleUndo,
+        handleRedo,
+        canUndo: undoStack.length > 0,
+        canRedo: redoStack.length > 0,
         handleYerlestirmeYap,
         handleAyarlarDegistir: (yeni) => {
             if (readOnly) showError('Düzenleme yetkisi gerekli.');

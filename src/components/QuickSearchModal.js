@@ -1,9 +1,10 @@
-﻿import React from 'react';
+import React from 'react';
 import SearchIcon from '@mui/icons-material/Search';
 import DialogHeader from './common/DialogHeader';
 import { Dialog, DialogTitle, DialogContent, TextField, List, ListItemButton, ListItemText, Box, Typography, Alert } from '@mui/material';
 import ExamContext from '../context/ExamContext';
 import { getPlacementMap, resolveStudentPlacement } from '../utils/placementHelper';
+import { turkishNormalize } from '../utils/turkishUtils';
 
 const QuickSearchModal = ({ open, onClose }) => {
   // ExamProvider olmadan render edilirse testlerde hata vermemesi için güvenli context erişimi
@@ -42,13 +43,21 @@ const QuickSearchModal = ({ open, onClose }) => {
   }, [yerlestirmeSonucu]);
 
   const results = React.useMemo(() => {
-    const q = query.trim().toLocaleLowerCase('tr-TR');
-    if (!q) return [];
+    const rawQ = query.trim();
+    if (!rawQ) return [];
+    const normQ = turkishNormalize(rawQ);
+    const lowerQ = rawQ.toLocaleLowerCase('tr-TR');
     const base = ogrenciler || [];
     return base
-      .filter(o => (
-        `${o.ad} ${o.soyad}`.toLocaleLowerCase('tr-TR').includes(q) || String(o.numara || '').includes(q)
-      ))
+      .filter(o => {
+        const fullName = `${o.ad || ''} ${o.soyad || ''}`.trim();
+        const numStr = String(o.numara || o.okulNo || '');
+        const sinifStr = String(o.sinif || o.sube || '');
+        if (numStr.includes(rawQ) || sinifStr.toLocaleLowerCase('tr-TR').includes(lowerQ)) return true;
+        if (fullName.toLocaleLowerCase('tr-TR').includes(lowerQ)) return true;
+        if (turkishNormalize(fullName).includes(normQ)) return true;
+        return false;
+      })
       .slice(0, 30)
       .map(o => {
         // GÜNCELLEME: Artık placementHelper'daki güvenli çözücüyü kullanıyoruz

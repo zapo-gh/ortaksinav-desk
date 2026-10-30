@@ -5,12 +5,16 @@
 
 import logger from '../../utils/logger.js';
 import { getSinifSeviyesi } from '../utils/helpers.js';
+import { normalizeGender } from '../../utils/turkishUtils.js';
 
 /**
  * Cinsiyet kontrolü - kız-erkek yan yana oturamaz
  */
 export const isGenderValid = (ogrenci, komsular, plan, currentGroup = null, currentRow = null) => {
-  if (!ogrenci.cinsiyet) return true; // Cinsiyet bilgisi yoksa geç
+  if (!ogrenci?.cinsiyet) return true; // Cinsiyet bilgisi yoksa geç
+
+  const ogrGender = normalizeGender(ogrenci.cinsiyet);
+  if (!ogrGender) return true;
 
   // SADECE YAN YANA KOMŞULAR İÇİN KISIT KONTROLÜ (getNeighbors artık sadece sol-sağ döndürüyor)
   for (const [satir, sutun] of komsular) {
@@ -19,9 +23,12 @@ export const isGenderValid = (ogrenci, komsular, plan, currentGroup = null, curr
     if (currentGroup != null && neighborCell?.grup != null && neighborCell.grup !== currentGroup) {
       continue; // sadece aynı grup
     }
-    if (komsuOgrenci && komsuOgrenci.cinsiyet !== ogrenci.cinsiyet) {
-      logger.debug(`❌ Cinsiyet kısıt ihlali: ${ogrenci.ad} (${ogrenci.cinsiyet}) yanında ${komsuOgrenci.ad} (${komsuOgrenci.cinsiyet})`);
-      return false;
+    if (komsuOgrenci?.cinsiyet) {
+      const komsuGender = normalizeGender(komsuOgrenci.cinsiyet);
+      if (komsuGender && komsuGender !== ogrGender) {
+        logger.debug(`❌ Cinsiyet kısıt ihlali: ${ogrenci.ad} (${ogrenci.cinsiyet}) yanında ${komsuOgrenci.ad} (${komsuOgrenci.cinsiyet})`);
+        return false;
+      }
     }
   }
   return true;

@@ -4,6 +4,7 @@
  */
 
 import logger from './logger';
+import { normalizeGender } from './turkishUtils';
 
 /**
  * Tek bir öğrencinin verilerini doğrular
@@ -102,11 +103,10 @@ export const validateStudent = (student, index = null) => {
       errors.push('Geçersiz cinsiyet');
       logger.info(`${logPrefix} Cinsiyet bilgisi eksik`);
     } else {
-      const cinsiyetStr = cinsiyet.toString().trim().toUpperCase();
-
-      if (!['E', 'K'].includes(cinsiyetStr)) {
+      const normalized = normalizeGender(cinsiyet);
+      if (!normalized) {
         errors.push('Geçersiz cinsiyet');
-        logger.warn(`${logPrefix} Geçersiz cinsiyet: "${cinsiyetStr}"`);
+        logger.warn(`${logPrefix} Geçersiz cinsiyet: "${cinsiyet}"`);
       }
     }
 
@@ -117,11 +117,11 @@ export const validateStudent = (student, index = null) => {
     } else {
       const sinifStr = sinif.toString().trim();
 
-      if (!/^\d+-[A-Z]$/.test(sinifStr)) {
+      if (!/^\d+[-/][A-ZÇĞİÖŞÜa-zçğıöşü0-9]+$/i.test(sinifStr)) {
         errors.push('Geçersiz sınıf formatı');
         logger.warn(`${logPrefix} Geçersiz sınıf formatı: "${sinifStr}"`);
       } else {
-        const sinifNum = parseInt(sinifStr.split('-')[0]);
+        const sinifNum = parseInt(sinifStr.split(/[-/]/)[0], 10);
         if (sinifNum < 5 || sinifNum > 12) {
           warnings.push('Sınıf numarası alışılmadık (5-12 arası normal)');
           logger.info(`${logPrefix} Sınıf numarası alışılmadık: ${sinifNum}`);

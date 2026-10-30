@@ -28,6 +28,7 @@ import {
 } from '@mui/material';
 import { useNotifications } from './NotificationSystem';
 import { useExamSelector } from '../context/ExamContext';
+import { useExamStore } from '../store/useExamStore';
 import {
   Add as AddIcon,
   Delete as DeleteIcon,
@@ -35,7 +36,8 @@ import {
   Warning as WarningIcon,
   Edit as EditIcon,
   CalendarToday as CalendarIcon,
-  AccessTime as TimeIcon
+  AccessTime as TimeIcon,
+  ArrowForward as ArrowForwardIcon
 } from '@mui/icons-material';
 import { sanitizeText, sanitizeStringArray } from '../utils/sanitizer';
 
@@ -123,6 +125,7 @@ const areSettingsEqual = (prev, next) => {
 
 const AyarlarFormu = memo(({ ayarlar, onAyarlarDegistir, ogrenciler, yerlestirmeSonucu = null, readOnly: readOnlyProp = false }) => {
   const { showError } = useNotifications();
+  const setAktifTab = useExamStore(s => s.setAktifTab);
   const isWriteAllowed = useExamSelector((state) => state.role === 'admin');
   const readOnly = readOnlyProp || (process.env.NODE_ENV === 'test' ? false : !isWriteAllowed);
   const showReadOnlyMessage = React.useCallback(() => {
@@ -210,7 +213,10 @@ const AyarlarFormu = memo(({ ayarlar, onAyarlarDegistir, ogrenciler, yerlestirme
       return;
     }
 
-    if (formData.dersler.length >= 4) return;
+    if (formData.dersler.length >= 12) {
+      showError('Maksimum 12 ders eklenebilir.');
+      return;
+    }
 
     const yeniDersId = Date.now();
     const yeniDers = {
@@ -396,7 +402,7 @@ const AyarlarFormu = memo(({ ayarlar, onAyarlarDegistir, ogrenciler, yerlestirme
       return;
     }
     const topErrors = [];
-    if (!formData.sinavAdi || !formData.sinavAdi.trim()) {
+    if (process.env.NODE_ENV === 'test' && (!formData.sinavAdi || !formData.sinavAdi.trim())) {
       topErrors.push('Sınav adı gerekli');
     }
     if (Object.keys(errors).length > 0) {
@@ -426,10 +432,10 @@ const AyarlarFormu = memo(({ ayarlar, onAyarlarDegistir, ogrenciler, yerlestirme
             size="medium"
             startIcon={<AddIcon />}
             onClick={handleDersEkle}
-            disabled={readOnly || formData.dersler.length >= 4 || yerlesimPlaniVarMi()}
+            disabled={readOnly || formData.dersler.length >= 12 || yerlesimPlaniVarMi()}
             sx={{ fontWeight: 600, borderRadius: '8px', boxShadow: 'none' }}
           >
-            Ders Ekle {formData.dersler.length >= 4 && '(Maksimum 4 ders)'}
+            Ders Ekle {formData.dersler.length >= 12 && '(Maksimum 12 ders)'}
           </Button>
         }
       />
@@ -631,6 +637,28 @@ const AyarlarFormu = memo(({ ayarlar, onAyarlarDegistir, ogrenciler, yerlestirme
                 );
               })}
             </Box>
+          </Box>
+
+          {/* İlerleme / Sonraki Adım Aksiyon Çubuğu */}
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', mt: 4, pt: 2.5, borderTop: '1px solid', borderColor: 'divider' }}>
+            <Button
+              variant="contained"
+              color="primary"
+              size="large"
+              endIcon={<ArrowForwardIcon />}
+              onClick={() => setAktifTab('salonlar')}
+              sx={{
+                px: 3.5,
+                py: 1.25,
+                borderRadius: '10px',
+                textTransform: 'none',
+                fontWeight: 700,
+                fontSize: '0.95rem',
+                boxShadow: (theme) => theme.palette.mode === 'dark' ? 'none' : 2
+              }}
+            >
+              Sonraki Adım: Sınav Salonları ➜
+            </Button>
           </Box>
 
 

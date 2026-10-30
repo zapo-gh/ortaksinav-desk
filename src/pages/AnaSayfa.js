@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState, Suspense, useMemo } from 'react';
-import { DndContext, closestCenter } from '@dnd-kit/core';
+import { DndContext, pointerWithin, rectIntersection, DragOverlay, useSensor, useSensors, MouseSensor, TouchSensor } from '@dnd-kit/core';
 import {
   Box,
   Container,
@@ -24,7 +24,9 @@ import {
   DialogContent,
   DialogActions,
   useMediaQuery,
-  useTheme
+  useTheme,
+  IconButton,
+  Tooltip
 } from '@mui/material';
 import {
   People as PeopleIcon,
@@ -41,15 +43,15 @@ import {
   Assignment as AssignmentIcon,
   AssignmentTurnedIn as AssignmentTurnedInIcon,
   Lock as LockIcon,
-  School as SchoolIcon
+  School as SchoolIcon,
+  Menu as MenuIcon
 } from '@mui/icons-material';
 import { useReactToPrint } from 'react-to-print';
 
 import { motion, AnimatePresence } from 'framer-motion';
 
 import Sidebar from '../components/common/Sidebar';
-import Header from '../components/Header';
-import Footer from '../components/Footer';
+import EmptyState from '../components/common/EmptyState';
 import ErrorBoundary from '../components/ErrorBoundary';
 import GenelAyarlarFormu from '../components/GenelAyarlarFormu';
 import OgrenciListesi from '../components/OgrenciListesi';
@@ -72,6 +74,7 @@ import {
 import { SalonPlaniPrintable } from '../components/SalonPlaniPrintable';
 import { SalonOgrenciListesiPrintable } from '../components/SalonOgrenciListesiPrintable';
 import { SalonImzaListesiPrintable } from '../components/SalonImzaListesiPrintable';
+import { StudentCardPreview } from '../components/SalonPlani/SeatItem';
 import logger from '../utils/logger';
 import transferManager from '../utils/transferManager';
 import PlanKaydetmeDialog from '../components/AnaSayfa/PlanKaydetmeDialog';
@@ -138,17 +141,16 @@ const AnaSayfaContent = React.memo(() => {
 
   const readOnly = !isWriteAllowed;
 
-  // İlk açılışta direkt genel-ayarlar sekmesine geç - loading kaldırıldı
+  // Aktif sekme kontrolü - tanımsız ise genel-ayarlar sekmesine geç
   useEffect(() => {
     try {
-      if (aktifTab !== 'genel-ayarlar') {
+      if (!aktifTab) {
         tabDegistir('genel-ayarlar');
       }
     } catch (error) {
-      console.error('❌ Tab değiştirme hatası:', error);
+      console.error('❌ Tab kontrol hatası:', error);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [aktifTab, tabDegistir]);
 
   // Plan varsa ilk salonu otomatik seç - sadece bir kez çalışsın (useRef ile kontrol)
   const ilkSalonSecildiRef = useRef(false);
@@ -213,7 +215,6 @@ const AnaSayfaContent = React.memo(() => {
     return () => window.removeEventListener('keydown', handler);
   }, [tabDegistir, showSuccess, aktifTab]);
 
-
   // PDF Export için ref'ler
   const salonPlaniPrintRef = useRef();
   const sinifListesiPrintRef = useRef();
@@ -267,7 +268,14 @@ const AnaSayfaContent = React.memo(() => {
   );
 
   const { handleSavePlan, handlePlanYukle } = usePlanPersistence(activePlanMeta, setActivePlanMeta, handleLoadSuccess);
-  const { handleStudentMove, handleStudentTransfer } = useStudentPlacement(
+  const {
+    handleStudentMove,
+    handleStudentTransfer,
+    handleUndo,
+    handleRedo,
+    canUndo,
+    canRedo
+  } = useStudentPlacement(
     yerlestirmeSonucu,
     yerlestirmeGuncelle,
     ogrenciler,
@@ -318,6 +326,37 @@ const AnaSayfaContent = React.memo(() => {
     setSaveDialogOpen(false);
   }, []);
 
+  // Global kısayollar: Ctrl+S (Planı Kaydet) & Ctrl+P (Yazdır)
+  useEffect(() => {
+    const handleGlobalShortcuts = (e) => {
+      const tag = (e.target?.tagName || '').toLowerCase();
+      const isInput = tag === 'input' || tag === 'textarea' || tag === 'select' || e.target?.isContentEditable;
+      if (isInput) return;
+
+      if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S')) {
+        e.preventDefault();
+        if (yerlestirmeSonucu || aktifTab === 'salon-plani') {
+          handleSaveClick();
+        } else {
+          showInfo('Kaydedilecek aktif bir sınav yerleşim planı bulunmuyor.');
+        }
+        return;
+      }
+
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'p' || e.key === 'P')) {
+        e.preventDefault();
+        if (yerlestirmeSonucu) {
+          handleSalonPlaniPrintClick();
+        } else {
+          showInfo('Yazdırmak için önce bir yerleşim planı oluşturun.');
+        }
+        return;
+      }
+    };
+    window.addEventListener('keydown', handleGlobalShortcuts);
+    return () => window.removeEventListener('keydown', handleGlobalShortcuts);
+  }, [handleSaveClick, yerlestirmeSonucu, aktifTab, handleSalonPlaniPrintClick, showInfo]);
+
 
 
   // Veri yükleme - artık localStorage'dan otomatik yükleniyor
@@ -331,12 +370,27 @@ const AnaSayfaContent = React.memo(() => {
     ayarlarGuncelle(yeniAyarlar);
   }, [ayarlarGuncelle, readOnly, showError]);
 
+  const salonlarSaveTimerRef = useRef(null);
+
   const handleSalonlarDegistir = useCallback((yeniSalonlar) => {
     if (readOnly) {
       showError('Salon düzenleme yetkisi için yönetici girişi gerekli.');
       return;
     }
     salonlarGuncelle(yeniSalonlar);
+
+    // Arka planda SQLite'a otomatik kaydet (Sekme değişse bile veri kaybını önler)
+    if (salonlarSaveTimerRef.current) {
+      clearTimeout(salonlarSaveTimerRef.current);
+    }
+    salonlarSaveTimerRef.current = setTimeout(async () => {
+      try {
+        const db = (await import('../database')).default;
+        await db.saveSalons(yeniSalonlar);
+      } catch (err) {
+        logger.warn('Otomatik salon kaydetme hatası:', err);
+      }
+    }, 600);
 
     // Eğer yerleştirme sonucu varsa, salon sıralamasını güncelle
     if (yerlestirmeSonucu && yerlestirmeSonucu.tumSalonlar) {
@@ -399,65 +453,42 @@ const AnaSayfaContent = React.memo(() => {
 
 
 
-  const genelAyarlarContent = useMemo(() => (
-    <GenelAyarlarFormu
-      ayarlar={ayarlar}
-      onAyarlarDegistir={handleAyarlarDegistir}
-      readOnly={readOnly}
-    />
-  ), [ayarlar, handleAyarlarDegistir, readOnly]);
-
-  const ogrencilerContent = useMemo(() => (
-    <OgrenciListesi
-      ogrenciler={ogrenciler}
-      yerlestirmeSonucu={yerlestirmeSonucu}
-      ayarlar={ayarlar}
-      onAyarlarDegistir={handleAyarlarDegistir}
-    />
-  ), [ogrenciler, yerlestirmeSonucu, ayarlar, handleAyarlarDegistir]);
-
-  const salonlarContent = useMemo(() => (
-    <SalonFormu
-      salonlar={salonlar}
-      onSalonlarDegistir={handleSalonlarDegistir}
-      onKaydet={handleSalonlarDBKaydet}
-      yerlestirmeSonucu={yerlestirmeSonucu}
-      readOnly={readOnly}
-    />
-  ), [salonlar, handleSalonlarDegistir, handleSalonlarDBKaydet, yerlestirmeSonucu, readOnly]);
-
-  const ayarlarTabContent = useMemo(() => (
-    <AyarlarFormu
-      ayarlar={ayarlar}
-      onAyarlarDegistir={handleAyarlarDegistir}
-      ogrenciler={ogrenciler}
-      yerlestirmeSonucu={yerlestirmeSonucu}
-      readOnly={readOnly}
-    />
-  ), [ayarlar, handleAyarlarDegistir, ogrenciler, yerlestirmeSonucu, readOnly]);
-
-  const sabitAtamalarContent = useMemo(() => (
-    <ErrorBoundary componentName="SabitAtamalar">
-      <SabitAtamalarLazy />
-    </ErrorBoundary>
-  ), []);
-
-  const planlamaContent = useMemo(() => (
-    <ErrorBoundary componentName="PlanlamaYap">
-      <PlanlamaYapLazy
-        ogrenciler={ogrenciler}
-        ayarlar={ayarlar}
-        salonlar={salonlar}
-        onYerlestirmeYap={handleYerlestirmeYap}
-        yukleme={yukleme}
-      />
-    </ErrorBoundary>
-  ), [ogrenciler, ayarlar, salonlar, handleYerlestirmeYap, yukleme]);
-
   // Aktif salonlar hesaplaması - performans için useMemo ile cache'lendi
   const aktifSalonlar = useMemo(() => {
     return salonlar?.filter(salon => salon.aktif !== false) || [];
   }, [salonlar]);
+
+  const aktifTumSalonlar = useMemo(() => {
+    return yerlestirmeSonucu?.tumSalonlar?.filter(salon => salon.aktif !== false) || [];
+  }, [yerlestirmeSonucu?.tumSalonlar]);
+
+  const currentSalonSinif = useMemo(() => {
+    if (yerlestirmeSonucu?.salon) return yerlestirmeSonucu.salon;
+    const kapasite = Math.max(ogrenciler.length, 30);
+    const satir = Math.ceil(Math.sqrt(kapasite));
+    const sutun = Math.ceil(kapasite / satir);
+    return {
+      id: 'A-101',
+      kapasite,
+      siraDizilimi: { satir, sutun },
+      ad: 'Sınav Salonu'
+    };
+  }, [yerlestirmeSonucu?.salon, ogrenciler.length]);
+
+  const currentSalonOgrenciler = useMemo(() => {
+    return yerlestirmeSonucu?.salon?.ogrenciler || [];
+  }, [yerlestirmeSonucu?.salon?.ogrenciler]);
+
+  const handleSalonDegistirCallback = useCallback((salon) => {
+    if (!yerlestirmeSonucu?.tumSalonlar) return;
+    const formatlanmisSalon = yerlestirmeSonucu.tumSalonlar.find(
+      fSalon => fSalon.salonId === salon.salonId
+    );
+
+    if (formatlanmisSalon) {
+      yerlestirmeGuncelle({ salon: formatlanmisSalon });
+    }
+  }, [yerlestirmeSonucu?.tumSalonlar, yerlestirmeGuncelle]);
 
   // Ortak onOgrenciSec callback (DnD için)
   const onOgrenciSecCallback = useCallback((action, data) => {
@@ -470,40 +501,120 @@ const AnaSayfaContent = React.memo(() => {
     }
   }, [handleYerlestirmeTemizle, handleStudentMove]);
 
-  // Tab içerik render fonksiyonu
+  // Tab içerik render fonksiyonu - sadece aktif sekme bileşeni oluşturulur (performans optimizasyonu)
   const renderTabIcerik = () => {
     switch (aktifTab) {
       case 'genel-ayarlar':
-        return genelAyarlarContent;
+        return (
+          <GenelAyarlarFormu
+            ayarlar={ayarlar}
+            onAyarlarDegistir={handleAyarlarDegistir}
+            readOnly={readOnly}
+          />
+        );
 
       case 'ogrenciler':
-        return ogrencilerContent;
+        return (
+          <OgrenciListesi
+            ogrenciler={ogrenciler}
+            yerlestirmeSonucu={yerlestirmeSonucu}
+            ayarlar={ayarlar}
+            onAyarlarDegistir={handleAyarlarDegistir}
+          />
+        );
 
       case 'salonlar':
-        return salonlarContent;
+        return (
+          <SalonFormu
+            salonlar={salonlar}
+            onSalonlarDegistir={handleSalonlarDegistir}
+            onKaydet={handleSalonlarDBKaydet}
+            yerlestirmeSonucu={yerlestirmeSonucu}
+            readOnly={readOnly}
+          />
+        );
 
       case 'ayarlar':
-        return ayarlarTabContent;
+        return (
+          <AyarlarFormu
+            ayarlar={ayarlar}
+            onAyarlarDegistir={handleAyarlarDegistir}
+            ogrenciler={ogrenciler}
+            yerlestirmeSonucu={yerlestirmeSonucu}
+            readOnly={readOnly}
+          />
+        );
 
       case 'sabit-atamalar':
-        return sabitAtamalarContent;
+        return (
+          <ErrorBoundary componentName="SabitAtamalar">
+            <SabitAtamalarLazy />
+          </ErrorBoundary>
+        );
 
       case 'planlama':
-        return planlamaContent;
+        return (
+          <ErrorBoundary componentName="PlanlamaYap">
+            <PlanlamaYapLazy
+              ogrenciler={ogrenciler}
+              ayarlar={ayarlar}
+              salonlar={salonlar}
+              onYerlestirmeYap={handleYerlestirmeYap}
+              yukleme={yukleme}
+            />
+          </ErrorBoundary>
+        );
 
       case 'salon-plani':
-        if (aktifSalonlar.length > 0 && !yerlestirmeSonucu) {
+        if (yerlestirmeSonucu) {
+          return (
+            <ErrorBoundary componentName="SalonPlani">
+              <Box sx={{ position: 'relative' }}>
+                <SalonPlaniLazy
+                  sinif={currentSalonSinif}
+                  ogrenciler={currentSalonOgrenciler}
+                  ayarlar={ayarlar}
+                  onOgrenciSec={onOgrenciSecCallback}
+                  tumSalonlar={aktifTumSalonlar}
+                  onSalonDegistir={handleSalonDegistirCallback}
+                  salonlar={aktifSalonlar}
+                  seciliSalonId={seciliSalonId}
+                  onSeciliSalonDegistir={setSeciliSalonId}
+                  onStudentTransfer={handleStudentTransfer}
+                  onUndo={handleUndo}
+                  onRedo={handleRedo}
+                  canUndo={canUndo}
+                  canRedo={canRedo}
+                  yerlestirmeSonucu={yerlestirmeSonucu}
+                  aktifPlanAdi={currentPlanDisplayName}
+                  readOnly={readOnly}
+                  dndJustEnded={dndJustEnded}
+                />
+              </Box>
+            </ErrorBoundary>
+          );
+        }
 
+        // Yerleştirme henüz yapılmamışsa: Salonların boş önizlemesi
+        {
           const seciliSalon = aktifSalonlar.find(salon => salon.id === seciliSalonId) || aktifSalonlar[0];
+          if (!seciliSalon) {
+            return (
+              <Box sx={{ width: '100%', py: 6, display: 'flex', justifyContent: 'center' }}>
+                <EmptyState
+                  icon={MeetingRoomIcon}
+                  title="Tanımlı Sınav Salonu Bulunamadı"
+                  description="Görüntülenecek sınav salonu bulunamadı. Lütfen önce 'Sınav Salonları' sekmesinden salon ekleyin."
+                  actionLabel="Sınav Salonu Ekle ➔"
+                  onAction={() => tabDegistir('salonlar')}
+                />
+              </Box>
+            );
+          }
 
-          // Kapasite bilgisini doğru şekilde al - 0 ise varsayılan değer kullan
           const salonKapasite = seciliSalon.kapasite || 30;
-
-          // Satır ve sütun sayılarını hesapla - eksikse kapasiteden hesapla
           const defaultSatir = seciliSalon.satir || (salonKapasite > 0 ? Math.ceil(Math.sqrt(salonKapasite)) : 6);
           const defaultSutun = seciliSalon.sutun || (salonKapasite > 0 ? Math.ceil(salonKapasite / defaultSatir) : 5);
-
-          // Grup bazlı düzen için varsayılan gruplar
           const defaultGruplar = seciliSalon.gruplar || [
             { id: 1, siraSayisi: Math.ceil(defaultSatir / 2) },
             { id: 2, siraSayisi: Math.ceil(defaultSatir / 2) },
@@ -514,6 +625,28 @@ const AnaSayfaContent = React.memo(() => {
           return (
             <ErrorBoundary componentName="SalonPlani">
               <Box sx={{ position: 'relative' }}>
+                <Alert
+                  severity="info"
+                  sx={{ mb: 2.5, borderRadius: '12px' }}
+                  action={
+                    <Button
+                      color="primary"
+                      variant="contained"
+                      size="small"
+                      onClick={() => tabDegistir('planlama')}
+                      sx={{ fontWeight: 700, borderRadius: '8px', textTransform: 'none' }}
+                    >
+                      Planlama Yap Ekranına Git ➜
+                    </Button>
+                  }
+                >
+                  <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                    Henüz otomatik yerleştirme yapılmadı.
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                    Aşağıdaki görünüm boş salon oturma düzeni önizlemesidir. Öğrencileri salonlara yerleştirmek için "Planlama Yap" sekmesine geçebilirsiniz.
+                  </Typography>
+                </Alert>
                 <SalonPlaniLazy
                   sinif={{
                     id: seciliSalon.id,
@@ -544,94 +677,6 @@ const AnaSayfaContent = React.memo(() => {
           );
         }
 
-        return (
-          <ErrorBoundary componentName="SalonPlani">
-            <Box sx={{ position: 'relative' }}>
-              {yerlestirmeSonucu && (
-                <>
-                  <SalonPlaniLazy
-                    sinif={yerlestirmeSonucu?.salon || {
-                      id: 'A-101',
-                      kapasite: Math.max(ogrenciler.length, 30),
-                      siraDizilimi: {
-                        satir: Math.ceil(Math.sqrt(Math.max(ogrenciler.length, 30))),
-                        sutun: Math.ceil(Math.max(ogrenciler.length, 30) / Math.ceil(Math.sqrt(Math.max(ogrenciler.length, 30))))
-                      },
-                      ad: 'Sınav Salonu'
-                    }}
-                    ogrenciler={yerlestirmeSonucu?.salon?.ogrenciler || []}
-                    ayarlar={ayarlar}
-                    onOgrenciSec={onOgrenciSecCallback}
-                    tumSalonlar={yerlestirmeSonucu?.tumSalonlar?.filter(salon => salon.aktif !== false) || []}
-                    onSalonDegistir={(salon) => {
-                      const formatlanmisSalon = yerlestirmeSonucu.tumSalonlar.find(
-                        fSalon => fSalon.salonId === salon.salonId
-                      );
-
-                      if (formatlanmisSalon) {
-                        yerlestirmeGuncelle({ salon: formatlanmisSalon });
-                      }
-                    }}
-                    salonlar={salonlar?.filter(salon => salon.aktif !== false) || []}
-                    seciliSalonId={seciliSalonId}
-                    onSeciliSalonDegistir={setSeciliSalonId}
-                    onStudentTransfer={handleStudentTransfer}
-                    yerlestirmeSonucu={yerlestirmeSonucu}
-                    aktifPlanAdi={currentPlanDisplayName}
-                    readOnly={readOnly}
-                    dndJustEnded={dndJustEnded}
-                  />
-                </>
-              )}
-
-              {!yerlestirmeSonucu && (
-                <ErrorBoundary componentName="SalonPlani">
-                  <>
-                    {(() => {
-                      const seciliSalon = salonlar.find(salon => salon.id === (seciliSalonId || salonlar[0]?.id));
-                      if (!seciliSalon) return null;
-
-                      const salonKapasite = seciliSalon.kapasite || 30;
-                      const defaultSatir = seciliSalon.satir || (salonKapasite > 0 ? Math.ceil(Math.sqrt(salonKapasite)) : 6);
-                      const defaultSutun = seciliSalon.sutun || (salonKapasite > 0 ? Math.ceil(salonKapasite / defaultSatir) : 5);
-                      const defaultGruplar = seciliSalon.gruplar || [
-                        { id: 1, siraSayisi: Math.ceil(defaultSatir / 2) },
-                        { id: 2, siraSayisi: Math.ceil(defaultSatir / 2) },
-                        { id: 3, siraSayisi: Math.ceil(defaultSatir / 2) },
-                        { id: 4, siraSayisi: Math.ceil(defaultSatir / 2) }
-                      ];
-
-                      return (
-                        <SalonPlaniLazy
-                          sinif={{
-                            id: seciliSalon.id,
-                            kapasite: salonKapasite,
-                            ad: seciliSalon.salonAdi || seciliSalon.ad,
-                            siraTipi: seciliSalon.siraTipi || 'ikili',
-                            gruplar: defaultGruplar,
-                            siraDizilimi: {
-                              satir: defaultSatir,
-                              sutun: defaultSutun
-                            }
-                          }}
-                          ogrenciler={[]}
-                          ayarlar={ayarlar}
-                          salonlar={salonlar?.filter(salon => salon.aktif !== false) || []}
-                          seciliSalonId={seciliSalonId}
-                          onSeciliSalonDegistir={setSeciliSalonId}
-                          onOgrenciSec={onOgrenciSecCallback}
-                          readOnly={readOnly}
-                          aktifPlanAdi={currentPlanDisplayName}
-                        />
-                      );
-                    })()}
-                  </>
-                </ErrorBoundary>
-              )}
-            </Box>
-          </ErrorBoundary>
-        );
-
       case 'database-test':
         return (
           <ErrorBoundary componentName="DatabaseTest">
@@ -659,13 +704,50 @@ const AnaSayfaContent = React.memo(() => {
   };
 
 
-  // Handle drag end for @dnd-kit
-  // (DnD activation/sensors were removed to restore previous drag/drop behavior)
+  // Drag & drop state and sensors for @dnd-kit
+  const [activeDragItem, setActiveDragItem] = useState(null);
+
+  const sensors = useSensors(
+    useSensor(MouseSensor, {
+      activationConstraint: {
+        distance: 2,
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 150,
+        tolerance: 5,
+      },
+    })
+  );
+
+  const customCollisionDetection = useCallback((args) => {
+    // 1. Doğrudan imlecin altındaki masayı anında yakala (en hızlı O(1) yöntem)
+    const pointerCollisions = pointerWithin(args);
+    if (pointerCollisions.length > 0) {
+      return pointerCollisions;
+    }
+    // 2. Kutu kesişimini kontrol et (fallback)
+    return rectIntersection(args);
+  }, []);
+
+  const handleDragStart = useCallback((event) => {
+    setActiveDragItem(event.active?.data?.current || null);
+  }, []);
+
+  const handleDragCancel = useCallback(() => {
+    setActiveDragItem(null);
+  }, []);
+
   const handleDragEnd = useCallback((event) => {
+    setActiveDragItem(null);
     setDndJustEnded(true);
     setTimeout(() => setDndJustEnded(false), 250);
 
     const { active, over } = event;
+    if (!over) {
+      return;
+    }
 
     const activeId = active?.id;
     const overId = over?.id;
@@ -678,13 +760,9 @@ const AnaSayfaContent = React.memo(() => {
       ? parseInt(overId.replace('masa-', ''), 10)
       : NaN;
 
-    if (!over) {
-      return;
-    }
-
     // Parse IDs to extract masaId and student info
-    const activeMasaId = activeMasaIdParsed;
-    const overMasaId = overMasaIdParsed;
+    const activeMasaId = isNaN(activeMasaIdParsed) ? null : activeMasaIdParsed;
+    const overMasaId = isNaN(overMasaIdParsed) ? null : overMasaIdParsed;
 
     const draggedStudent = active?.data?.current?.ogrenci;
 
@@ -700,11 +778,21 @@ const AnaSayfaContent = React.memo(() => {
   }, [onOgrenciSecCallback]);
 
   return (
-    <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+    <DndContext
+      sensors={sensors}
+      collisionDetection={customCollisionDetection}
+      autoScroll={{ layoutShiftCompensation: false }}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+      onDragCancel={handleDragCancel}
+    >
       <Box sx={{
         display: 'flex',
         minHeight: '100vh',
-        bgcolor: 'transparent'
+        width: '100%',
+        bgcolor: 'background.default',
+        color: 'text.primary',
+        flex: 1
       }}>
         <Sidebar 
           isMobile={isMobile} 
@@ -715,6 +803,28 @@ const AnaSayfaContent = React.memo(() => {
         />
         
         <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+          {isMobile && (
+            <Box sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              px: 2,
+              py: 1,
+              bgcolor: 'background.paper',
+              borderBottom: '1px solid',
+              borderColor: 'divider'
+            }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <IconButton onClick={() => setMobileOpen(true)} size="small" color="primary">
+                  <MenuIcon />
+                </IconButton>
+                <Typography variant="subtitle1" fontWeight={700}>
+                  Ortak Sınav
+                </Typography>
+              </Box>
+            </Box>
+          )}
+
           <Container maxWidth={false} sx={{ py: { xs: 1.5, sm: 2 }, px: { xs: 2, sm: 4, md: 5 }, flex: 1, display: 'flex', flexDirection: 'column' }}>
             {/* Hata Gösterme */}
             {hata && (
@@ -740,38 +850,68 @@ const AnaSayfaContent = React.memo(() => {
           </Container>
         </Box>
 
-        {/* Hızlı İşlem Butonları */}
-        <Fab
-          color="error"
-          sx={{
-            position: 'fixed',
-            bottom: { xs: 8, sm: 24 },
-            right: { xs: 8, sm: 24 },
-            zIndex: 1000,
-            width: { xs: 48, sm: 56 },
-            height: { xs: 48, sm: 56 }
-          }}
-          onClick={handleSaveClick}
-          title="Kaydet"
-        >
-          <SaveIcon sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' } }} />
-        </Fab>
+        {/* Modern Hızlı İşlem Çubuğu (Quick Action Bar / Dock) */}
+        {(Boolean(yerlestirmeSonucu) || aktifTab === 'salon-plani') && (
+          <Box
+            sx={{
+              position: 'fixed',
+              bottom: { xs: 16, sm: 24 },
+              right: { xs: 16, sm: 28 },
+              zIndex: 1000,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1,
+              p: 0.75,
+              borderRadius: '16px',
+              backdropFilter: 'blur(16px)',
+              bgcolor: (theme) => theme.palette.mode === 'light' ? 'rgba(255, 255, 255, 0.95)' : 'rgba(15, 23, 42, 0.95)',
+              border: '1px solid',
+              borderColor: (theme) => theme.palette.mode === 'light' ? 'rgba(226, 232, 240, 0.95)' : 'rgba(51, 65, 85, 0.85)',
+              boxShadow: (theme) => theme.palette.mode === 'light'
+                ? '0 12px 32px -4px rgba(15, 23, 42, 0.16), 0 4px 12px -2px rgba(15, 23, 42, 0.08)'
+                : '0 16px 36px -4px rgba(0, 0, 0, 0.6), 0 4px 12px -2px rgba(0, 0, 0, 0.4)',
+              transition: 'opacity 0.15s ease, transform 0.15s ease',
+            }}
+          >
+            {Boolean(yerlestirmeSonucu) && (
+              <Tooltip title="Yazdırma Seçenekleri (Ctrl+P)" arrow placement="top">
+                <Button
+                  variant="outlined"
+                  color="primary"
+                  onClick={handlePrintMenuOpen}
+                  aria-label="Yazdırma Seçenekleri"
+                  sx={{
+                    minWidth: 42,
+                    width: 42,
+                    height: 42,
+                    p: 0,
+                    borderRadius: '12px',
+                  }}
+                >
+                  <PrintIcon sx={{ fontSize: '1.25rem' }} />
+                </Button>
+              </Tooltip>
+            )}
 
-        <Fab
-          color="primary"
-          sx={{
-            position: 'fixed',
-            bottom: { xs: 8, sm: 24 },
-            right: { xs: 64, sm: 88 },
-            zIndex: 1000,
-            width: { xs: 48, sm: 56 },
-            height: { xs: 48, sm: 56 }
-          }}
-          onClick={handlePrintMenuOpen}
-          title="Yazdırma Seçenekleri"
-        >
-          <PrintIcon sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' } }} />
-        </Fab>
+            <Tooltip title="Planı Veritabanına Kaydet (Ctrl+S)" arrow placement="top">
+              <Button
+                variant="contained"
+                color="success"
+                onClick={handleSaveClick}
+                aria-label="Planı Kaydet"
+                sx={{
+                  minWidth: 42,
+                  width: 42,
+                  height: 42,
+                  p: 0,
+                  borderRadius: '12px',
+                }}
+              >
+                <SaveIcon sx={{ fontSize: '1.25rem' }} />
+              </Button>
+            </Tooltip>
+          </Box>
+        )}
 
         {/* Yazdırma Menüsü */}
         <Menu
@@ -786,54 +926,91 @@ const AnaSayfaContent = React.memo(() => {
             vertical: 'bottom',
             horizontal: 'center',
           }}
+          slotProps={{
+            paper: {
+              sx: {
+                borderRadius: '16px',
+                minWidth: 320,
+                p: 0.75,
+                mb: 1.5,
+                border: '1px solid',
+                borderColor: (theme) => theme.palette.mode === 'light' ? 'rgba(226, 232, 240, 0.9)' : 'rgba(51, 65, 85, 0.8)',
+                boxShadow: (theme) => theme.palette.mode === 'light'
+                  ? '0 16px 36px -4px rgba(15, 23, 42, 0.16)'
+                  : '0 20px 40px -4px rgba(0, 0, 0, 0.65)',
+                bgcolor: 'background.paper',
+                '& .MuiMenuItem-root': {
+                  borderRadius: '10px',
+                  py: 1,
+                  px: 1.5,
+                  my: 0.25,
+                  transition: 'all 0.15s ease',
+                  '&:hover': {
+                    bgcolor: (theme) => theme.palette.mode === 'light' ? 'rgba(79, 70, 229, 0.08)' : 'rgba(99, 102, 241, 0.12)',
+                  }
+                }
+              }
+            }
+          }}
         >
-          <MenuItem onClick={handleSalonPlaniPrintClick}>
+          <MenuItem onClick={handleSalonPlaniPrintClick} sx={{ py: 1.25 }}>
             <ListItemIcon>
-              <ChairIcon fontSize="small" />
+              <ChairIcon fontSize="small" color="primary" />
             </ListItemIcon>
-            <ListItemText primary="Salon Planı" />
+            <ListItemText
+              primary="Salon Oturma Planı (Tüm Salonlar)"
+              secondary="Görsel sıra/koltuk şeması ve yerleşim düzeni"
+            />
           </MenuItem>
-          <MenuItem onClick={handleSinifListesiPrintClick}>
+          <MenuItem onClick={handleSinifListesiPrintClick} sx={{ py: 1.25 }}>
             <ListItemIcon>
-              <PeopleIcon fontSize="small" />
+              <PeopleIcon fontSize="small" color="secondary" />
             </ListItemIcon>
-            <ListItemText primary="Sınıf Listesi" />
+            <ListItemText
+              primary="Öğrenci Listesi (Tüm Salonlar)"
+              secondary="Sınav salonu ve sıra numaralı öğrenci listesi"
+            />
           </MenuItem>
-          <MenuItem onClick={handleSalonImzaListesiPrintClick}>
+          <MenuItem onClick={handleSalonImzaListesiPrintClick} sx={{ py: 1.25 }}>
             <ListItemIcon>
-              <AssignmentIcon fontSize="small" />
+              <AssignmentIcon fontSize="small" color="success" />
             </ListItemIcon>
-            <ListItemText primary="Salon İmza Listesi" />
+            <ListItemText
+              primary="Sınav Yoklama / İmza Listesi"
+              secondary="Gözetmen öğretmen imza ve tutanak çizelgesi"
+            />
           </MenuItem>
         </Menu>
 
-        {/* PDF Export Bileşenleri - Görünür ama ekranda görünmez */}
-        <Box sx={{
-          position: 'absolute',
-          left: '-9999px',
-          top: '-9999px',
-          visibility: 'hidden'
-        }}>
-          <SalonPlaniPrintable
-            ref={salonPlaniPrintRef}
-            yerlestirmeSonucu={yerlestirmeSonucu}
-            ayarlar={ayarlar}
-          />
+        {/* PDF Export Bileşenleri - Sadece yerleştirme planı varsa oluşturulur */}
+        {Boolean(yerlestirmeSonucu) && (
+          <Box sx={{
+            position: 'absolute',
+            left: '-9999px',
+            top: '-9999px',
+            visibility: 'hidden'
+          }}>
+            <SalonPlaniPrintable
+              ref={salonPlaniPrintRef}
+              yerlestirmeSonucu={yerlestirmeSonucu}
+              ayarlar={ayarlar}
+            />
 
-          <SalonOgrenciListesiPrintable
-            ref={sinifListesiPrintRef}
-            ogrenciler={ogrenciler}
-            yerlestirmeSonucu={yerlestirmeSonucu}
-            ayarlar={ayarlar}
-          />
+            <SalonOgrenciListesiPrintable
+              ref={sinifListesiPrintRef}
+              ogrenciler={ogrenciler}
+              yerlestirmeSonucu={yerlestirmeSonucu}
+              ayarlar={ayarlar}
+            />
 
-          <SalonImzaListesiPrintable
-            ref={salonImzaListesiPrintRef}
-            yerlestirmeSonucu={yerlestirmeSonucu}
-            ayarlar={ayarlar}
-            tumOgrenciler={ogrenciler}
-          />
-        </Box>
+            <SalonImzaListesiPrintable
+              ref={salonImzaListesiPrintRef}
+              yerlestirmeSonucu={yerlestirmeSonucu}
+              ayarlar={ayarlar}
+              tumOgrenciler={ogrenciler}
+            />
+          </Box>
+        )}
 
         <PlanKaydetmeDialog
           open={saveDialogOpen}
@@ -848,6 +1025,12 @@ const AnaSayfaContent = React.memo(() => {
           title={successModalTitle}
           message={successModalMessage}
         />
+
+        <DragOverlay dropAnimation={null} zIndex={9999}>
+          {activeDragItem?.ogrenci ? (
+            <StudentCardPreview ogrenci={activeDragItem.ogrenci} />
+          ) : null}
+        </DragOverlay>
       </Box>
     </DndContext>
   );

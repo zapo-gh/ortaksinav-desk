@@ -15,7 +15,7 @@ import { Chair as ChairIcon } from '@mui/icons-material';
  * PDF export için özel olarak tasarlanmıştır
  * Tüm salonlar için ayrı sayfalarda salon yerleşim planları
  */
-export const SalonPlaniPrintable = forwardRef(({ yerlestirmeSonucu, ayarlar = {} }, ref) => {  const theme = useTheme();  // Masa numarası hesaplama fonksiyonu
+export const SalonPlaniPrintable = React.memo(forwardRef(({ yerlestirmeSonucu, ayarlar = {} }, ref) => {  const theme = useTheme();  // Masa numarası hesaplama fonksiyonu
   const calculateDeskNumberForMasa = (masa) => {
     if (!masa || !yerlestirmeSonucu?.tumSalonlar) return masa?.id + 1 || 1;
 
@@ -65,7 +65,7 @@ export const SalonPlaniPrintable = forwardRef(({ yerlestirmeSonucu, ayarlar = {}
           p: 4,
           textAlign: 'center',
           minHeight: '100vh',
-          width: '210mm',
+          width: '100%',
           margin: '0 auto',
           display: 'flex',
           flexDirection: 'column',
@@ -73,7 +73,7 @@ export const SalonPlaniPrintable = forwardRef(({ yerlestirmeSonucu, ayarlar = {}
           alignItems: 'center'
         }}
       >
-        <Typography variant="h4" sx={{ mb: 2, color: 'text.secondary' }}>
+        <Typography variant="h5" sx={{ mb: 2, color: 'text.secondary' }}>
           Herhangi Bir Yerleştirme Yapılmadı
         </Typography>
         <Typography variant="body1" sx={{ color: 'text.secondary' }}>
@@ -261,10 +261,17 @@ export const SalonPlaniPrintable = forwardRef(({ yerlestirmeSonucu, ayarlar = {}
       <Box
         ref={ref}
         sx={{
-          p: 3,
+          p: { xs: 2, sm: 3 },
+          width: '100%',
+          maxWidth: '100%',
+          boxSizing: 'border-box',
           bgcolor: 'white',
           '@media print': {
-            p: 1,
+            p: 0,
+            m: '0 auto',
+            width: '100%',
+            maxWidth: '100%',
+            boxSizing: 'border-box',
             fontSize: '12px',
             bgcolor: 'white',
           }
@@ -280,21 +287,27 @@ export const SalonPlaniPrintable = forwardRef(({ yerlestirmeSonucu, ayarlar = {}
           <Box
             key={salon.salonId || salonIndex}
             sx={{
+              mb: 2,
               pageBreakBefore: salonIndex > 0 ? 'always' : 'auto',
               bgcolor: 'white',
+              boxSizing: 'border-box',
               overflow: 'hidden',
-                '@media print': {
-                  pageBreakBefore: salonIndex > 0 ? 'always' : 'auto',
-                  breakBefore: salonIndex > 0 ? 'page' : 'auto',
-                  bgcolor: 'white',
-                }
+              '@media print': {
+                pageBreakBefore: salonIndex > 0 ? 'always' : 'auto',
+                breakBefore: salonIndex > 0 ? 'page' : 'auto',
+                boxSizing: 'border-box !important',
+                width: '100% !important',
+                maxWidth: '100% !important',
+                padding: '10mm 14mm 10mm 14mm !important',
+                bgcolor: 'white'
+              }
             }}
           >
             {/* Salon Başlığı */}
             <PrintHeader 
               schoolName={ayarlar.okulAdi || 'T.C. MİLLİ EĞİTİM BAKANLIĞI'}
               subTitle={`${ayarlar.egitimYili || '2025-2026'} Eğitim Öğretim Yılı`}
-              documentTitle={`${salon.salonAdi || salon.ad || `Salon ${salonIndex + 1}`} Salon Yerleşim Planı - ${(() => {
+              documentTitle={`${salon.salonAdi || salon.ad || `Salon ${salonIndex + 1}`} Salon Oturma Planı - ${(() => {
                 const dersAdi = ayarlar.dersler && ayarlar.dersler.length > 0
                   ? ayarlar.dersler[0].ad || 'Ders Adı'
                   : 'Ders Adı';
@@ -305,25 +318,24 @@ export const SalonPlaniPrintable = forwardRef(({ yerlestirmeSonucu, ayarlar = {}
 
 
             {/* Öğretmen Masası ve Ders Tahtası */}
-            <Box sx={{ mb: 3, px: 2 }}>
+            <Box sx={{ mb: 1.5, px: 2 }}>
               {/* Ders Tahtası - Üstte ortaya hizalı */}
-              <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'center', mb: 1 }}>
                 <Paper
-                  elevation={2}
+                  elevation={0}
                   sx={{
                     width: 280,
-                    height: 40,
+                    height: 32,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    bgcolor: 'white',
-                    color: 'black',
+                    bgcolor: '#f1f5f9',
+                    color: '#000',
                     borderRadius: 1,
-                    border: '2px solid',
-                    borderColor: 'grey.400'
+                    border: '2px solid #94a3b8'
                   }}
                 >
-                  <Typography variant="caption" sx={{ fontWeight: 700, fontSize: '0.8rem' }}>
+                  <Typography variant="caption" sx={{ fontWeight: 800, fontSize: '0.8rem', letterSpacing: 1 }}>
                     DERS TAHTASI
                   </Typography>
                 </Paper>
@@ -332,20 +344,19 @@ export const SalonPlaniPrintable = forwardRef(({ yerlestirmeSonucu, ayarlar = {}
               {/* Öğretmen Masası - Altta sola hizalı */}
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <Paper
-                  elevation={3}
+                  elevation={0}
                   sx={{
-                    width: 160,
-                    height: 50,
+                    width: 140,
+                    height: 38,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    bgcolor: 'secondary.50',
-                    border: '2px solid',
-                    borderColor: 'secondary.main',
+                    bgcolor: '#f8fafc',
+                    border: '2px solid #64748b',
                     borderRadius: 1
                   }}
                 >
-                  <Typography variant="caption" sx={{ fontWeight: 700, fontSize: '0.7rem', textAlign: 'center' }}>
+                  <Typography variant="caption" sx={{ fontWeight: 800, fontSize: '0.7rem', textAlign: 'center', color: '#000' }}>
                     ÖĞRETMEN<br />MASASI
                   </Typography>
                 </Paper>
@@ -353,105 +364,113 @@ export const SalonPlaniPrintable = forwardRef(({ yerlestirmeSonucu, ayarlar = {}
             </Box>
 
             {/* Grup Bazlı Masalar */}
-            {salonDuzeni.gruplar ? (
-              // Grup bazlı görüntüleme - YAN YANA
-              <Box sx={{ display: 'flex', flexDirection: 'row', gap: 4, flexWrap: 'nowrap', justifyContent: 'center', mb: 3 }}>
-                {Object.keys(salonDuzeni.gruplar).map(grupId => (
-                  <Box key={grupId} sx={{ minWidth: '200px', flex: '1 1 0', maxWidth: '25%' }}>
-                    <Box
-                      sx={{
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(2, 1fr)',
-                        gap: 0.2,
-                        rowGap: 0.9,
-                        maxWidth: '100%',
-                        mx: 'auto'
-                      }}
-                    >
-                      {salonDuzeni.gruplar[grupId].map((masa) => (
-                        <Paper
-                          key={masa.id}
-                          elevation={masa.ogrenci ? 2 : 1}
-                          sx={{
-                            p: 0.3,
-                            width: '100px',
-                            height: '50px',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                          bgcolor: (masa?.ogrenci && (masa.ogrenci.id || masa.ogrenci.numara || masa.ogrenci.ad || masa.ogrenci.soyad)) ? 'primary.50' : 'grey.100',
-                          border: (masa?.ogrenci && (masa.ogrenci.id || masa.ogrenci.numara || masa.ogrenci.ad || masa.ogrenci.soyad)) ? '2px solid' : '1px solid',
-                          borderColor: (masa?.ogrenci && (masa.ogrenci.id || masa.ogrenci.numara || masa.ogrenci.ad || masa.ogrenci.soyad)) ? 'primary.main' : 'grey.300',
-                            fontSize: '0.5rem',
-                            position: 'relative',
-                            overflow: 'hidden'
-                          }}
-                        >
-                          {/* Masa Numarası */}
-                          <Typography
-                            variant="caption"
+            {salonDuzeni.gruplar ? (() => {
+              const grupIds = Object.keys(salonDuzeni.gruplar);
+              const grupSayisi = grupIds.length;
+              const maxWPercent = `${Math.floor(100 / Math.max(1, grupSayisi))}%`;
+              const gapVal = grupSayisi > 4 ? 1.5 : (grupSayisi === 4 ? 2.5 : 3.5);
+
+              return (
+                <Box sx={{ display: 'flex', flexDirection: 'row', gap: gapVal, flexWrap: 'nowrap', justifyContent: 'center', mb: 2, width: '100%' }}>
+                  {grupIds.map(grupId => (
+                    <Box key={grupId} sx={{ minWidth: 0, flex: `1 1 ${maxWPercent}`, maxWidth: maxWPercent }}>
+                      <Box
+                        sx={{
+                          display: 'grid',
+                          gridTemplateColumns: 'repeat(2, 1fr)',
+                          gap: 0.2,
+                          rowGap: 0.9,
+                          maxWidth: '100%',
+                          mx: 'auto'
+                        }}
+                      >
+                        {salonDuzeni.gruplar[grupId].map((masa) => (
+                          <Paper
+                            key={masa.id}
+                            elevation={0}
                             sx={{
-                              position: 'absolute',
-                              top: 1,
-                              left: 2,
-                              fontWeight: 700,
-                              color: 'text.secondary',
-                              fontSize: '0.6rem'
+                              p: 0.3,
+                              width: '100px',
+                              height: '50px',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                            bgcolor: (masa?.ogrenci && (masa.ogrenci.id || masa.ogrenci.numara || masa.ogrenci.ad || masa.ogrenci.soyad)) ? '#eff6ff' : '#f8fafc',
+                            border: (masa?.ogrenci && (masa.ogrenci.id || masa.ogrenci.numara || masa.ogrenci.ad || masa.ogrenci.soyad)) ? '2px solid' : '1px solid',
+                            borderColor: (masa?.ogrenci && (masa.ogrenci.id || masa.ogrenci.numara || masa.ogrenci.ad || masa.ogrenci.soyad)) ? '#2563eb' : '#cbd5e1',
+                              fontSize: '0.5rem',
+                              position: 'relative',
+                              overflow: 'hidden'
                             }}
                           >
-                            {masa.masaNumarasi || calculateDeskNumberForMasa(masa)}
-                          </Typography>
+                            {/* Masa Numarası */}
+                            <Typography
+                              variant="caption"
+                              sx={{
+                                position: 'absolute',
+                                top: 1,
+                                left: 2,
+                                fontWeight: 700,
+                                color: 'text.secondary',
+                                fontSize: '0.6rem'
+                              }}
+                            >
+                              {masa.masaNumarasi || calculateDeskNumberForMasa(masa)}
+                            </Typography>
 
-                          {/* Öğrenci Bilgileri */}
-                          {masa.ogrenci ? (
-                            <Box sx={{ textAlign: 'center', width: '100%', px: 0.5 }}>
-                              <Typography
-                                variant="caption"
-                                sx={{
-                                  display: 'block',
-                                  fontWeight: 700,
-                                  fontSize: '0.5rem',
-                                  lineHeight: 1.1,
-                                  mb: 0.1,
-                                  overflow: 'hidden',
-                                  textAlign: 'center',
-                                  wordBreak: 'break-word'
-                                }}
-                              >
-                                {masa.ogrenci.ad} {masa.ogrenci.soyad}
-                              </Typography>
+                            {/* Öğrenci Bilgileri */}
+                            {masa.ogrenci ? (
+                              <Box sx={{ textAlign: 'center', width: '100%', px: 0.5 }}>
+                                <Typography
+                                  variant="caption"
+                                  sx={{
+                                    display: 'block',
+                                    fontWeight: 700,
+                                    fontSize: '0.55rem',
+                                    lineHeight: 1.15,
+                                    mb: 0.1,
+                                    overflow: 'hidden',
+                                    textAlign: 'center',
+                                    wordBreak: 'break-word',
+                                    color: '#000'
+                                  }}
+                                >
+                                  {masa.ogrenci.ad} {masa.ogrenci.soyad}
+                                </Typography>
 
-                              <Typography
-                                variant="caption"
-                                sx={{
-                                  display: 'block',
-                                  fontSize: '0.4rem',
-                                  color: 'text.secondary',
-                                  mb: 0.1,
-                                  overflow: 'hidden',
-                                  textOverflow: 'ellipsis',
-                                  whiteSpace: 'nowrap'
-                                }}
-                              >
-                                {masa.ogrenci.sinif} - {masa.ogrenci.numara}
-                              </Typography>
+                                <Typography
+                                  variant="caption"
+                                  sx={{
+                                    display: 'block',
+                                    fontSize: '0.45rem',
+                                    color: '#334155',
+                                    fontWeight: 600,
+                                    mb: 0.1,
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap'
+                                  }}
+                                >
+                                  {masa.ogrenci.sinif} - {masa.ogrenci.numara}
+                                </Typography>
 
-                            </Box>
-                          ) : (
-                            <Box sx={{ textAlign: 'center', color: 'text.disabled' }}>
-                              <Typography variant="caption" sx={{ fontSize: '0.5rem' }}>
-                                Boş
-                              </Typography>
-                            </Box>
-                          )}
-                        </Paper>
-                      ))}
+                              </Box>
+                            ) : (
+                              <Box sx={{ textAlign: 'center', color: 'text.disabled' }}>
+                                <Typography variant="caption" sx={{ fontSize: '0.5rem' }}>
+                                  Boş
+                                </Typography>
+                              </Box>
+                            )}
+                          </Paper>
+                        ))}
+                      </Box>
                     </Box>
-                  </Box>
-                ))}
-              </Box>
-            ) : (
+                  ))}
+                </Box>
+              );
+            })() : (
               // Fallback: Normal grid görüntüleme
               <Box
                 sx={{
@@ -595,18 +614,19 @@ export const SalonPlaniPrintable = forwardRef(({ yerlestirmeSonucu, ayarlar = {}
                 <Box sx={{
                   mt: 2,
                   p: 1,
-                  bgcolor: 'grey.50',
-                  borderRadius: 1,
-                  border: '1px solid',
-                  borderColor: 'grey.300'
+                  bgcolor: '#ffffff',
+                  borderRadius: '2px',
+                  border: '1.5px solid #000',
+                  fontFamily: '"Times New Roman", Times, serif'
                 }}>
                   <Typography variant="body2" sx={{
-                    fontSize: '0.7rem',
-                    fontWeight: 700,
+                    fontSize: '8.5pt',
+                    fontWeight: 800,
                     textAlign: 'center',
-                    color: 'text.primary'
+                    color: '#000',
+                    fontFamily: '"Times New Roman", Times, serif'
                   }}>
-                    Toplam Öğrenci: {ozet.toplamOgrenci} | Sınıf Dağılımı: {sinifListesi}
+                    Toplam Öğrenci: {ozet.toplamOgrenci} &nbsp;|&nbsp; Sınıf Dağılımı: {sinifListesi}
                   </Typography>
                 </Box>
               );
@@ -618,7 +638,7 @@ export const SalonPlaniPrintable = forwardRef(({ yerlestirmeSonucu, ayarlar = {}
       </Box>
     </>
   );
-});
+}));
 
 SalonPlaniPrintable.displayName = 'SalonPlaniPrintable';
 

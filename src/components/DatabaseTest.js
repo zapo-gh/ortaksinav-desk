@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   Button,
@@ -13,6 +13,9 @@ import {
   Divider
 } from '@mui/material';
 import { useExamSelector } from '../context/ExamContext';
+import db from '../database';
+import PageHeader from './common/PageHeader';
+import { BugReport as BugReportIcon } from '@mui/icons-material';
 
 const DatabaseTest = () => {
   const [testResults, setTestResults] = useState([]);
@@ -34,76 +37,39 @@ const DatabaseTest = () => {
 
   const runDatabaseTests = async () => {
     setIsLoading(true);
-    startLoading('Veritabanı testleri çalıştırılıyor...');
+    if (startLoading) startLoading('Veritabanı sağlık kontrolü çalıştırılıyor...');
     setError(null);
     setTestResults([]);
 
     try {
       // Test 1: Veritabanı bağlantısı
-      addTestResult('DB Connection', 'running', 'Veritabanı bağlantısı test ediliyor...');
-      await db.open();
-      addTestResult('DB Connection', 'success', 'Veritabanı bağlantısı başarılı');
+      addTestResult('DB Connection', 'running', 'Veritabanı bağlantısı kontrol ediliyor...');
+      if (db.open) {
+        await db.open();
+      }
+      addTestResult('DB Connection', 'success', 'Veritabanı bağlantısı aktif ve hazır');
 
-      // Test 2: Plan kaydetme - DEVRE DIŞI (gereksiz test planı oluşturmayı engelle)
-      // Gereksiz test planları Firestore'da birikmesin diye test plan kaydetme özelliği kapatıldı
-      addTestResult('Save Plan', 'skipped', 'Plan kaydetme testi atlandı (gereksiz test planı oluşturmayı önlemek için)');
-
-      // Test 3: Plan yükleme - DEVRE DIŞI (plan kaydetme olmadan plan yükleme test edilemez)
-      addTestResult('Load Plan', 'skipped', 'Plan yükleme testi atlandı (plan kaydetme devre dışı olduğu için)');
-
-      // Test 4: Öğrenci kaydetme
-      addTestResult('Save Students', 'running', 'Öğrenci kaydetme test ediliyor...');
-      const testStudents = [
-        { id: 1, ad: 'Test', soyad: 'Öğrenci1', numara: '001', sinif: '9/A', cinsiyet: 'E' },
-        { id: 2, ad: 'Test', soyad: 'Öğrenci2', numara: '002', sinif: '9/A', cinsiyet: 'K' }
-      ];
-
-      await db.saveStudents(testStudents);
-      addTestResult('Save Students', 'success', `${testStudents.length} öğrenci kaydedildi`, testStudents);
-
-      // Test 5: Öğrenci yükleme
-      addTestResult('Load Students', 'running', 'Öğrenci yükleme test ediliyor...');
+      // Test 2: Öğrenci tablosu kontrolü (Güvenli Okuma - Veri ezilmez)
+      addTestResult('Read Students', 'running', 'Kayıtlı öğrenciler kontrol ediliyor...');
       const loadedStudents = await db.getAllStudents();
-      addTestResult('Load Students', 'success', `${loadedStudents.length} öğrenci yüklendi`, loadedStudents);
+      addTestResult('Read Students', 'success', `${loadedStudents?.length || 0} öğrenci başarıyla okundu`);
 
-      // Test 6: Ayar kaydetme
-      addTestResult('Save Settings', 'running', 'Ayar kaydetme test ediliyor...');
-      const testSettings = {
-        sinavAdi: 'Test Sınavı',
-        sinavTarihi: '2024-01-01',
-        sinavSaati: '09:00',
-        dersler: [{ ders: 'Matematik', siniflar: ['9/A'] }]
-      };
-
-      await db.saveSettings(testSettings);
-      addTestResult('Save Settings', 'success', 'Ayarlar kaydedildi', testSettings);
-
-      // Test 7: Ayar yükleme
-      addTestResult('Load Settings', 'running', 'Ayar yükleme test ediliyor...');
+      // Test 3: Ayar tablosu kontrolü
+      addTestResult('Read Settings', 'running', 'Sınav ayarları kontrol ediliyor...');
       const loadedSettings = await db.getSettings();
-      addTestResult('Load Settings', 'success', 'Ayarlar yüklendi', loadedSettings);
+      addTestResult('Read Settings', 'success', 'Sınav ayarları okundu', loadedSettings);
 
-      // Test 8: Salon kaydetme
-      addTestResult('Save Salons', 'running', 'Salon kaydetme test ediliyor...');
-      const testSalons = [
-        { id: 1, salonAdi: 'Test Salon 1', kapasite: 30, siraTipi: 'normal' },
-        { id: 2, salonAdi: 'Test Salon 2', kapasite: 25, siraTipi: 'normal' }
-      ];
-
-      await db.saveSalons(testSalons);
-      addTestResult('Save Salons', 'success', `${testSalons.length} salon kaydedildi`, testSalons);
-
-      // Test 9: Salon yükleme
-      addTestResult('Load Salons', 'running', 'Salon yükleme test ediliyor...');
+      // Test 4: Salon tablosu kontrolü
+      addTestResult('Read Salons', 'running', 'Kayıtlı salonlar kontrol ediliyor...');
       const loadedSalons = await db.getAllSalons();
-      addTestResult('Load Salons', 'success', `${loadedSalons.length} salon yüklendi`, loadedSalons);
+      addTestResult('Read Salons', 'success', `${loadedSalons?.length || 0} salon başarıyla okundu`);
 
-      // Test 10: Plan listesi
-      addTestResult('List Plans', 'running', 'Plan listesi test ediliyor...');
+      // Test 5: Plan tablosu kontrolü
+      addTestResult('List Plans', 'running', 'Kayıtlı planlar kontrol ediliyor...');
       const plans = await db.getAllPlans();
-      addTestResult('List Plans', 'success', `${plans.length} plan bulundu`, plans);
+      addTestResult('List Plans', 'success', `${plans?.length || 0} sınav planı bulundu`);
 
-      addTestResult('All Tests', 'success', 'Tüm testler başarıyla tamamlandı! 🎉');
+      addTestResult('All Tests', 'success', 'Veritabanı sağlık kontrolü tamamlandı! Mevcut veriler korundu.');
 
     } catch (error) {
       console.error('❌ Veritabanı test hatası:', error);
@@ -111,7 +77,7 @@ const DatabaseTest = () => {
       addTestResult('Error', 'error', `Test hatası: ${error.message}`);
     } finally {
       setIsLoading(false);
-      stopLoading();
+      if (stopLoading) stopLoading();
     }
   };
 

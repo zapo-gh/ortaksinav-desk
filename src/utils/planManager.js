@@ -34,7 +34,7 @@ class PlanManager {
       };
       this.currentPlanOwnerId = ownerId;
       this.currentPlanInvalidated = false;
-      logger.debug('âœ… planManager: Aktif plan güncellendi', {
+      logger.debug('✅ planManager: Aktif plan güncellendi', {
         ...this.currentPlan,
         ownerId: this.currentPlanOwnerId
       });
@@ -90,7 +90,7 @@ class PlanManager {
    */
   async savePlan(planName, planData) {
     try {
-      logger.debug('ğŸ’¾ Plan kaydediliyor:', planName);
+      logger.debug('💼¾ Plan kaydediliyor:', planName);
       const normalizedPlanName = String(planName || '').trim();
       const lowerPlanName = normalizedPlanName.toLowerCase();
 
@@ -100,7 +100,7 @@ class PlanManager {
       if (this.isCurrentPlanActive()) {
         const currentName = this.getCurrentPlanName().toLowerCase();
         if (currentName === lowerPlanName) {
-          logger.debug('ğŸ”„ planManager: Mevcut plan ID üzerinden güncelleme yapılıyor:', this.currentPlan.id);
+          logger.debug('🔍„ planManager: Mevcut plan ID üzerinden güncelleme yapılıyor:', this.currentPlan.id);
           const updatedId = await this.updatePlan(this.currentPlan.id, normalizedPlanName, planData, ownerId);
           if (updatedId) {
             this.setCurrentPlan({ id: updatedId, name: normalizedPlanName, ownerId });
@@ -117,7 +117,7 @@ class PlanManager {
         });
 
         if (existingPlan) {
-          logger.debug('ğŸ”„ Aynı isimde plan bulundu, güncelleme yapılıyor:', existingPlan.id);
+          logger.debug('🔍„ Aynı isimde plan bulundu, güncelleme yapılıyor:', existingPlan.id);
           const updatedId = await this.updatePlan(existingPlan.id, normalizedPlanName, planData, ownerId);
           if (updatedId) {
             this.setCurrentPlan({ id: updatedId, name: normalizedPlanName, ownerId });
@@ -193,7 +193,7 @@ class PlanManager {
       const ayarlar = cleanPlanData.ayarlar || {};
 
       // DEBUG: Ayarlar kontrolü
-      logger.debug('ğŸ” planManager.savePlan - Ayarlar:', {
+      logger.debug('🔍 planManager.savePlan - Ayarlar:', {
         sinavTarihi: ayarlar.sinavTarihi,
         sinavSaati: ayarlar.sinavSaati,
         sinavDonemi: ayarlar.sinavDonemi,
@@ -216,7 +216,7 @@ class PlanManager {
         data: cleanPlanData
       };
 
-      logger.debug('ğŸ’¾ planManager: Plan payload hazırlandı:', {
+      logger.debug('💼¾ planManager: Plan payload hazırlandı:', {
         name: planPayload.name,
         totalStudents: planPayload.totalStudents,
         salonCount: planPayload.salonCount,
@@ -224,7 +224,7 @@ class PlanManager {
         dataKeys: planPayload.data ? Object.keys(planPayload.data) : []
       });
 
-      logger.debug('ğŸ’¾ planManager: db.savePlan çağrılıyor...', {
+      logger.debug('💼¾ planManager: db.savePlan çağrılıyor...', {
         dbType: typeof db,
         hasSavePlan: typeof db?.savePlan === 'function',
         dbConstructor: db?.constructor?.name,
@@ -235,7 +235,7 @@ class PlanManager {
 
       // DEBUG: DatabaseAdapter'ın çağrıldığından emin olmak için
       if (db?.useFirestore !== undefined) {
-        logger.debug('âœ… planManager: DatabaseAdapter kullanılıyor, useFirestore:', db.useFirestore);
+        logger.debug('✅ planManager: DatabaseAdapter kullanılıyor, useFirestore:', db.useFirestore);
       } else {
         logger.warn('âš ï¸ planManager: DatabaseAdapter KULLANILMIYOR! Doğrudan IndexedDB kullanılıyor olabilir!');
         logger.warn('âš ï¸ db objesi:', db);
@@ -243,9 +243,9 @@ class PlanManager {
 
       const savedPlan = await db.savePlan(planPayload);
 
-      logger.debug('âœ… planManager: Plan başarıyla kaydedildi:', savedPlan);
-      logger.info('âœ… planManager: Kaydedilen plan ID tipi:', typeof savedPlan);
-      logger.info('âœ… planManager: Kaydedilen plan ID değeri:', savedPlan);
+      logger.debug('✅ planManager: Plan başarıyla kaydedildi:', savedPlan);
+      logger.info('✅ planManager: Kaydedilen plan ID tipi:', typeof savedPlan);
+      logger.info('✅ planManager: Kaydedilen plan ID değeri:', savedPlan);
 
       if (savedPlan) {
         this.setCurrentPlan({ id: savedPlan, name: normalizedPlanName, ownerId });
@@ -264,7 +264,7 @@ class PlanManager {
    */
   async loadPlan(planId) {
     try {
-      logger.debug('ğŸ“¥ Plan yükleniyor:', planId);
+      logger.debug('📥 Plan yükleniyor:', planId);
       let authOwnerId = 'local-user';
 
       // planId validation - test ortamında null ID'lere izin ver
@@ -282,7 +282,7 @@ class PlanManager {
         throw new Error(`Plan ID geçersiz tip: ${typeof planId} (number veya string olmalı)`);
       }
 
-      logger.debug('ğŸ“¥ Normalize edilmiş Plan ID:', normalizedPlanId, '(tip:', typeof normalizedPlanId + ')');
+      logger.debug('📥 Normalize edilmiş Plan ID:', normalizedPlanId, '(tip:', typeof normalizedPlanId + ')');
 
       const plan = await db.getPlan(normalizedPlanId);
 
@@ -290,8 +290,8 @@ class PlanManager {
         throw new Error(`Plan bulunamadı (ID: ${normalizedPlanId})`);
       }
 
-      logger.debug('âœ… Plan yüklendi:', plan.name);
-      logger.debug('ğŸ” Plan verisi (raw):', {
+      logger.debug('✅ Plan yüklendi:', plan.name);
+      logger.debug('🔍 Plan verisi (raw):', {
         planDataKeys: Object.keys(plan.data),
         salonVar: !!plan.data.salon,
         tumSalonlarVar: !!plan.data.tumSalonlar,
@@ -301,7 +301,7 @@ class PlanManager {
       // Plan verisini doğrula ve düzelt
       const validatedPlan = this.validateAndFixPlan(plan.data);
 
-      logger.debug('ğŸ” Plan verisi (validated):', {
+      logger.debug('🔍 Plan verisi (validated):', {
         validatedPlanKeys: Object.keys(validatedPlan),
         salonVar: !!validatedPlan.salon,
         tumSalonlarVar: !!validatedPlan.tumSalonlar,
@@ -388,7 +388,7 @@ class PlanManager {
         logger.warn(`âš ï¸ ${nonEmptyPlans.length - withoutTestPlans.length} test plan filtrelendi`);
       }
 
-      logger.debug('âœ… Tüm planlar yüklendi:', withoutTestPlans.length, 'geçerli plan');
+      logger.debug('✅ Tüm planlar yüklendi:', withoutTestPlans.length, 'geçerli plan');
       logger.debug('ğŸ“‹ Plan detayları:', withoutTestPlans.map(p => ({ id: p.id, name: p.name, date: p.date })));
 
       const parseArchiveMetadata = (val) => {
@@ -422,7 +422,7 @@ class PlanManager {
         updatedAt: plan.updatedAt
       }));
 
-      logger.debug('âœ… Planlar map edildi:', mappedPlans.length, 'plan');
+      logger.debug('✅ Planlar map edildi:', mappedPlans.length, 'plan');
 
       // Debug: arşivlenme filtresiyle ilgili uyuşmazlığı yakalamak için ilk plan örneklerini logla
       try {
@@ -472,7 +472,7 @@ class PlanManager {
 
       // Veritabanından planı sil - hem string hem number ID'leri destekler
       await db.deletePlan(normalizedPlanId);
-      logger.debug('âœ… Plan silindi:', planId);
+      logger.debug('✅ Plan silindi:', planId);
     } catch (error) {
       logger.error('âŒ Plan silme hatası:', error);
       throw error;
@@ -484,7 +484,7 @@ class PlanManager {
    */
   async updatePlan(planId, planName, planData, ownerIdParam = null) {
     try {
-      logger.debug('ğŸ”„ planManager: Plan güncelleme başlıyor:', { planId, planName });
+      logger.debug('🔍„ planManager: Plan güncelleme başlıyor:', { planId, planName });
       const normalizedPlanName = String(planName || '').trim();
       const ownerId = ownerIdParam || 'local-user';
       const cleanPlanData = this.cleanPlanData(planData);
@@ -510,7 +510,7 @@ class PlanManager {
         archiveMetadata: existingPlan?.archiveMetadata ?? null
       };
 
-      logger.debug('ğŸ”„ planManager: db.updatePlan çağrılıyor...', {
+      logger.debug('🔍„ planManager: db.updatePlan çağrılıyor...', {
         planId,
         name: planPayload.name,
         totalStudents: planPayload.totalStudents,
@@ -520,7 +520,7 @@ class PlanManager {
       const result = await db.updatePlan(planId, planPayload);
       const updatedPlanId = result || planId;
 
-      logger.debug('âœ… planManager: Plan güncellendi:', updatedPlanId);
+      logger.debug('✅ planManager: Plan güncellendi:', updatedPlanId);
       this.setCurrentPlan({ id: updatedPlanId, name: normalizedPlanName, ownerId });
 
       return updatedPlanId;
@@ -538,7 +538,7 @@ class PlanManager {
       logger.debug('ğŸ“¦ Plan arşivleniyor:', planId, archiveMetadata);
       // Doğrudan SQL güncellemesi - tüm plan verisini okuyup yazmaya gerek yok
       await db.archivePlan(planId, archiveMetadata);
-      logger.debug('âœ… Plan başarıyla arşivlendi:', planId);
+      logger.debug('✅ Plan başarıyla arşivlendi:', planId);
       return true;
     } catch (error) {
       logger.error('âŒ Plan arşivleme hatası:', error);
@@ -551,10 +551,10 @@ class PlanManager {
    */
   async restorePlan(planId) {
     try {
-      logger.debug('ğŸ”“ Plan arşivden çıkarılıyor:', planId);
+      logger.debug('🔍“ Plan arşivden çıkarılıyor:', planId);
       // Doğrudan SQL güncellemesi - tüm plan verisini okuyup yazmaya gerek yok
       await db.restorePlan(planId);
-      logger.debug('âœ… Plan başarıyla restore edildi:', planId);
+      logger.debug('✅ Plan başarıyla restore edildi:', planId);
       return true;
     } catch (error) {
       logger.error('âŒ Plan restore hatası:', error);
@@ -728,7 +728,7 @@ class PlanManager {
 
       // Ana salon varsa, onu tumSalonlar'a ekle
       if (planData.salon) {
-        logger.debug('âœ… Ana salon tumSalonlar\'a ekleniyor');
+        logger.debug('✅ Ana salon tumSalonlar\'a ekleniyor');
         planData.tumSalonlar = [planData.salon];
       } else {
         logger.warn('âŒ Ana salon da bulunamadı, varsayılan salon oluşturuluyor');
@@ -797,7 +797,7 @@ class PlanManager {
     // TumSalonlar içindeki tüm salonların siraDizilimi'ni kontrol et
     planData.tumSalonlar = planData.tumSalonlar.map(salon => fixSalonSiraDizilimi(salon));
 
-    logger.debug('âœ… Plan verisi doğrulandı:', {
+    logger.debug('✅ Plan verisi doğrulandı:', {
       salonVar: !!planData.salon,
       tumSalonlarSayisi: planData.tumSalonlar.length,
       totalStudents: planData.totalStudents || 0,
@@ -805,7 +805,7 @@ class PlanManager {
     });
 
     // Debug: Plan verisinin detaylarını kontrol et
-    logger.debug('ğŸ” PlanManager - Plan verisi detayları:', {
+    logger.debug('🔍 PlanManager - Plan verisi detayları:', {
       planDataKeys: Object.keys(planData),
       salonKeys: planData.salon ? Object.keys(planData.salon) : 'null',
       salonMasalar: planData.salon?.masalar?.length || 0,
